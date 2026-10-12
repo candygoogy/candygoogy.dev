@@ -1,0 +1,730 @@
+/*
+ * Motion. Every animation answers a trigger (load, scroll into
+ * view, hover, click, navigation) and finishes; nothing loops, with one
+ * documented exception: the timeline's top tail (see "About's timeline"). Only
+ * transform, opacity and clip-path move, so layout never shifts.
+ *
+ * Hidden start states exist only under .js (set by the head script when
+ * IntersectionObserver exists) and only without reduced motion, so content
+ * is complete without JavaScript and instant for people who ask for less
+ * motion. A script in Base.astro adds .is-in once an element scrolls in.
+ *
+ * Primitives:
+ *   .rv       rises 28px and fades in
+ *   .rv-mask  clips its child and slides it up out of the clip
+ *   .rv-line  a hairline that draws from the left (scaleX)
+ *   --i       stagger index within a group (--stagger steps)
+ *   --d       extra delay for a whole group
+ */
+
+/* The AP broadcast's progress through each 3s (HomelabMap.astro). */
+@property --t {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --n {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
+
+@keyframes count {
+  from {
+    --n: 0;
+  }
+  to {
+    --n: var(--to);
+  }
+}
+
+/* Totals of 1,000 and up count in two groups, thousands and the rest
+   (zero-padded), so the overlay has the real number's comma and width. */
+@property --k {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
+
+@property --r {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
+
+@keyframes count-k {
+  from {
+    --k: 0;
+  }
+  to {
+    --k: var(--tk);
+  }
+}
+
+@keyframes count-r {
+  from {
+    --r: 0;
+  }
+  to {
+    --r: var(--tr);
+  }
+}
+
+@counter-style pad3 {
+  system: extends decimal;
+  pad: 3 "0";
+}
+
+@keyframes count-hide {
+  from,
+  to {
+    color: transparent;
+  }
+}
+
+@keyframes count-show {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-once {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes node-fill {
+  0% {
+    transform: scale(0);
+  }
+  65% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes theme-wipe {
+  from {
+    mask-position: 0 calc(-100vh - 48px);
+  }
+  to {
+    mask-position: 0 0;
+  }
+}
+
+@keyframes unroll {
+  from {
+    clip-path: inset(-12% -8% 100% -8%);
+  }
+  to {
+    clip-path: inset(-12% -8% -12% -8%);
+  }
+}
+
+@keyframes shown-band {
+  to {
+    clip-path: inset(0 round var(--band-r));
+  }
+}
+
+@keyframes shown-clip {
+  to {
+    clip-path: none;
+  }
+}
+
+/* One dot step (the pattern repeats every 10px), so the loop is seamless. */
+@keyframes tail-flow {
+  from {
+    background-position-y: 0;
+  }
+  to {
+    background-position-y: 10px;
+  }
+}
+
+/* The heatmap's charge-up: one keyframe per level on the way up. */
+@keyframes charge-1 {
+  from {
+    background: var(--cell-0);
+  }
+  to {
+    background: var(--cell-1);
+  }
+}
+
+@keyframes charge-2 {
+  0% {
+    background: var(--cell-0);
+  }
+  50% {
+    background: var(--cell-1);
+  }
+  100% {
+    background: var(--cell-2);
+  }
+}
+
+@keyframes charge-3 {
+  0% {
+    background: var(--cell-0);
+  }
+  33.33% {
+    background: var(--cell-1);
+  }
+  66.67% {
+    background: var(--cell-2);
+  }
+  100% {
+    background: var(--cell-3);
+  }
+}
+
+@keyframes charge-4 {
+  0% {
+    background: var(--cell-0);
+  }
+  25% {
+    background: var(--cell-1);
+  }
+  50% {
+    background: var(--cell-2);
+  }
+  75% {
+    background: var(--cell-3);
+  }
+  100% {
+    background: var(--cell-4);
+  }
+}
+
+/* The busiest day's one ring: an outline that grows 4px as it fades. */
+@keyframes busy-ring {
+  from {
+    opacity: 0.7;
+    box-shadow: 0 0 0 0 var(--ink);
+  }
+  to {
+    opacity: 0;
+    box-shadow: 0 0 0 4px var(--ink);
+  }
+}
+
+@keyframes progress {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Masks clip with a little room for descenders and overshoot. */
+.rv-mask {
+  display: inline-block;
+  clip-path: inset(-0.08em -0.1em -0.22em -0.1em);
+}
+
+.rv-mask > span {
+  display: inline-block;
+}
+
+/* Hairlines are drawn by a pseudo-element so they can scale. */
+.rv-line {
+  position: relative;
+}
+
+.rv-line::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--rule);
+  background: var(--line-color, var(--ink));
+  transform-origin: left center;
+}
+
+.rv-line.at-bottom::before {
+  inset: auto 0 0 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Cross-document View Transitions. The new page comes in over the old
+     one, opaque from its first frame, rising 12px the way you go (up
+     going forward, down coming back). The two pages are never blended:
+     any crossfade between a mostly light page and a mostly dark one
+     passes through a pale veil. The project name in the hero index grows
+     into the /fettle headline and the band's screenshot moves into the
+     page's, over it all. Shared elements only morph when they're on
+     screen on both pages, and they land settled (Base.astro); reloads
+     don't transition. */
+  @view-transition {
+    navigation: auto;
+  }
+
+  html:active-view-transition-type(forward) {
+    --vt-shift: 12px;
+  }
+
+  html:active-view-transition-type(back) {
+    --vt-shift: -12px;
+  }
+
+  /* Under the rising page: the page colour, not the old page's edge. */
+  html:active-view-transition-type(forward, back)::view-transition {
+    background: var(--bg);
+  }
+
+  html:active-view-transition-type(forward, back)::view-transition-old(root) {
+    animation: none;
+    opacity: 0;
+  }
+
+  html:active-view-transition-type(forward, back)::view-transition-new(root) {
+    animation: vt-rise 260ms var(--ease-out) both;
+    mix-blend-mode: normal;
+  }
+
+  /* A shared element that has no partner on screen on the other page
+     arrives with its page, or goes with the old page at once. */
+  html:active-view-transition-type(forward, back)::view-transition-old(
+      *
+    ):only-child {
+    animation: none;
+    opacity: 0;
+  }
+
+  html:active-view-transition-type(forward, back)::view-transition-new(
+      *
+    ):only-child {
+    animation: vt-rise 260ms var(--ease-out) both;
+  }
+
+  ::view-transition-group(project-title),
+  ::view-transition-group(project-shot) {
+    animation-duration: 500ms;
+    animation-timing-function: var(--ease-in-out);
+  }
+
+  /* The name always passes over the screenshot, never under it. */
+  ::view-transition-group(project-title) {
+    z-index: 2;
+  }
+
+  ::view-transition-group(project-shot) {
+    z-index: 1;
+  }
+
+  /* The name hands over from the small copy to the big one early, so
+     neither is seen scaled far from its own size. */
+  ::view-transition-old(project-title) {
+    animation: vt-fade-out 180ms var(--ease-out) both;
+    mix-blend-mode: plus-lighter;
+  }
+
+  ::view-transition-new(project-title) {
+    animation: vt-fade-in 180ms var(--ease-out) both;
+    mix-blend-mode: plus-lighter;
+  }
+
+  @keyframes vt-rise {
+    from {
+      transform: translateY(var(--vt-shift, 12px));
+    }
+  }
+
+  @keyframes vt-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes vt-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* Theme change: the new theme comes down from the top like a blind,
+     with a 48px feathered edge, over the old one, which holds still (no
+     mid-grey crossfade). The intro curtain lifts up; this comes down. */
+  html.theme-vt::view-transition-old(root) {
+    animation: none;
+  }
+
+  html.theme-vt::view-transition-new(root) {
+    mask-image: linear-gradient(
+      to bottom,
+      #000 0,
+      #000 calc(100% - 48px),
+      transparent 100%
+    );
+    mask-size: 100% calc(100vh + 48px);
+    mask-repeat: no-repeat;
+    animation: theme-wipe 400ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 260ms;
+  }
+
+  /* While the intro is on, the page's reveal starts with the curtain's
+     lift, and the delays between groups (the hero line, the index title,
+     its rows) are halved, so they rise together with the lift instead of
+     queueing after it. The staggers within a group stay as they are. */
+  html.intro-on {
+    --d-k: 0.5;
+  }
+
+  /* Rise. */
+  .js .rv {
+    transition:
+      opacity var(--dur-reveal) var(--ease-out),
+      transform var(--dur-reveal) var(--ease-out);
+    transition-delay: calc(
+      var(--d, 0ms) * var(--d-k, 1) + var(--i, 0) * var(--stagger)
+    );
+  }
+
+  .js .rv:not(.is-in) {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+
+  /* Mask reveal. */
+  .js .rv-mask > span {
+    transition: transform var(--dur-reveal) var(--ease-out);
+    transition-delay: calc(
+      var(--d, 0ms) * var(--d-k, 1) + var(--i, 0) * var(--stagger)
+    );
+  }
+
+  .js .rv-mask:not(.is-in) > span {
+    transform: translateY(130%);
+  }
+
+  /* Hairline draw. */
+  .js .rv-line::before {
+    transition: transform var(--dur-reveal) var(--ease-out);
+    transition-delay: calc(
+      var(--d, 0ms) * var(--d-k, 1) + var(--i, 0) * var(--stagger)
+    );
+  }
+
+  .js .rv-line:not(.is-in)::before {
+    transform: scaleX(0);
+  }
+
+  /* Hero: the headline rises line by line out of its own clip (the line
+     index is measured after layout), then the line and the index follow. */
+  .js :is(.hero-title, .line-title) .w > span {
+    transition: transform 820ms var(--ease-out);
+    transition-delay: calc(80ms + var(--line, 0) * 85ms);
+  }
+
+  .js :is(.hero-title, .line-title):not(.is-in) .w > span {
+    transform: translateY(130%);
+  }
+
+  /* The Fettle band: the panel settles from a slightly inset, rounder clip,
+     the wordmark's letters rise in turn, the rest follows in order. */
+  /* The resting clip matches the band's own corners (--band-r), so the
+     settle can interpolate (inset() to none can't). */
+  .js .band.rv-band {
+    clip-path: inset(0 round var(--band-r));
+    transition: clip-path 800ms var(--ease-out);
+  }
+
+  .js .band.rv-band:not(.is-in) {
+    clip-path: inset(3% 2% round calc(var(--band-r) * 1.8));
+  }
+
+  /* While the intro curtain is up, the band waits clipped away to its
+     bottom edge: the curtain uncovers a calm page, then the band rises
+     into place once, at full opacity, behind the lifting curtain (and
+     on its own at 2.6s if the curtain's script never runs). */
+  .js.intro-hold .band.rv-band:not(.is-in) {
+    clip-path: inset(100% 0 0 0 round var(--band-r));
+    animation: shown-band 1ms linear 2600ms forwards;
+  }
+
+  /* The band's screenshot unrolls top-down at full opacity, like a receipt
+     printing: a fade over the dark panel would pass through a grey veil.
+     Its reveal waits for the image to decode (data-decode, Base.astro).
+     The clip reaches past the image to keep its shadow, and goes away
+     once it's done, so the hover tilt is never clipped.
+     The clip sits on the inner .tilt, never on the observed figure:
+     Chromium measures an observed element through its own clip-path, and
+     a clip of zero height made the figure count as out of view at some
+     window sizes, so it never revealed. As a failsafe, the clip lifts on
+     its own after 4s whatever happens. */
+  .js .band .stage.rv:not(.is-in) {
+    opacity: 1;
+    transform: none;
+  }
+
+  .js .band .stage.rv:not(.is-in) > .tilt {
+    clip-path: inset(-12% -8% 100% -8%);
+    animation: shown-clip 1ms linear 4000ms forwards;
+  }
+
+  .js .band .stage.rv.is-in > .tilt {
+    animation: unroll 900ms var(--ease-out) calc(var(--d, 0ms) * var(--d-k, 1))
+      backwards;
+  }
+
+  .js .letters .l > span {
+    transition: transform 700ms var(--ease-out);
+    transition-delay: calc(120ms + var(--i, 0) * 45ms);
+  }
+
+  .js .letters:not(.is-in) .l > span {
+    transform: translateY(130%);
+  }
+
+  /* Released by the intro (Base.astro marks it .from-intro): the band's
+     wordmark rises with the band as one block, with no second letter-by-
+     letter typing right after the curtain's, and the band and its
+     screenshot settle quicker, so the whole page is still by ~1.6s.
+     Scrolled into view later, they play in full. */
+  .js .letters.from-intro .l > span {
+    transition: none;
+  }
+
+  .js .band.rv-band.from-intro {
+    transition-duration: 600ms;
+  }
+
+  .js .band .stage.rv.is-in.from-intro > .tilt {
+    animation-duration: 600ms;
+  }
+
+  /* The Live dot pings once as the facts come in. */
+  .js .is-in .live::after {
+    animation: pulse-once 900ms var(--ease-out) 600ms both;
+  }
+
+  /* Logo chips pop in after their row. */
+  .js .rv .chip {
+    transition: transform 500ms var(--ease-out);
+    transition-delay: calc(
+      var(--d, 0ms) + var(--i, 0) * var(--stagger) + 160ms
+    );
+  }
+
+  .js .rv:not(.is-in) .chip {
+    transform: scale(0.8);
+  }
+
+  /* About's timeline, kept quiet. Each row is a view timeline (--row);
+     the reading line sits 55% down the window. A row's segment fills from
+     its node (38px into the row) to the next row's node as that stretch
+     crosses the line, and each node pops as the line reaches it. Without
+     scroll-driven animation: the full line. */
+  @supports (animation-timeline: view()) {
+    .tl li {
+      view-timeline: --row block;
+    }
+
+    .tl .seg::after {
+      animation-fill-mode: both;
+      animation-timing-function: linear;
+      animation-timeline: --row;
+      animation-range: entry calc(45vh + 38px) entry calc(100% + 45vh + 38px);
+    }
+
+    .tl .seg::after {
+      animation-name: progress;
+    }
+
+    .tl .node::after {
+      animation-fill-mode: both;
+      animation-timing-function: linear;
+      animation-timeline: --row;
+      animation-range: entry calc(45vh + 34px) entry calc(45vh + 42px);
+    }
+
+    .tl .node::after {
+      animation-name: node-fill;
+    }
+  }
+
+  /* THE SITE'S TWO PERPETUAL MOTIONS, ON PURPOSE. Both mark a
+     real, current state, run only while on screen, never under reduced
+     motion, and stay still without JS. Don't strip them as stray loops.
+     1. The AP broadcast on /uses (HomelabMap.astro): once the first packet
+        reaches the access point, a wave of three arcs spreads to its
+        right every 3s, because a live access point is always
+        broadcasting. One animation (--t, below) drives every wave;
+        IntersectionObserver pauses it off screen.
+     2. The timeline's top tail, described here. */
+
+  /* The top tail,
+     above the "to now" job, keeps flowing toward the first node, one dot
+     step every 1.5s, because that job is still going: it marks a real,
+     current state. Don't strip it as a stray loop. It runs only while the
+     timeline is on screen (About.astro sets data-live), never under
+     reduced motion; without JS it stays still. The bottom tail ("before
+     that") is still: the past doesn't move. */
+  .tl::before {
+    animation: tail-flow 1.5s linear infinite paused;
+  }
+
+  .tl[data-live]::before {
+    animation-play-state: running;
+  }
+
+  /* Heatmap: a charge-up, once. Every day starts at level 0 and steps up
+     through the levels to its own, 60ms a step, the weeks starting left
+     to right (22ms apart, so 53 weeks finish within ~1.6s). Then the
+     busiest day rings once. */
+  .js .heat-draw:not(.is-in) [role="gridcell"] > span {
+    background: var(--cell-0);
+  }
+
+  .js .heat-draw.is-in [role="gridcell"] > span {
+    animation-timing-function: steps(1, end);
+    animation-fill-mode: backwards;
+    animation-delay: calc(150ms + var(--w, 0) * 22ms);
+  }
+
+  .js .heat-draw.is-in [role="gridcell"][data-level="1"] > span {
+    animation-name: charge-1;
+    animation-duration: 60ms;
+  }
+
+  .js .heat-draw.is-in [role="gridcell"][data-level="2"] > span {
+    animation-name: charge-2;
+    animation-duration: 120ms;
+  }
+
+  .js .heat-draw.is-in [role="gridcell"][data-level="3"] > span {
+    animation-name: charge-3;
+    animation-duration: 180ms;
+  }
+
+  .js .heat-draw.is-in [role="gridcell"][data-level="4"] > span {
+    animation-name: charge-4;
+    animation-duration: 240ms;
+  }
+
+  .js .heat-draw [data-busiest] > span {
+    position: relative;
+  }
+
+  .js .heat-draw.is-in [data-busiest] > span::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    opacity: 0;
+    animation: busy-ring 700ms var(--ease-out) 1750ms both;
+  }
+
+  /* Count-up: the real number stays in the HTML (and for screen readers);
+     a visual-only overlay counts to it once, then gets out of the way.
+     The number is an inline block, one line box tall, so the overlay
+     (inset 0, same font and line height) lays its digits out on exactly
+     the same baseline; on a plain inline span it sat in the font's
+     content area instead, a few pixels low, and the digits jumped up
+     when the real number came back. */
+  .js .heat-draw .count {
+    position: relative;
+    display: inline-block;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .js .heat-draw .count::after {
+    content: counter(n) / "";
+    counter-reset: n var(--n);
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--soft);
+    pointer-events: none;
+  }
+
+  /* "backwards", not "both": the hide/show hold only while counting, so
+     afterwards the real number is visible again and the overlay is gone
+     (with "both" the overlay stayed on top forever and broke selection). */
+  .js .heat-draw.is-in .count {
+    animation: count-hide 1100ms 150ms backwards;
+  }
+
+  .js .heat-draw.is-in .count::after {
+    animation:
+      count 1100ms var(--ease-out) 150ms backwards,
+      count-show 1100ms 150ms backwards;
+  }
+
+  .js .heat-draw .count.grouped::after {
+    content: counter(k) "," counter(r, pad3) / "";
+    counter-reset: k var(--k) r var(--r);
+  }
+
+  .js .heat-draw.is-in .count.grouped::after {
+    animation:
+      count-k 1100ms var(--ease-out) 150ms backwards,
+      count-r 1100ms var(--ease-out) 150ms backwards,
+      count-show 1100ms 150ms backwards;
+  }
+
+  /* Pointer-only hover details. */
+  @media (hover: hover) and (pointer: fine) {
+    .shift .name,
+    .shift .blurb {
+      transition: transform var(--dur-ui) var(--ease-out);
+    }
+
+    .shift:hover .name,
+    .shift:hover .blurb {
+      transform: translateX(6px);
+    }
+
+    .lift {
+      transition: transform var(--dur-ui) var(--ease-out);
+    }
+
+    .lift:hover {
+      transform: translateY(-2px);
+    }
+  }
+}
+
+/* Named elements for View Transitions (harmless where unsupported). The
+   name's box hugs its text on both pages, so the two snapshots share a
+   shape and scale evenly into each other. */
+.vt-project-title {
+  width: fit-content;
+  view-transition-name: project-title;
+}
+
+.vt-project-shot {
+  view-transition-name: project-shot;
+}
+
+/* During a theme change, these are part of the page's own snapshot, so
+   they wipe with everything else instead of crossfading on their own. */
+html.theme-vt .vt-project-title,
+html.theme-vt .vt-project-shot {
+  view-transition-name: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

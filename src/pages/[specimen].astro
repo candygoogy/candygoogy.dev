@@ -1,0 +1,268 @@
+---
+// Token specimen: every token on one page. Built only in `astro dev`; production
+// builds emit no page for it.
+import Base from "../layouts/Base.astro";
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { specimen: "tokens" } }] : [];
+}
+
+const neutrals = ["bg", "ink", "soft", "line", "acc"];
+const band = ["band", "band-ink", "band-soft", "band-line", "band-acc"];
+const display = [
+  ["--fs-d-band", "Fettle", "--ls-band", "--lh-band", 800],
+  [
+    "--fs-d-hero",
+    "I build the tools I wish existed.",
+    "--ls-hero",
+    "--lh-display",
+    700,
+  ],
+  ["--fs-d-section", "Websites", "--ls-section", "--lh-tight", 700],
+  ["--fs-d-lg", "Dolci Eoliani", "--ls-d-md", "--lh-tight", 700],
+  ["--fs-d-md", "hello@candygoogy.dev", "--ls-d-sm", "--lh-tight", 700],
+  ["--fs-d-sm", "What was hard", "--ls-d-sm", "--lh-tight", 700],
+  ["--fs-d-xs", "Systems and hardware", "--ls-d-sm", "--lh-tight", 700],
+] as const;
+const text = ["--fs-lede", "--fs-body", "--fs-meta", "--fs-sm", "--fs-xs"];
+const space = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+---
+
+<Base title="Tokens – candygoogy" description="Design token specimen.">
+  <main class="wrap">
+    <header class="head">
+      <h1>Tokens</h1>
+      <p class="soft">
+        Specimen for step 4. Placeholder text, not site copy. Theme:{" "}
+        <span class="theme-name"></span>
+      </p>
+    </header>
+
+    <section aria-labelledby="c">
+      <h2 id="c">Color</h2>
+      <ul class="swatches">
+        {neutrals.map((t) => (
+          <li>
+            <span class="chip" style={`background: var(--${t})`} />
+            <code>--{t}</code>
+          </li>
+        ))}
+      </ul>
+      <p>
+        Body text in ink,{" "}
+        <span class="soft">soft text for secondary lines</span>, and{" "}
+        <a href="#c">a link in the accent</a>.
+      </p>
+    </section>
+
+    <section aria-labelledby="t">
+      <h2 id="t">Display, Cabinet Grotesk</h2>
+      <ol class="scale">
+        {display.map(([size, sample, ls, lh, weight]) => (
+          <li>
+            <code>{size}</code>
+            <span
+              class="d"
+              style={`font-size: var(${size}); letter-spacing: var(${ls}); line-height: var(${lh}); font-weight: ${weight}`}
+            >
+              {sample}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section aria-labelledby="x">
+      <h2 id="x">Text, Satoshi</h2>
+      <ol class="scale">
+        {text.map((size) => (
+          <li>
+            <code>{size}</code>
+            <span style={`font-size: var(${size})`}>
+              Verdicts first, numbers second. 0123456789
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section aria-labelledby="s">
+      <h2 id="s">Spacing, 4px base</h2>
+      <ol class="space">
+        {space.map((n) => (
+          <li>
+            <code>--sp-{n}</code>
+            <span class="bar" style={`width: var(--sp-${n})`} />
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section aria-labelledby="b">
+      <h2 id="b">Band</h2>
+      <div class="band">
+        <p class="band-title">Fettle</p>
+        <p class="band-soft">
+          Soft text on the band, and <a href="#b">a link in the band accent</a>.
+        </p>
+        <p>
+          <span class="live">Live</span>
+        </p>
+        <ul class="swatches">
+          {band.map((t) => (
+            <li>
+              <span class="chip" style={`background: var(--${t})`} />
+              <code>--{t}</code>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section aria-labelledby="f">
+      <h2 id="f">Focus</h2>
+      <p>
+        <a href="#f" class="focus-demo">
+          Focused link
+        </a>
+      </p>
+      <div class="band">
+        <a href="#f" class="focus-demo">
+          Focused link on the band
+        </a>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<script is:inline>
+  document.querySelector(".theme-name").textContent =
+    document.documentElement.dataset.theme ?? "auto";
+</script>
+
+<style>
+  .wrap {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: var(--sp-8) var(--gutter);
+  }
+  .head h1 {
+    font-size: var(--fs-d-section);
+    letter-spacing: var(--ls-section);
+  }
+  .soft,
+  .band-soft {
+    color: var(--soft);
+  }
+  .band-soft {
+    color: var(--band-soft);
+  }
+  section {
+    margin-top: var(--sp-8);
+    padding-top: var(--sp-5);
+    border-top: var(--rule) solid var(--ink);
+  }
+  section > h2 {
+    font-size: var(--fs-d-md);
+    letter-spacing: var(--ls-d-sm);
+    margin-bottom: var(--sp-5);
+  }
+  ol,
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  code {
+    font-family: var(--ff-text);
+    font-size: var(--fs-sm);
+    color: var(--soft);
+  }
+  .swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-5);
+    margin-bottom: var(--sp-5);
+  }
+  .swatches li {
+    display: grid;
+    gap: var(--sp-2);
+  }
+  .chip {
+    width: 4.5rem;
+    height: 3rem;
+    border: var(--rule) solid var(--line);
+  }
+  .band .chip {
+    border-color: var(--band-line);
+  }
+  .band code {
+    color: var(--band-soft);
+  }
+  .scale li {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: var(--sp-5);
+    align-items: baseline;
+    padding: var(--sp-4) 0;
+    border-bottom: var(--rule) solid var(--line);
+  }
+  .d {
+    font-family: var(--ff-display);
+  }
+  .space li {
+    display: grid;
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: var(--sp-5);
+    align-items: center;
+    padding: var(--sp-2) 0;
+  }
+  .bar {
+    display: block;
+    height: var(--sp-3);
+    background: var(--ink);
+  }
+  .band {
+    background: var(--band);
+    color: var(--band-ink);
+    border-radius: var(--r-band);
+    padding: var(--space-band) var(--gutter);
+    margin-top: var(--sp-5);
+  }
+  .band-title {
+    font-family: var(--ff-display);
+    font-size: var(--fs-d-band);
+    font-weight: var(--fw-heavy);
+    letter-spacing: var(--ls-band);
+    line-height: var(--lh-band);
+    margin-bottom: var(--sp-5);
+  }
+  .band p + p {
+    margin-top: var(--sp-4);
+  }
+  .live::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--live);
+    margin-right: var(--sp-2);
+    vertical-align: 0.12em;
+  }
+  .focus-demo {
+    outline: var(--focus-width) solid var(--focus);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--r-focus);
+  }
+  @media (max-width: 860px) {
+    .band {
+      border-radius: var(--r-band-narrow);
+    }
+    .scale li,
+    .space li {
+      grid-template-columns: 1fr;
+      gap: var(--sp-1);
+    }
+  }
+</style>

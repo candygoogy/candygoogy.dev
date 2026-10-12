@@ -1,0 +1,39 @@
+---
+import About from "../components/About.astro";
+import Contact from "../components/Contact.astro";
+import FettleBand from "../components/FettleBand.astro";
+import Hero from "../components/Hero.astro";
+import ProjectRows from "../components/ProjectRows.astro";
+import Previews from "../components/Previews.astro";
+import { site } from "../data/site";
+import Base from "../layouts/Base.astro";
+import { orderedProjects } from "../lib/projects";
+
+const projects = await orderedProjects();
+const products = projects.filter((p) => p.data.kind === "product");
+const sides = projects.filter((p) => p.data.kind === "side");
+const websites = projects.filter((p) => p.data.kind === "website");
+
+// Structured data: who the site belongs to (the public handle only).
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: site.name,
+  url: site.url,
+  sameAs: [site.github, site.x, site.telegram],
+};
+---
+
+<Base title={site.name} description={site.description} intro schema={schema}>
+  <Hero projects={projects} />
+  {products.map((p) => (
+    <FettleBand project={p} />
+  ))}
+  {sides.length > 0 && (
+    <ProjectRows id="side-projects" title="Side projects" projects={sides} />
+  )}
+  <ProjectRows id="websites" title="Websites" projects={websites} />
+  <About />
+  <Contact />
+  <Previews />
+</Base>

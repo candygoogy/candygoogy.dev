@@ -1,0 +1,101 @@
+---
+// One screenshot in light and dark. Only the one matching the theme shows,
+// and both are lazy, so only that one downloads; an eager shot (a page's
+// first screen) loads both at once, at high priority, and the theme picks
+// which shows. With a phone crop, narrow screens get the crop instead (art
+// direction), so the detail stays readable instead of shrinking the whole
+// window to a texture.
+import type { ImageMetadata } from "astro";
+import { getImage, Picture } from "astro:assets";
+
+interface Props {
+  light: ImageMetadata;
+  dark: ImageMetadata;
+  alt: string;
+  sizes: string;
+  phone?: { light: ImageMetadata; dark: ImageMetadata } | undefined;
+  eager?: boolean;
+}
+
+const { light, dark, alt, sizes, phone, eager = false } = Astro.props;
+const loading = eager
+  ? ({ loading: "eager", fetchpriority: "high" } as const)
+  : ({ loading: "lazy" } as const);
+const formats = ["avif", "webp"] as const;
+const widths = [480, 800, 1200, 1400];
+const common = {
+  alt,
+  sizes,
+  formats: [...formats],
+  widths,
+  ...loading,
+  decoding: "async" as const,
+};
+
+// The same breakpoint as the layout's phone styles (32.5rem).
+const PHONE = "(max-width: 32.5rem)";
+
+// Sources for one theme: the crop under PHONE, then the full shot, each in
+// AVIF and WebP, with a PNG <img> for old browsers. Each source carries its
+// own size, so the page reserves the right height on every screen. The
+// <img> itself has none: a fixed size there would contradict the phone
+// crop's shape whenever the crop is loaded but not shown (the other theme).
+async function artDirected(full: ImageMetadata, crop: ImageMetadata) {
+  const sources = [];
+  for (const [src, w, media] of [
+    [crop, [crop.width], PHONE],
+    [full, widths.filter((x) => x <= full.width), undefined],
+  ] as const) {
+    for (const format of formats) {
+      const img = await getImage({ src, format, widths: [...w] });
+      sources.push({
+        media,
+        type: `image/${format}`,
+        srcset: img.srcSet.attribute,
+        width: src.width,
+        height: src.height,
+      });
+    }
+  }
+  const fallback = await getImage({ src: full, format: "png", widths });
+  return { sources, fallback };
+}
+
+const looks = phone
+  ? [
+      { look: "light", ...(await artDirected(light, phone.light)) },
+      { look: "dark", ...(await artDirected(dark, phone.dark)) },
+    ]
+  : [];
+---
+
+{phone ? (
+  looks.map(({ look, sources, fallback }) => (
+    <picture>
+      {sources.map((s) => (
+        <source
+          media={s.media}
+          type={s.type}
+          srcset={s.srcset}
+          sizes={sizes}
+          width={s.width}
+          height={s.height}
+        />
+      ))}
+      <img
+        class={`shot-${look}`}
+        src={fallback.src}
+        srcset={fallback.srcSet.attribute}
+        sizes={sizes}
+        alt={alt}
+        {...loading}
+        decoding="async"
+      />
+    </picture>
+  ))
+) : (
+  <>
+    <Picture src={light} class="shot-light" {...common} />
+    <Picture src={dark} class="shot-dark" {...common} />
+  </>
+)}

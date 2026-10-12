@@ -1,0 +1,111 @@
+---
+import type { CollectionEntry } from "astro:content";
+import fettleIcon from "../assets/logos/fettle-app-icon-small.svg";
+import { hero } from "../data/site";
+import ProjectIndex from "./ProjectIndex.astro";
+
+interface Props {
+  projects: CollectionEntry<"projects">[];
+}
+
+const { projects } = Astro.props;
+// The headline is split into words so each line can rise out of its own
+// clip. Screen readers get the sentence once, from aria-label.
+const words = hero.headline.split(" ");
+
+// The line's mention of Fettle becomes a chip: its app icon and its name,
+// linking to its page.
+const [lineBefore, lineAfter] = hero.line.split("Fettle");
+if (lineAfter === undefined) throw new Error("hero.line must mention Fettle");
+// The word before the chip goes with it, so the chip never starts a line
+// on its own.
+const [, lead = "", beforeChip = ""] =
+  lineBefore?.match(/^(.*?)(\S+\s*)$/s) ?? [];
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="statement">
+    <h1 id="hero-title" class="hero-title" aria-label={hero.headline}>
+      {words.map((word, i) => (
+        <>
+          <span class="w" aria-hidden="true">
+            <span>{word}</span>
+          </span>
+          {i < words.length - 1 && " "}
+        </>
+      ))}
+    </h1>
+    <script is:inline>
+      // Before first paint: number the headline's lines so they rise in turn.
+      (() => {
+        const words = document.querySelectorAll("#hero-title .w");
+        let line = -1;
+        let top = null;
+        for (const w of words) {
+          if (w.offsetTop !== top) {
+            top = w.offsetTop;
+            line++;
+          }
+          w.style.setProperty("--line", String(line));
+        }
+      })();
+    </script>
+    <p class="rv" style="--d: 420ms">
+      {lead}
+      <span class="nobr">
+        {beforeChip}
+        <a class="mention" href="/fettle" data-preview="pv-fettle">
+          <img
+            src={fettleIcon.src}
+            alt=""
+            width="20"
+            height="20"
+            decoding="async"
+          />
+          Fettle
+        </a>
+      </span>
+      {lineAfter}
+    </p>
+  </div>
+  <ProjectIndex projects={projects} headingId="index-title" prefix="" />
+</section>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    gap: var(--gap-hero);
+    align-items: end;
+    padding-block: var(--space-hero-top) var(--space-hero-bottom);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  /* Each word clips its own rise, with room for descenders. */
+  .w {
+    display: inline-block;
+    clip-path: inset(-0.06em -0.08em -0.2em -0.08em);
+  }
+
+  .w > span {
+    display: inline-block;
+  }
+
+  .statement p {
+    margin-top: var(--sp-6);
+    max-width: var(--measure-lede);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  @media (max-width: 53.75rem) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

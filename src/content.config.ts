@@ -1,0 +1,94 @@
+import { defineCollection } from "astro:content";
+import { glob } from "astro/loaders";
+import { z } from "astro/zod";
+
+// One Markdown file per project. Adding a project means adding one file (and,
+// for products, one image folder). The build fails on a missing or bad field.
+const projects = defineCollection({
+  loader: glob({ pattern: "*.md", base: "./src/content/projects" }),
+  schema: ({ image }) =>
+    z
+      .object({
+        name: z.string().min(1),
+        // One short line for the hero index, under the name (only there).
+        blurb: z.string().min(1).max(64),
+        // One or two sentences: the band lede or the website row.
+        summary: z.string().min(1).max(320),
+        // "product" = candygoogy's own work (gets images and a band/page);
+        // "side" = a smaller own project (a text row, no page);
+        // "website" = built for a client or employer (text row).
+        kind: z.enum(["product", "side", "website"]),
+        status: z.enum(["live", "in-progress", "archived"]),
+        date: z.coerce.date(),
+        stack: z.array(z.string().min(1)).min(1),
+        role: z.string().min(1).optional(),
+        // Fallback only: the build reads the latest release tag when it can.
+        version: z.string().min(1).optional(),
+        // owner/repo on GitHub, for the latest release tag.
+        repo: z
+          .string()
+          .regex(/^[\w.-]+\/[\w.-]+$/)
+          .optional(),
+        license: z.string().min(1).optional(),
+        runsOn: z.string().min(1).optional(),
+        story: z
+          .object({
+            why: z.string().min(1),
+            hard: z.string().min(1),
+            promise: z.string().min(1),
+          })
+          .optional(),
+        links: z.object({
+          live: z.url().optional(),
+          source: z.url().optional(),
+        }),
+        // Screenshots in light and dark; the page shows the one that matches
+        // the theme.
+        images: z
+          .array(
+            z.object({
+              light: image(),
+              dark: image(),
+              alt: z.string().min(1),
+              caption: z.string().min(1),
+              // Optional phone crop (light and dark): a readable detail
+              // of the shot, served on narrow screens instead.
+              phone: z.object({ light: image(), dark: image() }).optional(),
+            }),
+          )
+          .default([]),
+        // The project page's own sections (products only).
+        page: z
+          .object({
+            checks: z
+              .array(
+                z.object({ name: z.string().min(1), text: z.string().min(1) }),
+              )
+              .min(1),
+            checksNote: z.string().min(1).optional(),
+            uses: z
+              .array(
+                z.object({
+                  text: z.string().min(1),
+                  // Index into images: this use's screenshot, shown beside it.
+                  shot: z.number().int().min(0).optional(),
+                }),
+              )
+              .min(1),
+            privacy: z.string().min(1),
+            learned: z.string().min(1),
+          })
+          .optional(),
+        draft: z.boolean().default(false),
+      })
+      .refine((p) => p.kind === "product" || p.images.length === 0, {
+        message: "Only products have images; rows are text only.",
+        path: ["images"],
+      })
+      .refine((p) => p.kind !== "product" || p.story !== undefined, {
+        message: "Products need a story (why, hard, promise).",
+        path: ["story"],
+      }),
+});
+
+export const collections = { projects };

@@ -1,0 +1,6 @@
+dist/
+.astro/
+.wrangler/
+src/fonts/
+.shots/
+package-lock.json

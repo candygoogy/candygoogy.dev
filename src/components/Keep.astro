@@ -1,0 +1,15 @@
+---
+// Renders text so hyphenated words ("check-up", "64-bit") never break
+// at their hyphen: each one is wrapped in a no-wrap span. The words are
+// unchanged; only the line breaks are controlled.
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+const parts = text.split(/([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)+)/u);
+---
+
+{parts.map((part, i) =>
+  i % 2 === 1 ? <span class="nobr">{part}</span> : part,
+)}

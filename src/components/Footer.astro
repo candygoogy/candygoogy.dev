@@ -1,0 +1,130 @@
+---
+import { site } from "../data/site";
+import { builtOn, commit } from "../lib/build";
+---
+
+<footer class="wrap">
+  <div class="inner rv-line" style="--line-color: var(--line)">
+    <p class="notes">
+      <span>
+        © {new Date().getFullYear()} {site.name}
+      </span>
+      <span>No trackers, no cookies</span>
+      <span class="stamp">
+        Built <time datetime={builtOn.iso}>{builtOn.label}</time>
+        {commit && (
+          <>
+            {" from "}
+            <a
+              href={`${site.source}/commit/${commit}`}
+              aria-label={`commit ${commit.slice(0, 7)}`}
+            >
+              {commit.slice(0, 7)}
+            </a>
+          </>
+        )}
+      </span>
+    </p>
+    <a href="/colophon">Colophon</a>
+    <a href="/uses">Uses</a>
+    <a href={site.source}>Site source on GitHub</a>
+    <a href="#top">Back to top</a>
+    <!-- Paper only (print.css). -->
+    <p class="printed">
+      Printed from candygoogy.dev{commit && `, build ${commit.slice(0, 7)}`}
+    </p>
+  </div>
+</footer>
+
+<style>
+  footer {
+    margin-top: var(--sp-8);
+  }
+
+  /* Grouped by kind: the two notes on the left, the two links on the
+     right, one gap throughout, on one baseline. */
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-2) var(--sp-6);
+    /* The row sits in the middle of its band. */
+    padding-block: var(--sp-6);
+    font-size: var(--fs-sm);
+    color: var(--soft);
+  }
+
+  /* The notes (©, no trackers, the build stamp) take the row's free
+     space and wrap within it: where they don't fit on one line the stamp
+     drops to its own, and the links stay on the right, on the first
+     line's baseline. (A zero basis: the row breaks on the notes' widest
+     span, not on all three side by side.) */
+  .notes {
+    display: flex;
+    font-variant-numeric: tabular-nums;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-2) var(--sp-6);
+    margin: 0;
+  }
+
+  /* Each note stays whole. */
+  .notes > span {
+    white-space: nowrap;
+  }
+
+  /* Narrower, the notes take the first row and the links the next. */
+  @media (max-width: 53.75rem) {
+    .notes {
+      flex-basis: 100%;
+    }
+  }
+
+  .printed {
+    display: none;
+    margin: 0;
+  }
+
+  /* Phones: the two links first, then the two notes, as two aligned
+     columns; on the narrowest, one column in that order. */
+  @media (max-width: 32.5rem) {
+    footer {
+      margin-top: var(--sp-7);
+    }
+
+    .inner {
+      display: grid;
+      grid-template-columns: auto auto;
+      justify-content: start;
+      justify-items: start;
+      gap: var(--sp-3) var(--sp-6);
+    }
+
+    .inner a {
+      order: -1;
+    }
+
+    /* The notes start their own row after the links, as two columns,
+       with the stamp last on its own line. */
+    .notes {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: auto auto;
+      justify-content: start;
+      justify-items: start;
+      gap: var(--sp-3) var(--sp-6);
+    }
+
+    .stamp {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 22.5rem) {
+    .inner,
+    .notes {
+      grid-template-columns: auto;
+    }
+  }
+</style>

@@ -1,0 +1,240 @@
+---
+// Hover previews for the mention chips (scripts/previews.ts): Fettle's
+// receipt for the hero chip, and a compact logo card for each employer.
+// Decorative: the links already say where they go, so the cards are
+// aria-hidden with nothing focusable in them. Fine pointers and keyboard
+// focus only; without JS they never show. No client or third-party site
+// screenshots: the employer cards show only their own logo and domain.
+import { getEntry } from "astro:content";
+import { Picture } from "astro:assets";
+import fettleIcon from "../assets/logos/fettle-app-icon-small.svg";
+import gaijinLogo from "../assets/logos/gaijin-entertainment.svg";
+import sielLogo from "../assets/logos/siel-eolie.webp";
+import receiptDark from "../assets/previews/fettle-receipt-dark.png";
+import receiptLight from "../assets/previews/fettle-receipt-light.png";
+import { orgs } from "../data/site";
+
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+// The Fettle card's line: its index line.
+const fettle = await getEntry("projects", "fettle");
+const shot = {
+  alt: "",
+  widths: [360, 720],
+  sizes: "360px",
+  formats: ["avif", "webp"],
+  loading: "lazy" as const,
+  decoding: "async" as const,
+};
+---
+
+<div class="previews" aria-hidden="true">
+  <div class="pv pv-image" id="pv-fettle" hidden>
+    <Picture src={receiptLight} class="pv-light" {...shot} />
+    <Picture src={receiptDark} class="pv-dark" {...shot} />
+    <div class="bar">
+      <p class="title">
+        <img src={fettleIcon.src} alt="" width="20" height="20" />
+        Fettle
+      </p>
+      <p class="line">{fettle?.data.blurb}</p>
+    </div>
+  </div>
+  <div class="pv pv-compact" id="pv-siel" hidden>
+    <img
+      class="logo"
+      src={sielLogo.src}
+      alt=""
+      width="40"
+      height="40"
+      decoding="async"
+    />
+    <p class="who">
+      <span class="name">{orgs.siel.name}</span>
+      <span class="host">{host(orgs.siel.url)}</span>
+    </p>
+  </div>
+  <div class="pv pv-compact" id="pv-gaijin" hidden>
+    <span class="tile">
+      <img
+        src={gaijinLogo.src}
+        alt=""
+        width="56"
+        height="32"
+        decoding="async"
+      />
+    </span>
+    <p class="who">
+      <span class="name">{orgs.gaijin.name}</span>
+      <span class="host">{host(orgs.gaijin.url)}</span>
+    </p>
+  </div>
+</div>
+
+<script>
+  import "../scripts/previews";
+</script>
+
+<style>
+  /* Placed by the script (fixed, so it never moves the page): above its
+     chip, centred, flipped below if there's no room, kept inside the
+     window. It rises 6px and scales up from .98 as it fades in. */
+  .pv {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: 360px;
+    max-width: calc(100vw - 16px);
+    overflow: hidden;
+    /* The chips' firmer hairline: --line nearly vanishes on the light page. */
+    border: var(--rule) solid var(--chip-line);
+    border-radius: 18px;
+    background: var(--bg);
+    box-shadow: var(--shadow-shot);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px) scale(0.98);
+    transform-origin: 50% 100%;
+    transition:
+      opacity 180ms var(--ease-out),
+      transform 180ms var(--ease-out);
+  }
+
+  .pv[hidden] {
+    display: none;
+  }
+
+  .pv[data-below] {
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: 50% 0;
+  }
+
+  .pv.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  .pv-image :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* The receipt in the current theme (like the site's screenshots). */
+  .pv-image :global(.pv-dark) {
+    display: none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme])) .pv-image :global(.pv-light) {
+      display: none;
+    }
+    :global(:root:not([data-theme])) .pv-image :global(.pv-dark) {
+      display: block;
+    }
+  }
+
+  :global([data-theme="dark"]) .pv-image :global(.pv-light) {
+    display: none;
+  }
+
+  :global([data-theme="dark"]) .pv-image :global(.pv-dark) {
+    display: block;
+  }
+
+  /* One left-aligned stack under the receipt: the app icon and the name
+     in the heading face, then the index line (wrapping only if it must). */
+  .bar {
+    display: grid;
+    gap: 2px;
+    padding: var(--sp-3) var(--sp-4) var(--sp-4);
+    border-top: var(--rule) solid var(--line);
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin: 0;
+    font: var(--fw-bold) var(--fs-body) / 1.3 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+    color: var(--ink);
+  }
+
+  .title img {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+
+  .line {
+    margin: 0;
+    font-size: var(--fs-sm);
+    line-height: 1.4;
+    color: var(--soft);
+  }
+
+  .name {
+    color: var(--ink);
+    font-weight: var(--fw-medium);
+  }
+
+  .host {
+    color: var(--soft);
+  }
+
+  /* The employer cards: the logo, larger, then the name and the domain. */
+  .pv-compact {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: auto;
+    padding: var(--sp-3) var(--sp-5) var(--sp-3) var(--sp-3);
+  }
+
+  .logo {
+    display: block;
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Gaijin's mark is white, so it keeps its dark tile. */
+  .tile {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 40px;
+    border-radius: 10px;
+    background: #18181b;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 12%, transparent);
+  }
+
+  .tile img {
+    display: block;
+    width: 56px;
+    height: 32px;
+  }
+
+  .who {
+    display: grid;
+    line-height: 1.35;
+    white-space: nowrap;
+  }
+
+  .who .name {
+    font: var(--fw-bold) var(--fs-body) / 1.3 var(--ff-text);
+  }
+
+  .who .host {
+    font-size: var(--fs-sm);
+  }
+
+  /* Reduced motion: a fade only (base.css also makes it near-instant). */
+  @media (prefers-reduced-motion: reduce) {
+    .pv,
+    .pv[data-below] {
+      transform: none;
+    }
+  }
+</style>

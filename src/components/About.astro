@@ -1,0 +1,380 @@
+---
+import gaijinLogo from "../assets/logos/gaijin-entertainment.svg";
+// Prepared at 2x (36px) with a clean circular alpha; served as is, not
+// resampled again, so the edge stays free of halos.
+import sielLogo from "../assets/logos/siel-eolie.webp";
+import { about, orgs, site, skills, work } from "../data/site";
+import { github } from "../lib/github";
+import Heatmap from "./Heatmap.svelte";
+import Section from "./Section.astro";
+
+const days = github.contributions?.days ?? [];
+const logos = { siel: sielLogo, gaijin: gaijinLogo };
+// Display size: Siel's round mark 18px, Gaijin's white wordmark 14px tall.
+const logoSize = (org: keyof typeof logos) => {
+  const h = org === "gaijin" ? 16 : 18;
+  const { width, height } = logos[org];
+  return { width: Math.round((width / height) * h), height: h };
+};
+---
+
+<Section id="about" title="About">
+  <div class="intro">
+    <p class="lead rv">{about.background}</p>
+    <p class="lead rv" style="--i: 1">
+      {about.away}
+    </p>
+  </div>
+
+  <ol class="tl">
+    {work.map((item, i) => (
+      <li
+        class="rv rv-line at-bottom"
+        style={`--i: ${i}; --line-color: var(--line)`}
+      >
+        {i < work.length - 1 ? (
+          <span class="seg" aria-hidden="true" />
+        ) : (
+          <span class="tail" aria-hidden="true" />
+        )}
+        <span class="node" aria-hidden="true" />
+        {item.datetime ? (
+          <time datetime={item.datetime}>{item.when}</time>
+        ) : (
+          <span class="when">{item.when}</span>
+        )}
+        <div>
+          <h3>
+            <span>{item.title}</span>
+            {item.org && " "}
+            {item.org && (
+              <span class="nobr at">
+                at{" "}
+                <a
+                  class="org"
+                  href={orgs[item.org].url}
+                  data-preview={`pv-${item.org}`}
+                >
+                  <span class:list={["chip", `chip-${item.org}`]}>
+                    <img
+                      src={logos[item.org].src}
+                      alt=""
+                      width={logoSize(item.org).width}
+                      height={logoSize(item.org).height}
+                      decoding="async"
+                    />
+                  </span>
+                  {orgs[item.org].name}
+                </a>
+              </span>
+            )}
+          </h3>
+          {item.detail && <p>{item.detail}</p>}
+        </div>
+      </li>
+    ))}
+  </ol>
+</Section>
+
+<script>
+  // The timeline's top tail flows only while the timeline is on screen
+  // (motion.css: one of the site's two perpetual motions, on purpose).
+  const tl = document.querySelector<HTMLElement>(".tl");
+  if (tl && "IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      tl.toggleAttribute("data-live", entry?.isIntersecting ?? false);
+    }).observe(tl);
+  }
+</script>
+
+<!-- Skills span the page as one row of four groups,
+     so the lower half of About doesn't sit beside an empty column. -->
+<section class="skills-row" aria-labelledby="skills-title">
+  <h3 id="skills-title" class="rv">
+    Skills
+  </h3>
+  <dl class="skills">
+    {skills.map((s, i) => (
+      <div class="rv" style={`--i: ${i + 1}`}>
+        <dt>{s.group}</dt>
+        {/* Lines break between skills, never inside one ("Claude Code"). */}
+        <dd>
+          {s.items.split(", ").map((item, j) => (
+            <>
+              {j > 0 && ", "}
+              <span class="nobr">{item}</span>
+            </>
+          ))}
+        </dd>
+      </div>
+    ))}
+  </dl>
+</section>
+
+{
+  /* The heatmap is a feature, so it gets the full content width below the
+     About columns instead of a narrow slot inside them. */
+  days.length > 0 && (
+    <section class="github heat-draw rv-line" aria-labelledby="github-title">
+      <h3 id="github-title">On GitHub</h3>
+      <Heatmap
+        client:visible
+        start={days[0]?.date ?? ""}
+        counts={days.map((d) => d.count)}
+        levels={days.map((d) => d.level)}
+        profile={site.github}
+      />
+    </section>
+  )
+}
+
+<style>
+  /* A two-paragraph personal intro (background, then away from the
+     computer) before the factual part. */
+  .intro {
+    display: grid;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-7);
+  }
+
+  .lead {
+    max-width: var(--measure);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  /* The timeline: a node per row, a solid line from the first node to the
+     last (one segment per row, node centre to node centre), and a dotted
+     tail beyond each end: "still going" above the first, "before that"
+     below the last. Where scroll-driven animation runs (motion.css), ink
+     fills each segment quietly as you read; elsewhere the line is full. */
+  .tl {
+    /* The node's centre, from its row's top. */
+    --node-y: calc(var(--sp-5) + 0.875rem - 0.5px);
+    position: relative;
+    margin: 0;
+    padding: 0 0 0 var(--sp-5);
+    list-style: none;
+  }
+
+  /* The tails: three dots 10px apart, fading away from the line. */
+  .tl::before,
+  .tail {
+    content: "";
+    position: absolute;
+    width: 3px;
+    height: 30px;
+    background: radial-gradient(circle, var(--soft) 1.1px, transparent 1.6px)
+      center 0 / 3px 10px repeat-y;
+  }
+
+  .tl::before {
+    top: calc(var(--node-y) - 8px - 30px);
+    left: -1px;
+    mask-image: linear-gradient(to top, #000 20%, transparent);
+  }
+
+  .tail {
+    top: calc(var(--node-y) + 8px);
+    left: calc(-1 * var(--sp-5) - 1px);
+    mask-image: linear-gradient(to bottom, #000 20%, transparent);
+  }
+
+  /* A row's segment, from its node to the next row's: the track and its
+     ink fill (::after). */
+  .seg {
+    position: absolute;
+    top: var(--node-y);
+    left: calc(-1 * var(--sp-5));
+    width: 1px;
+    height: 100%;
+    background: var(--line);
+  }
+
+  .seg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    transform-origin: top;
+  }
+
+  .tl li {
+    position: relative;
+  }
+
+  /* 7px node on the track, level with the row's first line. */
+  .node {
+    position: absolute;
+    left: calc(-1 * var(--sp-5) - 3px);
+    top: calc(var(--sp-5) + 0.875rem - 4px);
+    width: 7px;
+    height: 7px;
+    /* Soft ring (7:1 on the page) so unfilled nodes read clearly. */
+    border: var(--rule) solid var(--soft);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .node::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    background: var(--ink);
+  }
+
+  .tl li {
+    display: grid;
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: var(--sp-5);
+    padding-block: var(--sp-5);
+  }
+
+  /* One-line dates wherever the column has room. */
+  @media (min-width: 64rem) {
+    time,
+    .when {
+      white-space: nowrap;
+    }
+  }
+
+  time,
+  .when {
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Role, "at", logo chip and employer on one centered line, wrapping as
+     whole words on narrow screens. */
+  .tl h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.3em;
+    /* A whole-pixel line box keeps the logo chips on whole pixels. */
+    font: var(--fw-bold) var(--fs-body) / 1.75rem var(--ff-text);
+  }
+
+  .tl p {
+    color: var(--soft);
+  }
+
+  /* Logo chips: small, in the brand's own colors, beside the name. */
+  /* Each employer is one mention chip: a hairline pill holding its logo
+     and name, centred in the heading's 28px line, so it never grows it. */
+  .org {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px 2px 3px;
+    border: var(--rule) solid var(--chip-line);
+    border-radius: var(--r-pill);
+    /* 22px of text + 2px padding and a 1px border each side = the 28px
+       line exactly. */
+    line-height: 22px;
+    white-space: nowrap;
+    /* A link to the employer's site, styled as the chip: the text keeps
+       its color, no underline or marker; the border darkens on hover and
+       the focus ring follows the pill. */
+    background: none;
+    color: inherit;
+    transition: border-color var(--dur-ui) var(--ease-out);
+  }
+
+  .org:hover {
+    border-color: color-mix(in oklab, var(--ink) 45%, var(--bg));
+  }
+
+  /* Closer than the site's 4px, so the ring clears the word before it. */
+  .org:focus-visible {
+    outline-offset: 2px;
+    border-radius: var(--r-pill);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
+
+  /* Explicit heights: the base img rule (height: auto) would otherwise
+     override the height attribute. */
+  .chip :global(img) {
+    display: block;
+    width: auto;
+    height: 18px;
+  }
+
+  /* Whole-pixel size (the mark is 133 x 77) so the white strokes stay as
+     crisp as they can on the dark chip: a 28 x 16 image in a 36 x 20 chip. */
+  .chip-gaijin :global(img) {
+    width: 28px;
+    height: 16px;
+  }
+
+  /* Gaijin's mark is white, so it always sits on a small dark chip. */
+  .chip-gaijin {
+    padding: 2px 4px;
+    border-radius: 5px;
+    background: #18181b;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 12%, transparent);
+  }
+
+  .skills-row {
+    margin-top: var(--sp-9);
+  }
+
+  .skills-row > h3 {
+    margin-bottom: var(--sp-5);
+    font-size: var(--fs-d-md);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .github {
+    margin-top: var(--sp-8);
+    padding-top: var(--sp-5);
+  }
+
+  .github > h3 {
+    margin-bottom: var(--sp-3);
+    font-size: var(--fs-d-md);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .skills {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--sp-6) var(--sp-7);
+    margin: 0;
+  }
+
+  dt {
+    margin-bottom: var(--sp-1);
+    font: var(--fw-bold) var(--fs-d-xs) / var(--lh-tight) var(--ff-display);
+  }
+
+  /* Like paragraphs (base.css): no lone word on a list's last line. */
+  dd {
+    margin: 0;
+    color: var(--soft);
+    text-wrap: pretty;
+  }
+
+  @media (max-width: 53.75rem) {
+    .skills {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 32.5rem) {
+    .tl li {
+      grid-template-columns: 1fr;
+      gap: var(--sp-1);
+    }
+    .skills {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

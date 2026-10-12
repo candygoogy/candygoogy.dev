@@ -1,0 +1,785 @@
+---
+// The 404: a large "404" that types in like the intro's wordmark, then the
+// page's own words and the way home. Beside them, a three-hop status
+// trace (you, this site, this page), drawn once in hairlines: the first
+// two work, the page isn't found. With JS the last hop is also a button
+// that tries the oldest IT fix (the script below).
+import Base from "../layouts/Base.astro";
+
+// Every state a hop can show, stacked in one cell so the status keeps the
+// width of the longest and nothing moves when it changes.
+const states = {
+  checking: "Checking…",
+  ok: "Working",
+  missing: "Not found",
+  restarting: "Restarting…",
+};
+
+const hops = [
+  { label: "You", state: "ok", icon: "laptop" },
+  { label: "candygoogy.dev", state: "ok", icon: "globe" },
+  { label: "This page", state: "missing", icon: "page" },
+] as const;
+---
+
+<Base
+  title="Page not found – candygoogy"
+  description="There’s nothing at this address."
+  noindex
+>
+  <section class="nf" aria-labelledby="nf-title">
+    <div class="lost">
+      <p class="code" aria-hidden="true">
+        {[..."404"].map((ch, i) => (
+          <span class="l" style={`--i: ${i}`}>
+            <span>{ch}</span>
+          </span>
+        ))}
+      </p>
+      <h1 id="nf-title">
+        <span class="rv-mask" style="--d: 260ms">
+          <span>Page not found</span>
+        </span>
+      </h1>
+      <p class="lede rv" style="--d: 380ms">
+        There’s nothing at this address. It may have moved, or the link has a
+        typo.
+      </p>
+      <p class="back rv" style="--d: 500ms">
+        <a href="/">Back to candygoogy.dev</a>
+      </p>
+    </div>
+
+    <div class="trace" data-trace>
+      <span class="tick tl" aria-hidden="true"></span>
+      <span class="tick tr" aria-hidden="true"></span>
+      <span class="tick bl" aria-hidden="true"></span>
+      <span class="tick br" aria-hidden="true"></span>
+      <p class="panel-head">
+        <span>Route check</span>
+        <span data-time-value></span>
+      </p>
+      <div class="panel-body">
+        <ol class="hops">
+          {hops.map((hop, i) => (
+            <li class="hop" data-hop={i + 1}>
+              <span class="node">
+                <span class="glyph" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="28" height="28">
+                    {hop.icon === "laptop" && (
+                      <>
+                        <rect x="4" y="5" width="16" height="11" rx="1.5" />
+                        <path d="M2 19h20" />
+                      </>
+                    )}
+                    {hop.icon === "globe" && (
+                      <>
+                        <circle cx="12" cy="12" r="8.5" />
+                        <path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.1 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.1-3.6-8.5s1.2-6.2 3.6-8.5Z" />
+                      </>
+                    )}
+                    {hop.icon === "page" && (
+                      <>
+                        <path d="M6.5 3.5h7.5l4 4v13h-11.5Z" />
+                        <path d="M14 3.5v4h4M9.5 13h5M9.5 16.5h3" />
+                      </>
+                    )}
+                  </svg>
+                </span>
+                <span class="num" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span class="label">{hop.label}</span>
+                <span class="visually-hidden">, </span>
+                <span class="status" data-state={hop.state}>
+                  <span class="dot" aria-hidden="true"></span>
+                  <span class="states" aria-hidden="true">
+                    {Object.entries(states).map(([key, text]) => (
+                      <span data-is={key}>{text}</span>
+                    ))}
+                  </span>
+                  <span class="visually-hidden" data-sr>
+                    {states[hop.state]}
+                  </span>
+                </span>
+                {hop.icon === "page" && <span class="path" data-path />}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <p class="egg-line" aria-live="polite" data-egg-line></p>
+      </div>
+      <dl class="meta">
+        <div>
+          <dt>Status</dt>
+          <dd>404</dd>
+        </div>
+        <div hidden data-meta-path>
+          <dt>Path</dt>
+          <dd data-path-value></dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+</Base>
+
+<script>
+  // The trace, once the 404 has typed in: each hop appears "Checking…",
+  // resolves, and the line draws on to the next (~450ms a step). The
+  // header shows the time of this request in UTC (set once, not a clock). Then the
+  // last hop is a button: "turning it off and on again" shows
+  // "Restarting…" for 600ms, then "Not found" again, and says so once in
+  // the live line. Without JS it's the final state; under reduced motion
+  // it's the final state at once, and the egg still works.
+  const STEP = 450;
+  const RESTART = 600;
+  const LABELS: Record<string, string> = {
+    checking: "Checking…",
+    ok: "Working",
+    missing: "Not found",
+    restarting: "Restarting…",
+  };
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  const trace = document.querySelector<HTMLElement>("[data-trace]");
+
+  if (trace) {
+    const hops = [...trace.querySelectorAll<HTMLElement>(".hop")];
+    const line = trace.querySelector<HTMLElement>("[data-egg-line]");
+
+    const setState = (hop: HTMLElement | undefined, state: string) => {
+      const status = hop?.querySelector<HTMLElement>(".status");
+      const sr = hop?.querySelector<HTMLElement>("[data-sr]");
+      if (status) status.dataset.state = state;
+      if (sr) sr.textContent = LABELS[state] ?? "";
+    };
+
+    // The real path and the visitor's time (UTC), in the trace and the
+    // metadata line.
+    const path = decodeURI(location.pathname);
+    // Long paths keep their start and their end, with an ellipsis between:
+    // up to 28 characters in the footer, 20 under the narrow hop.
+    const middle = (max: number) => {
+      if (path.length <= max) return path;
+      const head = Math.ceil((max - 1) / 2);
+      return `${path.slice(0, head)}…${path.slice(-(max - 1 - head))}`;
+    };
+    for (const [selector, max] of [
+      ["[data-path]", 20],
+      ["[data-path-value]", 28],
+    ] as const) {
+      const el = trace.querySelector<HTMLElement>(selector);
+      if (!el) continue;
+      el.textContent = middle(max);
+      el.title = path;
+    }
+    const timeValue = trace.querySelector<HTMLElement>("[data-time-value]");
+    if (timeValue) {
+      timeValue.textContent = `${new Date().toISOString().slice(11, 19)} UTC`;
+    }
+    for (const el of trace.querySelectorAll<HTMLElement>("[data-meta-path]")) {
+      el.hidden = false;
+    }
+
+    // The sequence.
+    const timers: number[] = [];
+    let running = false;
+    const finish = () => {
+      for (const t of timers.splice(0)) window.clearTimeout(t);
+      running = false;
+      hops.forEach((hop, i) => {
+        hop.dataset.shown = "";
+        hop.dataset.drawn = "";
+        setState(hop, i === hops.length - 1 ? "missing" : "ok");
+      });
+      trace.dataset.done = "";
+    };
+
+    const play = () => {
+      running = true;
+      let t = 0;
+      hops.forEach((hop, i) => {
+        const last = i === hops.length - 1;
+        timers.push(
+          window.setTimeout(() => {
+            hop.dataset.shown = "";
+            setState(hop, "checking");
+          }, t),
+        );
+        t += STEP;
+        timers.push(
+          window.setTimeout(() => {
+            setState(hop, last ? "missing" : "ok");
+            if (!last) hop.dataset.drawn = "";
+          }, t),
+        );
+        if (!last) t += STEP;
+      });
+      timers.push(window.setTimeout(finish, t + 50));
+    };
+
+    if (calm.matches) {
+      finish();
+    } else {
+      trace.dataset.run = "";
+      const lastDigit = document.querySelector(".code .l:last-child > span");
+      let started = false;
+      const start = () => {
+        if (started) return;
+        started = true;
+        play();
+      };
+      lastDigit?.addEventListener("animationend", start, { once: true });
+      timers.push(window.setTimeout(start, 1500)); // If it never reports.
+    }
+
+    // The egg: the last hop as a button.
+    const lastHop = hops.at(-1);
+    const node = lastHop?.querySelector<HTMLElement>(".node");
+    if (lastHop && node && line) {
+      const button = document.createElement("button");
+      for (const attr of node.attributes) {
+        button.setAttribute(attr.name, attr.value);
+      }
+      button.type = "button";
+      button.append(...node.childNodes);
+      node.replaceWith(button);
+      // Its name stays what it shows ("This page, Not found"); the question
+      // is its description, from a hidden note (read only through the
+      // button, never as page text).
+      const hint = document.createElement("span");
+      hint.id = "egg-hint";
+      hint.hidden = true;
+      hint.textContent = "Have you tried turning it off and on again?";
+      lastHop.append(hint);
+      button.setAttribute("aria-describedby", hint.id);
+
+      let busy = false;
+      button.addEventListener("click", () => {
+        if (busy) return;
+        if (running || !("done" in trace.dataset)) finish();
+        busy = true;
+        setState(lastHop, "restarting");
+        window.setTimeout(() => {
+          setState(lastHop, "missing");
+          line.textContent = "Tried it. Still a 404.";
+          busy = false;
+        }, RESTART);
+      });
+    }
+  }
+</script>
+
+<style>
+  /* The 404 and its words on the left, the trace on the right (6:5, so
+     three hops have room); stacked on narrow screens. */
+  .nf {
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    gap: var(--gap-hero);
+    align-items: stretch;
+    padding-block: var(--space-hero-top) var(--space-hero-bottom);
+  }
+
+  /* A short page: the body fills the window and the main area takes the
+     slack, so the footer sits at the bottom instead of mid-screen. */
+  :global(body) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  :global(body > main) {
+    flex: 1 0 auto;
+    width: 100%;
+  }
+
+  :global(body > header),
+  :global(body > footer) {
+    width: 100%;
+  }
+
+  /* The decorative "404": the display face at its heaviest. Each digit
+     rises out of its own clip, like the intro's wordmark. */
+  /* Trimmed to the cap height and the baseline (where supported), so the
+     panel beside it starts level with the digits' tops. */
+  .code {
+    margin: 0 0 var(--sp-6);
+    text-box: trim-both cap alphabetic;
+    font: var(--fw-heavy) clamp(6rem, 2.5rem + 15vw, 14rem) / 0.82
+      var(--ff-display);
+    letter-spacing: var(--ls-band);
+    color: var(--ink);
+  }
+
+  .l {
+    display: inline-block;
+    clip-path: inset(-0.05em -0.06em -0.2em -0.06em);
+  }
+
+  .l > span {
+    display: inline-block;
+  }
+
+  /* The intro wordmark's motion (Curtain.astro): 620ms on the site's
+     curve, 30ms apart, fading up over the first 60%. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.js) .l > span {
+      animation: nf-rise 620ms var(--ease-out) calc(60ms + var(--i) * 30ms) both;
+    }
+  }
+
+  @keyframes nf-rise {
+    from {
+      transform: translateY(110%);
+      opacity: 0;
+    }
+    60% {
+      opacity: 1;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  .lede,
+  .back {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-5);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  /* Its box ends on the baseline, so the panel's bottom meets it. */
+  .back {
+    text-box: trim-end cap alphabetic;
+  }
+
+  /* The trace is one instrument panel: a hairline frame with registration
+     ticks at its outer corners; a header (what it is, the request's time
+     in UTC), the trace itself, and a footer (status, path), each part
+     ruled off by a hairline. At desktop it spans the left column's height,
+     from the top of the 404 to the back link. */
+  .trace {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: var(--rule) solid var(--chip-line);
+  }
+
+  .panel-head,
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-6);
+    margin: 0;
+    padding: var(--sp-3) var(--sp-4);
+    font-size: var(--fs-xs);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel-head {
+    justify-content: space-between;
+    border-bottom: var(--rule) solid var(--chip-line);
+    color: var(--soft);
+  }
+
+  /* The trace's scale, set once here and stepped down for narrower
+     panels: the icon box and icon, and the type. */
+  .panel-body {
+    --g: 64px;
+    --ic: 44px;
+    --arrow: 8px;
+    --label: var(--fs-lede);
+    --state: var(--fs-body);
+    container-type: inline-size;
+    display: grid;
+    flex: 1;
+    align-content: center;
+    gap: var(--sp-5);
+    padding: var(--sp-7) var(--sp-4) var(--sp-5);
+  }
+
+  /* A narrower panel (the 1024 column): one step down, so the three hops
+     still fit "candygoogy.dev". */
+  @container (max-width: 460px) {
+    .hops {
+      --g: 52px;
+      --ic: 32px;
+      --arrow: 7px;
+      --label: var(--fs-body);
+      --state: var(--fs-sm);
+    }
+  }
+
+  .meta {
+    border-top: var(--rule) solid var(--chip-line);
+  }
+
+  .tick {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 0 solid var(--soft);
+  }
+
+  .tl {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+
+  .tr {
+    top: -1px;
+    right: -1px;
+    border-width: 1px 1px 0 0;
+  }
+
+  .bl {
+    bottom: -1px;
+    left: -1px;
+    border-width: 0 0 1px 1px;
+  }
+
+  .br {
+    right: -1px;
+    bottom: -1px;
+    border-width: 0 1px 1px 0;
+  }
+
+  .hops {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hop {
+    position: relative;
+  }
+
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: center;
+  }
+
+  button.node {
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  /* The egg's quiet affordance: the page icon gets a hairline frame on
+     hover, enough for the curious to try it. */
+  button.node:hover .glyph {
+    box-shadow: inset 0 0 0 var(--rule) var(--chip-line);
+  }
+
+  button.node:focus-visible {
+    outline: var(--focus-width) solid var(--focus);
+    outline-offset: 4px;
+  }
+
+  .glyph {
+    display: grid;
+    place-items: center;
+    width: var(--g);
+    height: var(--g);
+    border-radius: 12px;
+    color: var(--ink);
+    transition: box-shadow var(--dur-ui) var(--ease-out);
+  }
+
+  /* The stroke stays 1.5px at any icon size. */
+  .glyph svg {
+    width: var(--ic);
+    height: var(--ic);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .glyph svg * {
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* The link to the next hop: from beside this icon to beside the next
+     one, at the icons' centre line. */
+  .hop:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: calc(var(--g) / 2);
+    left: calc(50% + var(--g) / 2 + 6px);
+    width: calc(100% - var(--g) - 12px);
+    height: var(--rule);
+    background: var(--soft);
+    transform-origin: left center;
+  }
+
+  /* The arrowhead at the receiving end: a chevron, scaled with the icons,
+     its tip on the line's end. */
+  .hop:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: calc(var(--g) / 2 - var(--arrow) / 2);
+    left: calc(150% - var(--g) / 2 - 6px - var(--arrow) * 1.2);
+    width: var(--arrow);
+    height: var(--arrow);
+    border: solid var(--soft);
+    border-width: var(--rule) var(--rule) 0 0;
+    transform: rotate(45deg);
+  }
+
+  .num {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--soft);
+  }
+
+  .label {
+    margin-top: var(--sp-1);
+    font: var(--fw-bold) var(--label) / 1.25 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+    color: var(--ink);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-top: var(--sp-1);
+    font-size: var(--state);
+    color: var(--soft);
+  }
+
+  /* Square-ish dots: green working, grey while checking, a hollow red
+     ring when not found. */
+  .dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--st-offline);
+  }
+
+  .status[data-state="ok"] .dot {
+    background: var(--st-online);
+  }
+
+  .status[data-state="missing"] .dot {
+    background: none;
+    box-shadow: inset 0 0 0 1.5px var(--st-missing);
+  }
+
+  .states {
+    display: inline-grid;
+  }
+
+  .states > span {
+    grid-area: 1 / 1;
+    visibility: hidden;
+    white-space: nowrap;
+  }
+
+  .status[data-state="checking"] [data-is="checking"],
+  .status[data-state="ok"] [data-is="ok"],
+  .status[data-state="missing"] [data-is="missing"],
+  .status[data-state="restarting"] [data-is="restarting"] {
+    visibility: visible;
+  }
+
+  /* The path under "This page": its line is kept even when empty (no
+     JS), so nothing moves when it fills in. */
+  .path {
+    display: block;
+    max-width: 100%;
+    min-height: 1.4em;
+    margin-top: var(--sp-1);
+    overflow: hidden;
+    font-size: var(--fs-xs);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    color: var(--soft);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The sequence (JS, motion allowed): hops wait unseen and links
+     undrawn until the script reaches them, and all show on their own at
+     4s if it never does. */
+  @media (prefers-reduced-motion: no-preference) {
+    .hop {
+      transition:
+        opacity 450ms var(--ease-out),
+        transform 450ms var(--ease-out);
+    }
+
+    .hop::after {
+      transition: transform 450ms var(--ease-out);
+    }
+
+    .hop::before {
+      transition: opacity 150ms var(--ease-out) 350ms;
+    }
+
+    :global(.js) .trace:not([data-done]) .hop:not([data-shown]) {
+      opacity: 0;
+      transform: translateY(6px);
+      animation: trace-shown 1ms linear 4000ms forwards;
+    }
+
+    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
+      transform: scaleX(0);
+      animation: trace-drawn 1ms linear 4000ms forwards;
+    }
+
+    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::before {
+      opacity: 0;
+      animation: trace-shown 1ms linear 4000ms forwards;
+    }
+  }
+
+  @keyframes trace-shown {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes trace-drawn {
+    to {
+      transform: none;
+    }
+  }
+
+  /* The footer's pairs: real values only (the status; with JS the path),
+     labels soft, values ink. */
+  .meta > div {
+    display: flex;
+    gap: var(--sp-2);
+    min-width: 0;
+  }
+
+  .meta > div[hidden] {
+    display: none;
+  }
+
+  .meta dt {
+    color: var(--soft);
+  }
+
+  .meta dd {
+    min-width: 0;
+    max-width: 28ch;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The reply's line, its space kept so nothing moves when it appears. */
+  .egg-line {
+    min-height: 1.6em;
+    margin: 0;
+    font-size: var(--fs-body);
+    color: var(--soft);
+    text-align: center;
+  }
+
+  /* The narrower desktop column (around 1024): a little less air in the
+     panel, so it never outgrows the text beside it. */
+  @media (max-width: 75rem) {
+    .panel-body {
+      padding-block: var(--sp-5) var(--sp-4);
+    }
+  }
+
+  @media (max-width: 53.75rem) {
+    .nf {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    .panel-body {
+      padding-top: var(--sp-6);
+    }
+  }
+
+  /* Phones: the hops stack, icon on the left, the link running down. */
+  @media (max-width: 32.5rem) {
+    .hops {
+      grid-template-columns: 1fr;
+      gap: var(--sp-5);
+    }
+
+    .node {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      column-gap: var(--sp-3);
+      align-items: center;
+      justify-items: start;
+      text-align: left;
+    }
+
+    .glyph {
+      grid-row: 1 / span 4;
+      align-self: start;
+    }
+
+    .num {
+      margin-top: 0;
+    }
+
+    .hops {
+      --g: 44px;
+      --ic: 28px;
+      --arrow: 6px;
+      --label: var(--fs-body);
+      --state: var(--fs-sm);
+    }
+
+    .hop:not(:last-child)::after {
+      top: calc(var(--g) + 6px);
+      left: calc(var(--g) / 2);
+      width: var(--rule);
+      height: calc(100% - var(--g) - 12px + var(--sp-5));
+      transform-origin: center top;
+    }
+
+    .hop:not(:last-child)::before {
+      top: calc(100% + var(--sp-5) - 6px - var(--arrow) * 1.2);
+      left: calc(var(--g) / 2 - var(--arrow) / 2 + 0.5px);
+      transform: rotate(135deg);
+    }
+
+    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
+      transform: scaleY(0);
+    }
+  }
+
+  @media (max-width: 22.5rem) {
+    .meta {
+      flex-direction: column;
+    }
+  }
+</style>

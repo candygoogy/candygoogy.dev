@@ -1,0 +1,370 @@
+---
+// Page shell: fonts, tokens, header and footer, SEO tags, and the theme
+// applied before first paint.
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { Font } from "astro:assets";
+import Curtain from "../components/Curtain.astro";
+import Footer from "../components/Footer.astro";
+import Header from "../components/Header.astro";
+import { hero, site } from "../data/site";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import "../styles/motion.css";
+import "../styles/print.css";
+
+interface Props {
+  title: string;
+  description: string;
+  // Only the 404 page opts out of search engines.
+  noindex?: boolean;
+  // Only the home page has the intro curtain.
+  intro?: boolean;
+  // The social preview card and its description (default: the site's).
+  ogImage?: string;
+  ogAlt?: string;
+  // Structured data (schema.org JSON-LD) for this page.
+  schema?: Record<string, unknown>;
+}
+
+const {
+  title,
+  description,
+  noindex = false,
+  intro = false,
+  ogImage: ogPath = "/og.png",
+  ogAlt = `${site.name}: ${hero.headline}`,
+  schema,
+} = Astro.props;
+// Pages are built as files (index.html, fettle.html), but served and
+// listed in the sitemap without the extension: / and /fettle.
+const pagePath = Astro.url.pathname
+  .replace(/\.html$/, "")
+  .replace(/\/index$/, "/");
+const canonical = new URL(pagePath, Astro.site);
+const ogImage = new URL(ogPath, Astro.site);
+
+// The icons are made from the GitHub avatar at build time
+// (scripts/icons.mjs). Browsers keep favicons for a long time, so the URL
+// carries a hash of the file: a new avatar gets a new URL.
+const icon = (file: string) => {
+  const path = `public/${file}`;
+  if (!existsSync(path)) return `/${file}`;
+  const hash = createHash("sha256").update(readFileSync(path)).digest("hex");
+  return `/${file}?v=${hash.slice(0, 10)}`;
+};
+---
+
+<!doctype html>
+<Fragment set:html="<!-- Hi. Curious how this works? The source is at github.com/candygoogy/candygoogy.dev -->" />
+<html lang="en" data-intro-page={intro ? "" : undefined}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? (
+      <meta name="robots" content="noindex" />
+    ) : (
+      <link rel="canonical" href={canonical} />
+    )}
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#f4f4f5"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#121214"
+      media="(prefers-color-scheme: dark)"
+    />
+    <link rel="icon" href={icon("favicon.ico")} sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href={icon("apple-touch-icon.png")} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    {schema && (
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(schema).replace(/</g, "\\u003c")}
+      />
+    )}
+    <script is:inline>
+      // Before first paint: apply a saved theme so there's no flash. No saved
+      // choice means Auto (follow the OS). Also marks JS as available, which
+      // is what allows motion to start from a hidden state.
+      (() => {
+        const root = document.documentElement;
+        if ("IntersectionObserver" in window) root.classList.add("js");
+        try {
+          let theme = localStorage.getItem("theme");
+          // The OLED theme was retired: returning visitors move to Dark.
+          if (theme === "oled") {
+            theme = "dark";
+            localStorage.setItem("theme", theme);
+          }
+          if (theme === "light" || theme === "dark") {
+            root.dataset.theme = theme;
+            document
+              .querySelector('meta[name="color-scheme"]')
+              ?.setAttribute("content", theme === "light" ? "light" : "dark");
+            // The browser bar follows the chosen theme, not the OS: both
+            // theme-color metas take its page color (the switch restores
+            // them on Auto). Keep in step with --bg in tokens.css.
+            const bg = theme === "light" ? "#f4f4f5" : "#121214";
+            for (const m of document.querySelectorAll(
+              'meta[name="theme-color"]',
+            ))
+              m.setAttribute("content", bg);
+          }
+        } catch {
+          // Storage blocked: stay on Auto.
+        }
+        // The intro curtain: home page only, once per session, never under
+        // reduced motion or without the motion system. intro-hold keeps the
+        // hero's reveal waiting until the curtain lifts.
+        try {
+          if (
+            root.hasAttribute("data-intro-page") &&
+            root.classList.contains("js") &&
+            !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+            !sessionStorage.getItem("intro-seen")
+          ) {
+            sessionStorage.setItem("intro-seen", "1");
+            root.classList.add("intro-on", "intro-hold");
+          }
+        } catch {
+          // Storage blocked: no intro.
+        }
+      })();
+    </script>
+    <script is:inline>
+      // Navigations between pages (motion.css, "Cross-document View
+      // Transitions"). Each transition is typed by its direction, forward
+      // or back. A shared element (the project's name, its screenshot) only
+      // morphs when at least 40% of it is on screen on both pages. One
+      // that's on screen on only one page still gets its own layer, and
+      // leaves or arrives with its page (so the name is always drawn above
+      // a screenshot passing by). Arriving with a transition, or
+      // coming back, all that's in view is shown settled instead of playing
+      // its reveal: the page's slide is its entrance, and the morphs land
+      // on finished elements. A page restored from the back/forward cache
+      // arrives as it was left, with no transition: Chromium paints the
+      // restored page for a frame before the transition's first frame, so
+      // one would read as a cut back to the old page and a fade. Registered
+      // here, before first paint.
+      (() => {
+        const NAMED = ".vt-project-title, .vt-project-shot";
+        const REVEALS =
+          ".rv, .rv-mask, .rv-line, .rv-band, .letters, .hero-title, .line-title, .heat-draw";
+        const inView = (el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+        };
+        // Enough of it on screen to follow from one page to the other.
+        const shown = (el) => {
+          const r = el.getBoundingClientRect();
+          const seen = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+          return r.width > 0 && seen >= 0.4 * Math.min(r.height, innerHeight);
+        };
+        let restored = false;
+        addEventListener("pageshow", (e) => {
+          restored = e.persisted;
+        });
+        const direction = (a) =>
+          a?.navigationType === "traverse" &&
+          a.from &&
+          a.entry.index < a.from.index
+            ? "back"
+            : "forward";
+        // Names are recomputed on every navigation (a page restored from
+        // the back/forward cache keeps its inline styles).
+        const name = (el, keep) => {
+          el.style.viewTransitionName = keep(el) ? "" : "none";
+        };
+        // Revealed at once: the element and the reveals around it, with
+        // their entrance transitions and animations run to the end.
+        const settle = (els) => {
+          for (const el of els) {
+            const imgs = [...el.querySelectorAll("img")].filter((img) =>
+              img.checkVisibility(),
+            );
+            for (const img of imgs) {
+              img.loading = "eager";
+              img.fetchPriority = "high";
+              // Painted in the transition's first frame, not the next.
+              img.decoding = "sync";
+            }
+            // A screenshot that hasn't loaded yet would arrive as an empty
+            // frame and pop in: it waits unseen and fades in once decoded
+            // (at most 2.5s).
+            if (
+              el.hasAttribute("data-decode") &&
+              imgs.some((img) => !img.complete)
+            ) {
+              el.style.opacity = "0";
+              Promise.race([
+                Promise.allSettled(imgs.map((img) => img.decode())),
+                new Promise((resolve) => setTimeout(resolve, 2500)),
+              ]).then(() => {
+                el.style.transition =
+                  "opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)";
+                el.style.opacity = "";
+                el.addEventListener(
+                  "transitionend",
+                  () => el.style.removeProperty("transition"),
+                  { once: true },
+                );
+              });
+            }
+            for (let x = el; x; x = x.parentElement?.closest(REVEALS)) {
+              if (x.matches(REVEALS)) x.classList.add("is-in");
+            }
+          }
+          for (const el of els) {
+            const root = el.closest(".rv-band") ?? el;
+            for (const a of root.getAnimations({ subtree: true })) {
+              if (a.effect?.getComputedTiming().endTime !== Infinity)
+                a.finish();
+            }
+          }
+        };
+        addEventListener("pageswap", (e) => {
+          if (!e.viewTransition) return;
+          e.viewTransition.types.add(direction(e.activation));
+          for (const el of document.querySelectorAll(NAMED)) name(el, shown);
+        });
+        addEventListener("pagereveal", (e) => {
+          if (restored) {
+            restored = false;
+            e.viewTransition?.skipTransition();
+            return;
+          }
+          const nav = window.navigation?.activation;
+          const landing = [];
+          if (e.viewTransition) {
+            e.viewTransition.types.add(direction(nav));
+            for (const el of document.querySelectorAll(NAMED)) {
+              name(el, shown);
+              if (el.style.viewTransitionName !== "none") landing.push(el);
+            }
+          }
+          if (e.viewTransition || nav?.navigationType === "traverse") {
+            for (const el of document.querySelectorAll(REVEALS)) {
+              if (inView(el)) landing.push(el);
+            }
+          }
+          if (landing.length) settle(landing);
+        });
+      })();
+    </script>
+    <link rel="expect" href="#main" blocking="render" />
+    <Font cssVariable="--font-display" preload />
+    <Font cssVariable="--font-text" preload />
+  </head>
+  <body>
+    {intro && <Curtain />}
+    <a class="skip" href="#main">
+      Skip to content
+    </a>
+    <Header />
+    <main id="main" class="wrap">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import "../scripts/selection";
+      import "../scripts/marker";
+      // For the curious, once per page.
+      console.info(
+        "Hi. Curious how this works? The source is at github.com/candygoogy/candygoogy.dev",
+      );
+    </script>
+    <script>
+      // Marks animated elements once they scroll into view (or at once, if
+      // they're already in view); the CSS in motion.css does the rest.
+      // While the intro curtain is up (html.intro-hold), arrivals wait and
+      // play together as it lifts.
+      const root = document.documentElement;
+      const waiting = new Set<Element>();
+      // Elements marked data-decode (the band's screenshot) hold their
+      // reveal until their visible images have decoded, at most 300ms, so
+      // they never reveal a blank or half-painted image.
+      const show = (el: Element) => {
+        if (!el.hasAttribute("data-decode")) return el.classList.add("is-in");
+        const imgs = [...el.querySelectorAll("img")].filter((img) =>
+          img.checkVisibility(),
+        );
+        for (const img of imgs) img.loading = "eager";
+        Promise.race([
+          Promise.allSettled(imgs.map((img) => img.decode())),
+          new Promise((resolve) => setTimeout(resolve, 300)),
+        ]).then(() => el.classList.add("is-in"));
+      };
+      const arrive: IntersectionObserverCallback = (entries, observer) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          observer.unobserve(entry.target);
+          // Arriving while the intro is still on (the band's children, which
+          // only come into view as the band unclips after the release, on
+          // large windows) counts as released by it.
+          if (root.classList.contains("intro-on"))
+            entry.target.classList.add("from-intro");
+          if (root.classList.contains("intro-hold")) waiting.add(entry.target);
+          else show(entry.target);
+        }
+      };
+      // Things reveal a little after they enter, 10% up from the bottom.
+      const io = new IntersectionObserver(arrive, {
+        rootMargin: "0px 0px -10% 0px",
+      });
+      // The footer is the page's last thing: at full scroll on a tall
+      // window it can end up inside that bottom 10%, where it would never
+      // reveal. It's watched with no margin.
+      const end = new IntersectionObserver(arrive);
+      // Everything the intro releases is marked .from-intro: the band's
+      // wordmark skips its own letter reveal and rises with the band, and
+      // the band and its screenshot settle a little quicker (motion.css).
+      addEventListener("intro:release", () => {
+        for (const el of waiting) {
+          el.classList.add("from-intro");
+          show(el);
+        }
+        waiting.clear();
+      });
+      // Line-masked statements below the hero: number their lines (again
+      // once the fonts are in) so the lines rise in turn.
+      const numberLines = () => {
+        for (const title of document.querySelectorAll(".line-title")) {
+          let line = -1;
+          let top: number | null = null;
+          for (const w of title.querySelectorAll<HTMLElement>(".w")) {
+            if (w.offsetTop !== top) {
+              top = w.offsetTop;
+              line++;
+            }
+            w.style.setProperty("--line", String(line));
+          }
+        }
+      };
+      numberLines();
+      document.fonts?.ready.then(numberLines);
+
+      for (const el of document.querySelectorAll(
+        ".rv, .rv-mask, .rv-line, .rv-band, .letters, .hero-title, .line-title, .heat-draw",
+      )) {
+        (el.closest("footer") ? end : io).observe(el);
+      }
+    </script>
+  </body>
+</html>

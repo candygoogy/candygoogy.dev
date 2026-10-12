@@ -1,0 +1,123 @@
+---
+import type { CollectionEntry } from "astro:content";
+import Keep from "./Keep.astro";
+
+interface Props {
+  data: CollectionEntry<"projects">["data"];
+  version: string | undefined;
+}
+
+const { data, version } = Astro.props;
+const status = {
+  live: "Live",
+  "in-progress": "In progress",
+  archived: "Archived",
+}[data.status];
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+---
+
+<dl class="facts rv-line" style="--line-color: var(--band-line)">
+  <dt class="rv" style="--i: 0">
+    Status
+  </dt>
+  <dd class="rv" style="--i: 0">
+    <span class:list={[{ live: data.status === "live" }]}>{status}</span>
+    {version && `, version ${version}`}
+  </dd>
+  <dt class="rv" style="--i: 1">
+    Built with
+  </dt>
+  <dd class="rv" style="--i: 1">
+    {data.stack.join(", ")}
+  </dd>
+  {data.runsOn && (
+    <>
+      <dt class="rv" style="--i: 2">
+        Runs on
+      </dt>
+      <dd class="rv" style="--i: 2">
+        <Keep text={data.runsOn} />
+      </dd>
+    </>
+  )}
+  {data.license && (
+    <>
+      <dt class="rv" style="--i: 3">
+        License
+      </dt>
+      <dd class="rv" style="--i: 3">
+        {data.license}
+      </dd>
+    </>
+  )}
+  <dt class="rv" style="--i: 4">
+    Links
+  </dt>
+  <dd class="links rv" style="--i: 4">
+    {data.links.live && <a href={data.links.live}>{host(data.links.live)}</a>}
+    {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
+  </dd>
+</dl>
+
+<style>
+  .facts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--sp-3) var(--sp-5);
+    align-content: start;
+    margin: 0;
+    padding-top: var(--sp-4);
+  }
+
+  dt {
+    font-size: var(--fs-meta);
+    color: var(--band-soft);
+  }
+
+  dd {
+    margin: 0;
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The dot and its word stay together. */
+  .live {
+    white-space: nowrap;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-5);
+  }
+
+  .live {
+    position: relative;
+  }
+
+  /* A ring over the dot; motion.css pings it once as the facts arrive. */
+  .live::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    background: var(--live);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .live::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: var(--sp-2);
+    border-radius: 50%;
+    background: var(--live);
+    vertical-align: 0.12em;
+  }
+</style>

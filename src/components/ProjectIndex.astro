@@ -1,0 +1,115 @@
+---
+// The index of everything built: a heading and one row per project (name,
+// line, year). Used in the home hero and on the 404 page.
+import type { CollectionEntry } from "astro:content";
+import { hero } from "../data/site";
+import Keep from "./Keep.astro";
+
+interface Props {
+  projects: CollectionEntry<"projects">[];
+  // The heading's id (unique per page).
+  headingId: string;
+  // "" on the home page, where the rows jump to its sections; "/" elsewhere.
+  prefix: string;
+  // Reveal delays for the heading and the first row (the rows stagger).
+  delay?: { title: number; rows: number };
+}
+
+const {
+  projects,
+  headingId,
+  prefix,
+  delay = { title: 520, rows: 600 },
+} = Astro.props;
+
+// Products open their page; side projects jump to their section; client
+// sites to their own row.
+const href = (p: CollectionEntry<"projects">) =>
+  p.data.kind === "product"
+    ? `/${p.id}`
+    : p.data.kind === "side"
+      ? `${prefix}#side-projects`
+      : `${prefix}#${p.id}`;
+---
+
+<nav class="index" aria-labelledby={headingId}>
+  <h2 id={headingId} class="rv rv-line" style={`--d: ${delay.title}ms`}>
+    {hero.indexTitle}
+  </h2>
+  <ol>
+    {projects.map((p, i) => (
+      <li
+        class="rv rv-line at-bottom"
+        style={`--d: ${delay.rows}ms; --i: ${i}; --line-color: var(--line)`}
+      >
+        <a class="shift" href={href(p)}>
+          <span
+            class:list={[
+              "name",
+              { "vt-project-title": p.data.kind === "product" },
+            ]}
+          >
+            {p.data.name}
+          </span>
+          <span class="blurb">
+            <Keep text={p.data.blurb} />
+          </span>
+          <span class="year">{p.data.date.getUTCFullYear()}</span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .index h2 {
+    padding-top: var(--sp-3);
+    margin-bottom: var(--sp-1);
+    font: var(--fw-medium) var(--fs-sm) / 1.4 var(--ff-text);
+    color: var(--soft);
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .index a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--sp-3);
+    padding-block: var(--sp-5);
+    background: none;
+    color: var(--ink);
+  }
+
+  .name {
+    font: var(--fw-bold) var(--fs-d-lg) / var(--lh-tight) var(--ff-display);
+    letter-spacing: var(--ls-d-md);
+    transition: color var(--dur-ui) var(--ease-out);
+  }
+
+  /* Hover feedback that doesn't depend on motion. */
+  .index a:hover .name {
+    color: var(--acc);
+  }
+
+  .blurb {
+    grid-column: 1;
+    margin-top: var(--sp-1);
+    font-size: var(--fs-meta);
+    color: var(--soft);
+    text-wrap: balance;
+  }
+
+  .year {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    padding-top: 0.35em;
+    font-size: var(--fs-meta);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

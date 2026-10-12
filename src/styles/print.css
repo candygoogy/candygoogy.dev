@@ -1,0 +1,418 @@
+/*
+ * Print: every page comes out as a receipt, like Fettle's. One narrow
+ * column (80mm) centred on the page, black on white, no backgrounds,
+ * dashed hairlines between sections, the wordmark on top and a "Printed
+ * from" line at the bottom. Only what reads on paper stays: no nav, theme
+ * switch, curtain, previews, heatmap grid, tooltip or Copy button. External
+ * links print their address after the text. Overrides win with !important
+ * because the components' own (scoped) styles are more specific.
+ */
+
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  /* Paper colours and sizes, in the tokens everything already uses. */
+  :root,
+  :root[data-theme] {
+    color-scheme: light;
+    --bg: #fff !important;
+    --ink: #000 !important;
+    --soft: #444 !important;
+    --acc: #000 !important;
+    --line: #000 !important;
+    --chip-line: #000 !important;
+    --band: #fff !important;
+    --band-edge: #fff !important;
+    --band-ink: #000 !important;
+    --band-soft: #444 !important;
+    --band-line: #000 !important;
+    --band-acc: #000 !important;
+    --fs-xs: 7pt !important;
+    --fs-sm: 7.5pt !important;
+    --fs-meta: 8pt !important;
+    --fs-body: 9pt !important;
+    --fs-lede: 9.5pt !important;
+    --fs-d-xs: 9pt !important;
+    --fs-d-sm: 10pt !important;
+    --fs-d-md: 10.5pt !important;
+    --fs-d-lg: 11pt !important;
+    --fs-d-section: 13pt !important;
+    --fs-d-hero: 16pt !important;
+    --fs-d-band: 18pt !important;
+    --sp-3: 1.5mm !important;
+    --sp-4: 2mm !important;
+    --sp-5: 3mm !important;
+    --sp-6: 4mm !important;
+    --sp-7: 5mm !important;
+    --sp-8: 6mm !important;
+    --sp-9: 6mm !important;
+    --sp-10: 6mm !important;
+    --gutter: 0mm !important;
+    --gap-hero: 3mm !important;
+    --space-section: 0mm !important;
+    --space-hero-top: 0mm !important;
+    --space-hero-bottom: 0mm !important;
+    --space-band: 0mm !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  body {
+    max-width: 80mm;
+    margin: 0 auto !important;
+    line-height: 1.4;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Everything that waits to reveal on screen is simply there. */
+  .rv,
+  .rv-mask > span,
+  .w > span,
+  .letters .l > span,
+  .stage,
+  .tilt {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .rv-line::before {
+    transform: none !important;
+  }
+
+  .band,
+  .tilt,
+  .letters .l,
+  .w {
+    clip-path: none !important;
+  }
+
+  /* One column: every grid and flex row stacks. */
+  main *,
+  footer * {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-column: 1 / -1 !important;
+    max-width: 100% !important;
+  }
+
+  /* Except the label-and-value rows, which read best side by side, the
+     way a receipt lists its lines: the facts, the /uses spec sheets. */
+  .facts {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 1mm 3mm !important;
+  }
+
+  .spec .row {
+    grid-template-columns: auto minmax(2mm, 1fr) auto !important;
+    padding-block: 1mm !important;
+  }
+
+  #contact .row {
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    padding: 1mm 0 !important;
+  }
+
+  .facts > *,
+  .spec .row > *,
+  #contact .row > * {
+    grid-column: auto !important;
+  }
+
+  /* A row's address goes under its name. */
+  #contact .row::after {
+    grid-column: 2 / -1 !important;
+  }
+
+  /* The contact card is part of the receipt, not a box on it. */
+  #contact .card {
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  /* The index: the name, its line, then the year, in reading order. */
+  .index .shift {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 2mm;
+    padding-block: 1.5mm !important;
+  }
+
+  .index .shift .blurb {
+    flex-basis: 100%;
+    order: 1;
+  }
+
+  /* The year at the end of the name's line, like a receipt's amount. */
+  .index .shift .name {
+    flex: 1;
+  }
+
+  .index .shift .year {
+    order: 0;
+    align-self: baseline !important;
+    padding: 0 !important;
+  }
+
+  .stage {
+    margin: 3mm 0 !important;
+  }
+
+  /* After the screenshot, the story at the section gap. */
+  .zig {
+    margin-top: 4mm !important;
+    gap: 4mm !important;
+  }
+
+  /* The Live dot is a colour; on paper the word says it, inline and in
+     order, aligned with the other values. */
+  .live::before,
+  .live::after {
+    display: none !important;
+  }
+
+  .live {
+    position: static !important;
+  }
+
+  /* Chips and pills print as their words: no outline, no logo tile (a
+     white mark on a dark tile would vanish), no icon. */
+  .mention,
+  .org,
+  .mail .pill,
+  .mail .seg {
+    display: inline !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .mention img,
+  .org .chip,
+  .mail .env,
+  .mail .seg.copy {
+    display: none !important;
+  }
+
+  .mention,
+  .org {
+    font: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* The email: the address alone. */
+  .mail .address {
+    font-size: var(--fs-body) !important;
+    text-decoration: none !important;
+  }
+
+  /* Live states and screen-only hints mean nothing on paper: the avatar,
+     the Discord status, the rows' "Open"/"Message". The card's name goes
+     too: the wordmark heads the page already. */
+  #contact .who,
+  #contact .act {
+    display: none !important;
+  }
+
+  /* The timeline as receipt lines: no track, nodes or tails; the date on
+     its own line in soft, then the role, then the detail, tight. */
+  .tl {
+    padding: 0 !important;
+  }
+
+  .tl::before,
+  .tl .tail,
+  .tl .seg,
+  .tl .node {
+    display: none !important;
+  }
+
+  .tl li {
+    display: block !important;
+    padding-block: 1.5mm !important;
+  }
+
+  .tl h3 {
+    display: block !important;
+    line-height: 1.35 !important;
+  }
+
+  .tl :is(time, .when) {
+    display: block;
+    color: #444;
+  }
+
+  /* The contact question: a section title on paper. */
+  .statement {
+    font-size: var(--fs-d-section) !important;
+  }
+
+  /* The side project and website names: a title, not a poster. */
+  h3.name {
+    font-size: var(--fs-d-lg) !important;
+  }
+
+  main,
+  .wrap {
+    max-width: none !important;
+    padding-inline: 0 !important;
+  }
+
+  main * {
+    background-color: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  li,
+  dl > div,
+  figure,
+  img,
+  svg,
+  tr,
+  .row,
+  .card,
+  .mail {
+    break-inside: avoid;
+  }
+
+  /* The header is the receipt's head: the wordmark alone. (Only the
+     header: /fettle's own .top block is a section like the rest.) */
+  header.top {
+    display: block !important;
+    padding: 0 0 3mm !important;
+    border-bottom: 1px dashed #000;
+    margin-bottom: 4mm;
+  }
+
+  header.top nav,
+  header.top .tools,
+  .skip,
+  .curtain,
+  .previews,
+  .heatmap .grid-wrap,
+  .heatmap .tip,
+  .heatmap .legend,
+  .copy,
+  [data-copy-status] {
+    display: none !important;
+  }
+
+  /* Shown even mid-intro (the curtain holds it hidden on screen). */
+  .brand {
+    font-size: 12pt !important;
+    font-weight: 800;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  /* Between sections, a dashed hairline, like a receipt's. */
+  main > * + * {
+    margin-top: 4mm !important;
+    padding-top: 4mm !important;
+    border-top: 1px dashed #000 !important;
+  }
+
+  /* The band prints as plain text on the paper, no dark panel. */
+  .band {
+    padding-inline: 0 !important;
+    padding-bottom: 0 !important;
+    color: #000 !important;
+  }
+
+  /* Pictures at the column's width, in their light version. */
+  img,
+  svg,
+  picture {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .shot-dark {
+    display: none !important;
+  }
+
+  .shot-light {
+    display: block !important;
+  }
+
+  /* Links: underlined text; outside links add their address. */
+  a {
+    color: #000 !important;
+    background: none !important;
+    text-decoration: underline !important;
+    text-decoration-thickness: 0.5pt !important;
+    text-underline-offset: 1.5pt;
+  }
+
+  /* Whole-row links and the wordmark stay plain. */
+  :is(.brand, .shift, .row, .mention, .org) {
+    text-decoration: none !important;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")" !important;
+    position: static !important;
+    display: inline !important;
+    font-size: 7pt;
+    font-weight: 400;
+    color: #444;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  /* The footer: the notes, then the "Printed from" line; its links go. */
+  footer .inner {
+    display: block !important;
+    padding: 4mm 0 0 !important;
+    border-top: 1px dashed #000;
+    font-size: 7.5pt;
+  }
+
+  footer .inner > a {
+    display: none !important;
+  }
+
+  /* The stamp's commit link: its hash is the address enough. */
+  footer a[href]::after {
+    content: none !important;
+  }
+
+  footer .notes > span {
+    white-space: normal !important;
+  }
+
+  /* The build is in the "Printed from" line; once is enough. */
+  footer .stamp {
+    display: none !important;
+  }
+
+  /* The busiest date's dotted underline points into the grid on screen;
+     on paper it would read as a link. */
+  .busiest {
+    text-decoration: none !important;
+  }
+
+  .printed {
+    display: block !important;
+    margin-top: 2mm;
+  }
+}

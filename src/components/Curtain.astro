@@ -1,0 +1,262 @@
+---
+// The home page's intro, once per session. A panel in the band's ink covers
+// the page from the first paint (the page is fully rendered underneath).
+// "candygoogy", the header's own wordmark scaled up and centred, rises
+// letter by letter; then, with only a short beat after the last letter
+// lands, the panel lifts away while the wordmark glides and shrinks into
+// the header's wordmark, turning to page ink as the panel's edge passes
+// it. The page's reveal starts with the lift, so the headline, the index
+// and the band rise while the panel is still going: one movement.
+//
+// The head script in Base.astro decides whether it runs (html.intro-on):
+// never without JS, never under reduced motion, never twice in a session.
+// Any click, key, wheel or touch skips to the page.
+import { site } from "../data/site";
+---
+
+<div class="curtain" aria-hidden="true">
+  <div class="panel"></div>
+  <p class="fly">
+    {[...site.name].map((ch) => (
+      <span class="l">
+        <span>{ch}</span>
+      </span>
+    ))}
+  </p>
+</div>
+
+<script>
+  const OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+  const INOUT = "cubic-bezier(0.76, 0, 0.24, 1)";
+  const root = document.documentElement;
+  const curtain = document.querySelector<HTMLElement>(".curtain");
+
+  if (curtain && root.classList.contains("intro-on")) {
+    const panel = curtain.querySelector<HTMLElement>(".panel");
+    const fly = curtain.querySelector<HTMLElement>(".fly");
+    const brand = document.querySelector<HTMLElement>(".top .brand");
+    const animations: Animation[] = [];
+    let done = false;
+
+    const release = () => {
+      if (!root.classList.contains("intro-hold")) return;
+      root.classList.remove("intro-hold");
+      window.dispatchEvent(new Event("intro:release"));
+    };
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      for (const a of animations) a.cancel();
+      release();
+      curtain.remove();
+      root.classList.remove("intro-on");
+      for (const t of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+        removeEventListener(t, skip, true);
+      }
+    };
+
+    function skip() {
+      if (done) return;
+      curtain?.animate([{ opacity: 1 }, { opacity: 0 }], {
+        duration: 150,
+        easing: OUT,
+        fill: "forwards",
+      });
+      release();
+      window.setTimeout(finish, 160);
+    }
+
+    const start = () => {
+      if (done || !panel || !fly || !brand) return finish();
+      // The wordmark's text box (on phones the link spans the whole row).
+      const range = document.createRange();
+      range.selectNodeContents(brand);
+      const b = range.getBoundingClientRect();
+      const W = innerWidth;
+      const H = innerHeight;
+
+      // Big state: the header wordmark scaled up and centred. Wider on
+      // phones so it still reads, never wider than the screen.
+      const share = W < 600 ? 0.78 : 0.62;
+      const scale = Math.min((W * share) / b.width, 7);
+      const bigX = (W - b.width * scale) / 2;
+      const bigY = (H - b.height * scale) / 2;
+      fly.style.translate = `${bigX}px ${bigY}px`;
+      fly.style.scale = String(scale);
+      fly.style.opacity = "1";
+
+      const ink = getComputedStyle(root).getPropertyValue("--ink").trim();
+      // The last letter starts at 330ms and has visually landed by ~580ms
+      // (the curve is front-loaded), so the lift starts right after.
+      const t = { lift: 580, liftDur: 640 };
+
+      // 1. Letters rise out of their clip, 30ms apart, fading up as they go.
+      fly.querySelectorAll<HTMLElement>(".l > span").forEach((ch, i) => {
+        animations.push(
+          ch.animate(
+            [
+              { transform: "translateY(110%)", opacity: 0 },
+              { opacity: 1, offset: 0.6 },
+              { transform: "none", opacity: 1 },
+            ],
+            { duration: 620, delay: 60 + i * 30, easing: OUT, fill: "both" },
+          ),
+        );
+      });
+
+      // 2. The panel lifts away, its bottom edge travelling up.
+      animations.push(
+        panel.animate(
+          [{ clipPath: "inset(0 0 0 0)" }, { clipPath: "inset(0 0 100% 0)" }],
+          { duration: t.liftDur, delay: t.lift, easing: INOUT, fill: "both" },
+        ),
+      );
+
+      // 3. The wordmark glides home. Scale leads the move a little, so it
+      //    reads as settling rather than sliding.
+      animations.push(
+        fly.animate([{ scale: String(scale) }, { scale: "1" }], {
+          duration: t.liftDur - 60,
+          delay: t.lift,
+          easing: INOUT,
+          fill: "both",
+        }),
+        fly.animate(
+          [
+            { translate: `${bigX}px ${bigY}px` },
+            { translate: `${b.left}px ${b.top}px` },
+          ],
+          {
+            duration: t.liftDur,
+            delay: t.lift + 40,
+            easing: INOUT,
+            fill: "both",
+          },
+        ),
+      );
+
+      // 4. Its colour turns to page ink as the panel's edge passes the
+      //    header: find when the lift's edge reaches the wordmark's bottom
+      //    (smootherstep stands in for the ease-in-out curve), then
+      //    crossfade over 120ms around that moment.
+      let pass = 0.9;
+      for (let k = 0; k <= 100; k++) {
+        const p = k / 100;
+        const eased = p * p * p * (p * (6 * p - 15) + 10);
+        if (H * (1 - eased) <= b.bottom + 4) {
+          pass = p;
+          break;
+        }
+      }
+      animations.push(
+        fly.animate([{ color: getComputedStyle(fly).color }, { color: ink }], {
+          duration: 120,
+          delay: t.lift + t.liftDur * pass - 60,
+          easing: "linear",
+          fill: "both",
+        }),
+      );
+
+      // 5. The page rises as the panel starts to lift: the same reveals as
+      //    a normal load (with their group delays halved while the intro
+      //    is on, motion.css), overlapping the lift instead of following it.
+      window.setTimeout(release, t.lift);
+      window.setTimeout(finish, t.lift + t.liftDur + 60);
+    };
+
+    for (const t of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+      addEventListener(t, skip, { capture: true, passive: true });
+    }
+    // Measure with the real font, but don't wait long for it.
+    Promise.race([
+      document.fonts.ready,
+      new Promise((r) => setTimeout(r, 400)),
+    ]).then(() => requestAnimationFrame(start));
+  }
+</script>
+
+<style>
+  .curtain {
+    display: none;
+  }
+
+  /* Only when the head script chose to run it. */
+  :global(html.intro-on) .curtain {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    /* Failsafe: gone by 2.6s even if the script never runs. */
+    animation: gone 1ms linear 2600ms forwards;
+  }
+
+  /* The real header wordmark waits under the flying one (and comes back
+     on its own at 2.6s if the script never runs). */
+  :global(html.intro-on .top .brand) {
+    visibility: hidden;
+    animation: shown 1ms linear 2600ms forwards;
+  }
+
+  /* Phones: the nav is its own row under the wordmark, right in the
+     wordmark's glide path, so it waits out the intro and fades in after
+     (on its own at 2.6s if the script never runs). */
+  @media (max-width: 32.5rem) {
+    :global(.top nav) {
+      transition: opacity 300ms var(--ease-out);
+    }
+
+    :global(html.intro-on .top nav) {
+      opacity: 0;
+      animation: shown-nav 1ms linear 2600ms forwards;
+    }
+  }
+
+  @keyframes shown-nav {
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes gone {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  @keyframes shown {
+    to {
+      visibility: visible;
+    }
+  }
+
+  .panel {
+    position: absolute;
+    inset: 0;
+    background: var(--band);
+  }
+
+  /* The header wordmark's exact type, placed by the script. */
+  .fly {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    opacity: 0;
+    transform-origin: 0 0;
+    color: var(--band-ink);
+    font: var(--fw-heavy) 1.125rem / 1 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+    white-space: nowrap;
+  }
+
+  .l {
+    display: inline-block;
+    clip-path: inset(-0.05em -0.06em -0.2em -0.06em);
+  }
+
+  .l > span {
+    display: inline-block;
+  }
+</style>

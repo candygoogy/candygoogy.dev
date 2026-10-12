@@ -1,0 +1,47 @@
+---
+// A section with its title in a sticky left column and content on the right.
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+---
+
+<section {id} class="sh" aria-labelledby={`${id}-title`}>
+  <h2 id={`${id}-title`}>
+    <span class="rv-mask">
+      <span>{title}</span>
+    </span>
+  </h2>
+  <div class="body">
+    <slot />
+  </div>
+</section>
+
+<style>
+  .sh {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: var(--sp-5) var(--gap-hero);
+    align-items: start;
+    padding-top: var(--space-section);
+  }
+
+  h2 {
+    position: sticky;
+    top: var(--sp-5);
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  @media (max-width: 53.75rem) {
+    .sh {
+      grid-template-columns: 1fr;
+    }
+    h2 {
+      position: static;
+    }
+  }
+</style>

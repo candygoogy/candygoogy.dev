@@ -1,0 +1,896 @@
+---
+import type { ImageMetadata } from "astro";
+import { Picture } from "astro:assets";
+import committedAvatar from "../assets/avatar.jpg";
+import { DISCORD, GITHUB, TELEGRAM, X } from "../data/icons";
+import { contact, site } from "../data/site";
+
+// The avatar from the GitHub profile (scripts/avatar.mjs, gitignored), or
+// the committed copy when the build couldn't fetch it.
+const live = import.meta.glob<ImageMetadata>("../assets/avatar.live.jpg", {
+  eager: true,
+  import: "default",
+});
+const avatar = Object.values(live)[0] ?? committedAvatar;
+
+// Two groups, split by the card's hairline: profiles to follow, then
+// places to talk. The handle shows once, in the header; each row carries
+// it in hidden text, so its link reads "GitHub, candygoogy, Open".
+const groups = [
+  [
+    {
+      label: "GitHub",
+      handle: "candygoogy",
+      action: "Open",
+      href: site.github,
+      path: GITHUB,
+    },
+    {
+      label: "X",
+      handle: "@candygoogy",
+      action: "Open",
+      href: site.x,
+      path: X,
+      // The X mark is square and open: drawn a touch larger (a cropped
+      // box, same 18px slot) to match the round glyphs' weight.
+      box: "1 1 22 22",
+    },
+  ],
+  [
+    {
+      label: "Discord",
+      handle: "candygoogy",
+      action: "Message",
+      href: site.discord,
+      path: DISCORD,
+    },
+    {
+      label: "Telegram",
+      handle: "@candygoogy",
+      action: "Message",
+      href: site.telegram,
+      path: TELEGRAM,
+    },
+  ],
+];
+
+// The question, split into words so its lines can rise in turn.
+const words = contact.question.split(" ");
+---
+
+<!--
+  The page's close: on the left, the question as a statement, its answer,
+  and the email with Copy; on the right, a quiet card with the Discord
+  status and every other way to reach candygoogy. The card is a raised
+  surface in the page's own colors, not the band's ink (the band stays the
+  one bold element).
+-->
+<section id="contact" class="contact rv-line" aria-labelledby="contact-title">
+  <h2 id="contact-title" class="visually-hidden">
+    Contact
+  </h2>
+  <div class="say">
+    <p class="statement line-title">
+      {words.map((word, i) => (
+        <>
+          <span class="w">
+            <span>{word}</span>
+          </span>
+          {i < words.length - 1 && " "}
+        </>
+      ))}
+    </p>
+    <p class="lead rv" style="--d: 360ms">
+      {contact.lead}
+    </p>
+    <!-- One outline pill, two controls: the mailto link and Copy. The
+         reveal is on the wrapper, so the pill's own transitions keep
+         their timing. -->
+    <div class="mail rv" style="--d: 460ms">
+      <div class="pill">
+        <a class="seg address" href={`mailto:${site.email}`}>
+          <span class="env" aria-hidden="true">
+            {["out", "in"].map((part) => (
+              <svg
+                class={`line-icon env-${part}`}
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+              >
+                <rect x="2.75" y="4.75" width="18.5" height="14.5" rx="2.5" />
+                <path class="flap" d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+              </svg>
+            ))}
+          </span>
+          <span class="addr">{site.email}</span>
+        </a>
+        <button
+          type="button"
+          class="seg copy"
+          data-copy={site.email}
+          aria-label="Copy email address"
+        >
+          <span class="stack icons" aria-hidden="true">
+            <svg
+              class="line-icon glyph"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+            >
+              <rect x="5.5" y="5.5" width="8" height="8" rx="1.75"></rect>
+              <path d="M3.5 10.5h-.25A1.75 1.75 0 0 1 1.5 8.75v-5.5A1.75 1.75 0 0 1 3.25 1.5h5.5a1.75 1.75 0 0 1 1.75 1.75v.25"></path>
+            </svg>
+            <svg
+              class="line-icon check"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+            >
+              <path d="M3 8.5 6.5 12 13 4.5"></path>
+            </svg>
+          </span>
+          <span class="stack copy-label" aria-hidden="true">
+            <span class="idle">Copy</span>
+            <span class="done">Copied</span>
+          </span>
+        </button>
+      </div>
+      <span class="visually-hidden" role="status" data-copy-status></span>
+    </div>
+  </div>
+
+  <div class="card rv" style="--d: 200ms">
+    <div class="who">
+      <Picture
+        class="avatar"
+        src={avatar}
+        alt=""
+        width={52}
+        height={52}
+        densities={[1, 2]}
+        formats={["avif", "webp"]}
+        loading="eager"
+      />
+      <div>
+        <p class="name">{site.name}</p>
+        <p class="presence" data-presence hidden>
+          <span class="dot" aria-hidden="true"></span>
+          <!-- The longest state's line, unseen, holds the line's size, so a
+               change of state never shifts it. -->
+          <span class="phrase">
+            <span>
+              <span class="state"></span> on Discord
+            </span>
+            <span class="ghost" aria-hidden="true">
+              Do not disturb on Discord
+            </span>
+          </span>
+        </p>
+      </div>
+    </div>
+    {groups.map((group, g) => (
+      <ul class="rows">
+        {group.map((l, i) => (
+          <li class="rv" style={`--d: 320ms; --i: ${g * 2 + i}`}>
+            <a class="row" href={l.href}>
+              <svg
+                viewBox={l.box ?? "0 0 24 24"}
+                width="18"
+                height="18"
+                aria-hidden="true"
+              >
+                <path d={l.path} />
+              </svg>
+              <span class="label">
+                {l.label}
+                <span class="visually-hidden">, {l.handle}, </span>
+              </span>
+              <span class="act">{l.action}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ))}
+  </div>
+</section>
+
+<script>
+  // Discord presence through our own Worker (/api/presence returns only
+  // {status}). Fetched on load and when the tab becomes visible again, at
+  // most once a minute. Hidden without JS, on errors and on no status.
+  const LABELS: Record<string, string> = {
+    online: "Online",
+    idle: "Idle",
+    dnd: "Do not disturb",
+    offline: "Offline",
+  };
+  const badge = document.querySelector<HTMLElement>("[data-presence]");
+  let lastFetch = 0;
+  let pinged = false;
+
+  async function refresh() {
+    if (!badge || Date.now() - lastFetch < 60_000) return;
+    lastFetch = Date.now();
+    try {
+      const res = await fetch("/api/presence", {
+        signal: AbortSignal.timeout(4000),
+      });
+      const { status } = res.ok
+        ? ((await res.json()) as { status: string | null })
+        : { status: null };
+      const label = status ? LABELS[status] : undefined;
+      if (!status || !label) {
+        badge.hidden = true;
+        return;
+      }
+      badge.dataset.status = status;
+      const text = badge.querySelector(".state");
+      if (text) text.textContent = label;
+      badge.hidden = false;
+      // One ping when online, the first time it shows.
+      if (status === "online" && !pinged) {
+        pinged = true;
+        badge.classList.add("ping");
+      }
+    } catch {
+      badge.hidden = true;
+    }
+  }
+
+  if (badge) {
+    refresh();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") refresh();
+    });
+  }
+
+  // Hover, on each of the pill's two segments: a soft accent fill slides
+  // in from the edge the pointer came through (the nearest of four) and
+  // leaves toward the edge it went out by. The script only sets the two
+  // edges and the state; CSS does the motion. Mouse only (by the event's
+  // own pointerType); elsewhere hover is a plain fill.
+  for (const seg of document.querySelectorAll<HTMLElement>(".pill .seg")) {
+    const edge = (e: PointerEvent) => {
+      const r = seg.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      const d = { l: x, r: 1 - x, t: y, b: 1 - y };
+      return (Object.keys(d) as (keyof typeof d)[]).reduce((a, k) =>
+        d[k] < d[a] ? k : a,
+      );
+    };
+    seg.classList.add("sweeps");
+    seg.addEventListener("pointerenter", (e) => {
+      if (e.pointerType !== "mouse") return;
+      delete seg.dataset.sweep;
+      seg.dataset.from = edge(e);
+      void seg.offsetWidth; // Commit the start position first.
+      seg.dataset.sweep = "in";
+    });
+    seg.addEventListener("pointerleave", (e) => {
+      if (seg.dataset.sweep !== "in") return;
+      seg.dataset.to = edge(e);
+      seg.dataset.sweep = "out";
+    });
+    seg.addEventListener("transitionend", (e) => {
+      if (e.pseudoElement === "::before" && seg.dataset.sweep === "out")
+        delete seg.dataset.sweep;
+    });
+  }
+
+  // Sending: on click (or Enter), the envelope's flap opens, the envelope
+  // leaves to the right and a fresh one slides in from the left (~420ms).
+  // It runs alongside the mailto navigation and never delays it.
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  const OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+  const IN = "cubic-bezier(0.55, 0, 1, 0.45)";
+  for (const email of document.querySelectorAll<HTMLElement>(
+    ".pill .address",
+  )) {
+    const leaving = email.querySelector<SVGElement>(".env-out");
+    const flap = leaving?.querySelector<SVGElement>(".flap");
+    const arriving = email.querySelector<SVGElement>(".env-in");
+    let running: Animation[] = [];
+
+    email.addEventListener("click", () => {
+      if (calm.matches || !leaving || !flap || !arriving) return;
+      for (const a of running) a.cancel();
+      running = [
+        flap.animate([{ transform: "none" }, { transform: "scaleY(-1)" }], {
+          duration: 120,
+          easing: OUT,
+          fill: "forwards",
+        }),
+        leaving.animate(
+          [
+            { transform: "none" },
+            { transform: "translateX(14px)", opacity: 0 },
+          ],
+          { duration: 180, delay: 120, easing: IN, fill: "forwards" },
+        ),
+        arriving.animate(
+          [{ transform: "translateX(-14px)", opacity: 0 }, { opacity: 1 }],
+          { duration: 180, delay: 240, easing: OUT, fill: "both" },
+        ),
+      ];
+      // At rest the two copies look the same, so dropping every animation
+      // at the end swaps them back without a visible change.
+      const set = running;
+      Promise.all(set.map((a) => a.finished))
+        .then(() => {
+          for (const a of set) a.cancel();
+        })
+        .catch(() => {});
+    });
+  }
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    "[data-copy]",
+  )) {
+    const status = button
+      .closest(".mail")
+      ?.querySelector<HTMLElement>("[data-copy-status]");
+    let timer: number | undefined;
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      } catch {
+        return; // The mailto link still works.
+      }
+      if (status) status.textContent = `${button.dataset.copy} copied`;
+      button.dataset.state = "done";
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (status) status.textContent = "";
+        delete button.dataset.state;
+      }, 2000);
+    });
+  }
+</script>
+
+<style>
+  /* The 7:5 grid: statement on the left, card on the right, both resting
+     on the same bottom line. */
+  .contact {
+    /* The card's surface, shared by the email pill: one material. */
+    --surface: color-mix(in oklab, var(--line) 45%, var(--bg));
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: var(--sp-8) var(--gap-hero);
+    align-items: end;
+    margin-top: var(--space-section);
+    padding-top: var(--sp-7);
+    padding-bottom: var(--sp-6);
+  }
+
+  /* A step below the hero headline, so the page keeps one biggest line. */
+  .statement {
+    max-width: 18ch;
+    font: var(--fw-bold) clamp(2rem, 1rem + 2.6vw, 3.5rem) / 1.04
+      var(--ff-display);
+    letter-spacing: var(--ls-hero);
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .statement .w {
+    display: inline-block;
+    clip-path: inset(-0.06em -0.08em -0.2em -0.08em);
+  }
+
+  .statement .w > span {
+    display: inline-block;
+  }
+
+  /* The answer reads in ink, sized to break after "myself,". */
+  .lead {
+    max-width: 26.5em;
+    margin-top: var(--sp-5);
+    font-size: var(--fs-lede);
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+
+  @media (max-width: 32.5rem) {
+    .lead {
+      text-wrap: balance;
+    }
+  }
+
+  /* The email: one pill on the card's own surface, inside a hairline,
+     holding two real controls, the address and Copy, behind a hairline
+     divider. Both are set in the text face on one baseline. Each segment
+     has its own hover fill, focus ring and press. Without JS, Copy is
+     hidden and the pill closes after the address. */
+  /* A flex box, not a line: an inline pill on a text line would sit on
+     its baseline and leave the descender's gap under it. */
+  .mail {
+    display: flex;
+    margin-top: var(--sp-6);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: stretch;
+    max-width: 100%;
+    overflow: clip;
+    border: var(--rule) solid var(--chip-line);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    transition:
+      border-color var(--dur-ui) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  /* On hover the border leans toward the accent. */
+  .pill:has(.seg:hover) {
+    border-color: color-mix(in oklab, var(--acc) 45%, var(--chip-line));
+  }
+
+  /* Press: the whole pill, so the segments never part at the divider. */
+  .pill:has(.seg:active) {
+    transform: scale(0.98);
+  }
+
+  /* Each segment clips its own fill (a fill waiting off one segment's
+     edge would otherwise show over its neighbour). */
+  .seg {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    /* 48px with the pill's hairline. */
+    min-height: calc(3rem - 2 * var(--rule));
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: var(--fw-medium) var(--fs-body) / 1 var(--ff-text);
+    cursor: pointer;
+  }
+
+  /* The fill: a soft accent layer behind the text, waiting just off its
+     entry edge; the text stays ink (13.5:1 light, 12.6:1 dark). Without
+     the script (touch, no JS) hover is a plain fill. */
+  .seg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in oklab, var(--acc) var(--mark-mix), transparent);
+    transform: translate(var(--from-x, -101%), var(--from-y, 0%));
+  }
+
+  .seg:not(.sweeps):hover::before,
+  .seg:focus-visible::before {
+    transform: none;
+  }
+
+  /* Where the fill waits (the entry edge) and where it leaves (the exit
+     edge), set by the script as l, r, t or b. */
+  .seg[data-from="r"] {
+    --from-x: 101%;
+  }
+
+  .seg[data-from="t"] {
+    --from-x: 0%;
+    --from-y: -101%;
+  }
+
+  .seg[data-from="b"] {
+    --from-x: 0%;
+    --from-y: 101%;
+  }
+
+  .seg[data-to="l"] {
+    --to-x: -101%;
+  }
+
+  .seg[data-to="t"] {
+    --to-x: 0%;
+    --to-y: -101%;
+  }
+
+  .seg[data-to="b"] {
+    --to-x: 0%;
+    --to-y: 101%;
+  }
+
+  .seg[data-sweep="in"]::before {
+    transform: none;
+    transition: transform 320ms var(--ease-out);
+  }
+
+  .seg[data-sweep="out"]::before {
+    transform: translate(var(--to-x, 101%), var(--to-y, 0%));
+    transition: transform 260ms var(--ease-out);
+  }
+
+  /* The focus ring sits inside each segment, on its own rounded end. */
+  .seg:focus-visible {
+    outline-offset: -4px;
+  }
+
+  .address {
+    padding: 0 20px;
+    border-radius: var(--r-pill);
+    background: none;
+    font-weight: 600;
+  }
+
+  :global(.js) .address {
+    border-radius: var(--r-pill) 0 0 var(--r-pill);
+  }
+
+  .addr {
+    white-space: nowrap;
+  }
+
+  .line-icon {
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* The envelope: two copies in one cell. The second waits unseen for
+     the send animation (see the script). */
+  .env {
+    display: inline-grid;
+    flex: none;
+  }
+
+  /* Visible overflow: the opened flap reaches above the glyph's box. */
+  .env > svg {
+    grid-area: 1 / 1;
+    overflow: visible;
+  }
+
+  .env-in {
+    opacity: 0;
+  }
+
+  .flap {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+  }
+
+  /* Copy: the pill's right segment, behind a hairline divider. Hidden
+     without JS (the clipboard needs it). */
+  .copy {
+    display: none;
+    padding: 0 var(--sp-4);
+    border-left: var(--rule) solid var(--chip-line);
+    border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  }
+
+  :global(.js) .copy {
+    display: inline-flex;
+  }
+
+  /* The icon and the label each keep both states in one grid cell, sized
+     to the larger ("Copied"), and crossfade: the pill never resizes. */
+  .stack {
+    display: inline-grid;
+  }
+
+  /* One out, then the other in (never both at once): the incoming state
+     waits for the outgoing one's 80ms fade. */
+  .stack > * {
+    grid-area: 1 / 1;
+    transition: opacity 80ms var(--ease-out);
+  }
+
+  .copy .glyph,
+  .copy-label .idle,
+  .copy[data-state="done"] .check,
+  .copy[data-state="done"] .copy-label .done {
+    transition-delay: 80ms;
+  }
+
+  .copy[data-state="done"] .glyph,
+  .copy[data-state="done"] .copy-label .idle {
+    transition-delay: 0ms;
+  }
+
+  .copy .glyph {
+    stroke-width: 1.5;
+  }
+
+  .check {
+    stroke-width: 2;
+  }
+
+  .check,
+  .copy-label .done,
+  .copy[data-state="done"] .glyph,
+  .copy[data-state="done"] .copy-label .idle {
+    opacity: 0;
+  }
+
+  .copy[data-state="done"] .check,
+  .copy[data-state="done"] .copy-label .done {
+    opacity: 1;
+  }
+
+  /* The check draws in after the hand-off; its clip lives only in the
+     animation, so on revert it fades out with its label. */
+  .copy[data-state="done"] .check {
+    animation: draw-check 360ms var(--ease-out) 80ms both;
+  }
+
+  @keyframes draw-check {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .copy[data-state="done"] .check {
+      animation: none;
+      clip-path: none;
+    }
+  }
+
+  /* Phones: the pill takes the column's width, Copy still inside it. */
+  @media (max-width: 32.5rem) {
+    .pill {
+      display: flex;
+      width: 100%;
+    }
+
+    .address {
+      flex: 1 1 auto;
+      min-width: 0;
+      padding: 0 var(--sp-4);
+    }
+  }
+
+  /* The narrowest phones: the address a step smaller and Copy an icon
+     (its name stays its accessible label), so the pill fits on one line. */
+  @media (max-width: 22.5rem) {
+    .address {
+      gap: var(--sp-2);
+      font-size: var(--fs-meta);
+    }
+
+    .copy {
+      padding: 0 var(--sp-4);
+    }
+
+    .copy-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* The card: a quiet raised surface in the page's own colors. --inset is
+     the rows' inner padding: the avatar, the row icons and the divider all
+     start on it, and the divider ends where "Open"/"Message" end. */
+  .card {
+    --inset: var(--sp-3);
+    padding: var(--sp-5);
+    border: var(--rule) solid var(--line);
+    border-radius: 20px;
+    background: var(--surface);
+  }
+
+  .who {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: 0 var(--inset) var(--sp-4);
+  }
+
+  .who :global(.avatar) {
+    display: block;
+    width: 52px;
+    height: 52px;
+    flex: none;
+    border-radius: 14px;
+    object-fit: cover;
+    /* A 1px ring in the rule color seats the artwork's white ground on
+       the card; drawn inside the image, on its own radius. */
+    outline: var(--rule) solid var(--line);
+    outline-offset: calc(-1 * var(--rule));
+  }
+
+  .name {
+    font: var(--fw-heavy) var(--fs-d-sm) / 1.1 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  /* Discord presence: a status dot and its words. */
+  .presence {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 3px;
+    font-size: var(--fs-sm);
+    color: var(--soft);
+  }
+
+  .presence[hidden] {
+    display: none;
+  }
+
+  .phrase {
+    display: inline-grid;
+  }
+
+  .phrase > * {
+    grid-area: 1 / 1;
+  }
+
+  .ghost {
+    visibility: hidden;
+  }
+
+  .dot {
+    position: relative;
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: calc((1lh - 8px) / 2);
+    border-radius: 50%;
+    background: var(--st-offline);
+  }
+
+  [data-status="online"] .dot {
+    background: var(--st-online);
+  }
+
+  [data-status="idle"] .dot {
+    background: var(--st-idle);
+  }
+
+  [data-status="dnd"] .dot {
+    background: var(--st-dnd);
+  }
+
+  .dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: inherit;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ping .dot::after {
+      animation: ping 900ms var(--ease-out) 1;
+    }
+  }
+
+  @keyframes ping {
+    from {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+
+  /* Directory rows: the whole row is the link. The divider above each
+     group is drawn on the content inset, not across the rows' hover
+     padding. */
+  .rows {
+    position: relative;
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: var(--sp-2) 0 0;
+    list-style: none;
+  }
+
+  .rows + .rows {
+    margin-top: var(--sp-2);
+  }
+
+  .rows::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--inset);
+    right: var(--inset);
+    height: var(--rule);
+    background: var(--card-rule);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--sp-3);
+    min-height: 2.75rem;
+    padding: var(--sp-2) var(--inset);
+    border-radius: 12px;
+    background: none;
+    color: var(--ink);
+    font-weight: var(--fw-medium);
+    transition: background-color var(--dur-ui) var(--ease-out);
+  }
+
+  .row svg {
+    overflow: visible;
+    fill: currentColor;
+    color: var(--soft);
+    transition: color var(--dur-ui) var(--ease-out);
+  }
+
+  .label {
+    min-width: 0;
+  }
+
+  .act {
+    font-size: var(--fs-sm);
+    color: var(--soft);
+    transition:
+      color var(--dur-ui) var(--ease-out),
+      transform var(--dur-ui) var(--ease-out);
+  }
+
+  .row:hover {
+    background: color-mix(in oklab, var(--line) 70%, transparent);
+  }
+
+  .row:hover svg,
+  .row:hover .act {
+    color: var(--ink);
+  }
+
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .row:hover .act {
+      transform: translateX(4px);
+    }
+  }
+
+  .row:focus-visible {
+    outline-offset: 0;
+  }
+
+  /* Side by side, the card keeps its own height and sits centred on the
+     left column, measured from the statement's cap height (it's trimmed
+     to it) to the pill's bottom. */
+  @media (min-width: 53.8125rem) {
+    .contact {
+      align-items: center;
+    }
+
+    .statement {
+      text-box: trim-start cap alphabetic;
+    }
+  }
+
+  @media (max-width: 53.75rem) {
+    .contact {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 32.5rem) {
+    .contact {
+      padding-bottom: 0;
+    }
+
+    /* A little less padding on the card. */
+    .card {
+      --inset: var(--sp-2);
+      padding: var(--sp-4);
+    }
+  }
+</style>

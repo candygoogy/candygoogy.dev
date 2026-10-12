@@ -1,0 +1,161 @@
+---
+// How the site is made: a heading, a line, then one row per topic in the
+// project rows' language (a label on the left, the text on the right,
+// hairlines between).
+import { site } from "../data/site";
+import Base from "../layouts/Base.astro";
+
+const credit = "https://x.com/dark_night1109/status/2104328383211737219";
+---
+
+<Base
+  title="Colophon – candygoogy"
+  description="How this site is made, for anyone who wonders."
+>
+  <section class="colophon" aria-labelledby="colophon-title">
+    <h1 id="colophon-title">
+      <span class="rv-mask">
+        <span>Colophon</span>
+      </span>
+    </h1>
+    <p class="intro rv" style="--d: 200ms">
+      How this site is made, for anyone who wonders.
+    </p>
+
+    <dl class="rows rv-line at-bottom" style="--line-color: var(--line)">
+      <div class="row rv rv-line" style="--i: 0; --line-color: var(--line)">
+        <dt>Stack</dt>
+        <dd>
+          <p>
+            Astro builds every page ahead of time as plain HTML. The
+            contribution grid is Svelte; the other interactive parts are small
+            scripts in plain TypeScript. Cloudflare serves it, and a small
+            Worker of my own handles the three things that can’t be static: the
+            Discord status, a daily rebuild and a plain-text page for terminals.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 1; --line-color: var(--line)">
+        <dt>Type</dt>
+        <dd>
+          <p>
+            Headings are set in Cabinet Grotesk and body text in Satoshi, both
+            from Fontshare by the Indian Type Foundry. The fonts are served from
+            this site, not from a font service.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 2; --line-color: var(--line)">
+        <dt>Data</dt>
+        <dd>
+          <p>
+            Some things update by themselves. Every morning at 05:17 UTC the
+            site rebuilds and picks up my latest GitHub contributions, Fettle’s
+            newest version number and my GitHub profile picture, which is also
+            where the favicon comes from. Private work counts toward the
+            contributions as plain numbers, without saying what it was.
+          </p>
+          <p>
+            The Discord status is the one live thing. My Worker asks Lanyard for
+            it and passes on only whether I’m online, idle, do not disturb or
+            offline, nothing about what I’m doing.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 3; --line-color: var(--line)">
+        <dt>Privacy</dt>
+        <dd>
+          <p>
+            No cookies, no analytics, and nothing loaded from anyone else’s
+            server. Your browser remembers two things, on your device only: the
+            theme you picked, and that you’ve already seen the intro this
+            session.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 4; --line-color: var(--line)">
+        <dt>Motion</dt>
+        <dd>
+          <p>
+            Everything moves with CSS and the browser’s own View Transitions and
+            Web Animations, with no animation library. If your system asks for
+            less motion, the site keeps still. Every page also works with
+            JavaScript turned off.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 5; --line-color: var(--line)">
+        <dt>Credits</dt>
+        <dd>
+          <p>
+            My profile picture is by <a href={credit}>@dark_night1109</a>.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" style="--i: 6; --line-color: var(--line)">
+        <dt>Source</dt>
+        <dd>
+          <p>
+            The source is <a href={site.source}>on GitHub</a>, and the footer
+            shows the commit this version was built from.
+          </p>
+        </dd>
+      </div>
+    </dl>
+  </section>
+</Base>
+
+<style>
+  .colophon {
+    padding-top: var(--space-hero-top);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  .intro {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-5);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  .rows {
+    margin: var(--sp-8) 0 0;
+  }
+
+  /* The project rows' grid: the label on the left (4), the text on the
+     right (7), a hairline above each and below the last. */
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    column-gap: var(--gap-hero);
+    row-gap: var(--sp-3);
+    align-items: baseline;
+    padding-block: var(--sp-6);
+  }
+
+  dt {
+    font: var(--fw-bold) var(--fs-d-sm) / var(--lh-tight) var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  dd {
+    display: grid;
+    gap: var(--sp-4);
+    max-width: 60ch;
+    margin: 0;
+    font-size: var(--fs-lede);
+    color: var(--ink);
+  }
+
+  @media (max-width: 53.75rem) {
+    .row {
+      grid-template-columns: 1fr;
+      padding-block: var(--sp-5);
+    }
+  }
+</style>

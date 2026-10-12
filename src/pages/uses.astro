@@ -1,0 +1,259 @@
+---
+// What I use: the home network and the machines, as spec sheets. A head
+// with an index of the sections, then one section per group: its title on
+// the left, the sheet on the right (label, a dotted leader, the products,
+// one per line). The words are in src/data/uses.ts.
+import HomelabMap from "../components/HomelabMap.astro";
+import { uses } from "../data/uses";
+import Base from "../layouts/Base.astro";
+---
+
+<Base
+  title="What I use – candygoogy"
+  description={uses.lede}
+  ogImage="/og-uses.png"
+  ogAlt={`${uses.title}: ${uses.lede}`}
+>
+  <section class="head" aria-labelledby="uses-title">
+    <div class="intro">
+      <h1 id="uses-title">
+        <span class="rv-mask">
+          <span>{uses.title}</span>
+        </span>
+      </h1>
+      <p class="lede rv" style="--d: 200ms">
+        {uses.lede}
+      </p>
+    </div>
+    <nav class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title" class="rv rv-line" style="--d: 300ms">
+        On this page
+      </h2>
+      <ol>
+        {uses.sections.map((s, i) => (
+          <li
+            class="rv rv-line at-bottom"
+            style={`--d: 360ms; --i: ${i}; --line-color: var(--line)`}
+          >
+            <a class="shift" href={`#${s.id}`}>
+              <span class="name">{s.title}</span>
+              <span class="visually-hidden">, </span>
+              <span class="n">
+                {s.rows.length}
+                <span class="visually-hidden"> items</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  </section>
+
+  {uses.sections.map((s) => (
+    <section
+      id={s.id}
+      class="group rv-line"
+      style="--line-color: var(--ink)"
+      aria-labelledby={`${s.id}-title`}
+    >
+      <h2 id={`${s.id}-title`}>
+        <span class="rv-mask">
+          <span>{s.title}</span>
+        </span>
+      </h2>
+      <div class="sheet">
+        {s.id === "homelab" && <HomelabMap />}
+        <dl class="spec">
+          {s.rows.map((r, i) => (
+            <div
+              class="row rv rv-line at-bottom"
+              style={`--i: ${i}; --line-color: var(--line)`}
+            >
+              <dt>{r.label}</dt>
+              <span class="leader" aria-hidden="true">
+                &#8203;
+              </span>
+              <dd>
+                {r.items.map((item) =>
+                  typeof item === "string" ? (
+                    <span>{item}</span>
+                  ) : (
+                    <span class="detail">
+                      <span class="tag">{item.tag}:</span>{" "}
+                      {item.text.split(", ").map((drive, i, all) => (
+                        <>
+                          <span class="nobr">
+                            {drive}
+                            {i < all.length - 1 && ","}
+                          </span>
+                          {i < all.length - 1 && " "}
+                        </>
+                      ))}
+                    </span>
+                  ),
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  ))}
+</Base>
+
+<style>
+  /* The head: the hero's 7:4 split, the index on the right. */
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    gap: var(--gap-hero);
+    align-items: end;
+    padding-block: var(--space-hero-top) var(--space-hero-bottom);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  .lede {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-6);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  /* The index, in the hero index's language: a small heading, then one
+     row per section with its count. */
+  .toc h2 {
+    padding-top: var(--sp-3);
+    margin-bottom: var(--sp-1);
+    font: var(--fw-medium) var(--fs-sm) / 1.4 var(--ff-text);
+    color: var(--soft);
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toc a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding-block: var(--sp-4);
+    background: none;
+    color: var(--ink);
+  }
+
+  .toc .name {
+    font: var(--fw-bold) var(--fs-d-md) / var(--lh-tight) var(--ff-display);
+    letter-spacing: var(--ls-d-md);
+    transition: color var(--dur-ui) var(--ease-out);
+  }
+
+  .toc a:hover .name {
+    color: var(--acc);
+  }
+
+  .n {
+    font-size: var(--fs-meta);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A group: its title on the left (4), the sheet on the right (7), a
+     dark rule above each. */
+  .group {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: var(--sp-5) var(--gap-hero);
+    padding-block: var(--sp-8) var(--sp-7);
+    scroll-margin-top: var(--sp-5);
+  }
+
+  .group h2 {
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  .spec {
+    margin: 0;
+  }
+
+  /* A row: the label, a dotted leader on the first line's baseline, and
+     the products right-aligned, one per line. */
+  .row {
+    display: grid;
+    grid-template-columns: auto minmax(var(--sp-5), 1fr) auto;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding-block: var(--sp-4);
+  }
+
+  dt {
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  .leader {
+    overflow: hidden;
+    font-size: var(--fs-meta);
+    line-height: 1;
+    border-bottom: var(--rule) dotted var(--chip-line);
+    transform: translateY(-0.3em);
+  }
+
+  dd {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    margin: 0;
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    text-align: right;
+  }
+
+  /* A detail line under a product: a step smaller, its tag soft. */
+  .detail {
+    font-size: var(--fs-meta);
+    font-weight: var(--fw-regular);
+  }
+
+  .tag {
+    color: var(--soft);
+  }
+
+  @media (max-width: 53.75rem) {
+    .head,
+    .group {
+      grid-template-columns: 1fr;
+    }
+
+    .head {
+      align-items: start;
+    }
+  }
+
+  /* Phones: the product under its label, no leaders. */
+  @media (max-width: 32.5rem) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: var(--sp-1);
+    }
+
+    .leader {
+      display: none;
+    }
+
+    dd {
+      justify-items: start;
+      text-align: left;
+    }
+  }
+</style>

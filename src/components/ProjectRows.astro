@@ -1,0 +1,185 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+// A titled list of project rows: Side projects and Websites share it, so
+// the two read as siblings.
+interface Props {
+  id: string;
+  title: string;
+  projects: CollectionEntry<"projects">[];
+}
+
+const { id: sectionId, title, projects } = Astro.props;
+const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+---
+
+<!--
+  The heading spans the page; each row then uses the section grid. The left
+  column carries identity (the name as a title, the row's one link: the
+  site's domain, or the source for a side project; the year), the right
+  column the description, then who built it and with what.
+-->
+<section id={sectionId} class="projects" aria-labelledby={`${sectionId}-title`}>
+  <h2 id={`${sectionId}-title`}>
+    <span class="rv-mask">
+      <span>{title}</span>
+    </span>
+  </h2>
+  <ol class="rows rv-line">
+    {projects.map(({ id, data }, i) => (
+      <li
+        id={id}
+        class="row rv rv-line at-bottom shift"
+        style={`--i: ${i}; --line-color: var(--line)`}
+      >
+        <div class="who">
+          <h3 class="name">{data.name}</h3>
+          <p class="where">
+            {data.links.live ? (
+              <a class="site" href={data.links.live}>
+                {host(data.links.live)}
+              </a>
+            ) : (
+              data.links.source && (
+                <a class="site" href={data.links.source}>
+                  Source on GitHub
+                </a>
+              )
+            )}
+            <span class="yr">{data.date.getUTCFullYear()}</span>
+          </p>
+        </div>
+        <div class="what">
+          <p class="desc">{data.summary}</p>
+          <p class:list={["meta", { solo: !data.role }]}>
+            {data.role && <span class="role">{data.role}</span>}
+            <span>
+              {data.stack.join(", ") +
+                (data.license ? `. ${data.license}.` : "")}
+            </span>
+          </p>
+        </div>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .projects {
+    padding-top: var(--space-section);
+  }
+
+  h2 {
+    margin-bottom: var(--sp-7);
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    column-gap: var(--gap-hero);
+    row-gap: var(--sp-5);
+    padding-block: var(--sp-7);
+    scroll-margin-top: var(--sp-5);
+  }
+
+  /* Identity: the name reads as a title; the domain and year sit under it
+     as one tight block. */
+  .name {
+    font-size: clamp(1.75rem, 1rem + 1.6vw, 2.5rem);
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-section);
+  }
+
+  .where {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-1) var(--sp-4);
+    margin-top: var(--sp-3);
+    font-size: var(--fs-meta);
+  }
+
+  .site {
+    font-weight: var(--fw-medium);
+  }
+
+  .yr {
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The description in ink at lede size; under it, the role on its own
+     line and the stack as a quiet line. Both share the description's
+     measure, so the column has one right edge. */
+  .desc,
+  .meta {
+    max-width: 60ch;
+  }
+
+  .desc {
+    font-size: var(--fs-lede);
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+
+  .meta {
+    display: grid;
+    gap: var(--sp-1);
+    margin-top: var(--sp-4);
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  .role {
+    color: var(--ink);
+    font-weight: var(--fw-medium);
+  }
+
+  /* Without a role line, the stack alone follows the description: it sits
+     closer, so it reads as part of the row, not a stray line. */
+  .meta.solo {
+    margin-top: var(--sp-2);
+  }
+
+  /* With a pointer, the row takes a soft tint like the contact card's
+     rows. The tint is its own layer reaching a little past the text, so
+     the text keeps the page's left edge, the rule stays on the content
+     edges, and the row's reveal transition is left alone. */
+  @media (hover: hover) and (pointer: fine) {
+    .row {
+      isolation: isolate;
+    }
+
+    .row::after {
+      content: "";
+      position: absolute;
+      inset: var(--sp-2) calc(-1 * var(--sp-4));
+      z-index: -1;
+      border-radius: 14px;
+      background: color-mix(in oklab, var(--line) 45%, transparent);
+      opacity: 0;
+      transition: opacity var(--dur-ui) var(--ease-out);
+    }
+
+    .row:hover::after {
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 53.75rem) {
+    .row {
+      grid-template-columns: 1fr;
+      row-gap: var(--sp-4);
+      padding-block: var(--sp-6);
+    }
+  }
+</style>

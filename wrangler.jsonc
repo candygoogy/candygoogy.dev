@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "candygoogy-dev",
+  "compatibility_date": "2026-10-06",
+  // Static assets, plus a small Worker for one daily Cron Trigger that
+  // rebuilds the site (fresh heatmap and Fettle version). Its deploy hook
+  // URL is a runtime secret and never lives in this file.
+  "main": "./worker/index.ts",
+  "triggers": { "crons": ["17 5 * * *"] },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    // The Worker runs first only for "/" (the terminal card) and /api/*
+    // (the presence endpoint, which no asset matches: with a list, a path
+    // outside it never reaches the Worker). Every other request is served
+    // from the assets without it.
+    "run_worker_first": ["/", "/api/*"],
+  },
+  // The apex only. www is a redirect owned by the zone, never a second
+  // Custom Domain.
+  "routes": [{ "pattern": "candygoogy.dev", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+}

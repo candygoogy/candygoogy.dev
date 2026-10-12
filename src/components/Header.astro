@@ -1,0 +1,103 @@
+---
+import { site } from "../data/site";
+import ThemeSwitch from "./ThemeSwitch.astro";
+
+// Pages are built as files (fettle.html), so the path is compared without
+// the extension, the way Base.astro builds the canonical URL.
+const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+// On the home page the nav jumps to sections; elsewhere it links back to them.
+const prefix = path === "/" ? "" : "/";
+const nav = [
+  { href: "/fettle", label: "Fettle" },
+  { href: `${prefix}#websites`, label: "Websites" },
+  { href: `${prefix}#about`, label: "About" },
+  { href: `${prefix}#contact`, label: "Contact" },
+];
+---
+
+<header id="top" class="top wrap">
+  <a class="brand" href="/">
+    {site.name}
+  </a>
+  <nav aria-label="Main">
+    <ul>
+      {nav.map((item) => (
+        <li>
+          <a
+            href={item.href}
+            aria-current={path === item.href ? "page" : undefined}
+          >
+            {item.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+  <div class="tools">
+    <ThemeSwitch />
+  </div>
+</header>
+
+<style>
+  .top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3) var(--sp-6);
+    padding-block: var(--sp-5);
+  }
+
+  .brand {
+    margin-right: auto;
+    color: var(--ink);
+    background: none;
+    font: var(--fw-heavy) 1.125rem / 1 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  ul {
+    display: flex;
+    gap: var(--sp-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Nav links rest without an underline; on hover it draws in from the
+     left, the same 1px line every other link uses. */
+  nav a {
+    color: var(--soft);
+    background-size: 0 1px;
+    background-position: 0 100%;
+    font-size: var(--fs-meta);
+    font-weight: var(--fw-medium);
+    transition:
+      color var(--dur-ui) var(--ease-out),
+      background-size var(--dur-move) var(--ease-out);
+  }
+
+  nav a:hover {
+    color: var(--ink);
+    background-size: 100% 1px;
+    background-position: 0 100%;
+  }
+
+  nav a[aria-current="page"] {
+    color: var(--ink);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+  }
+
+  /* Phones: two rows. The wordmark and the theme switch share the first,
+     the nav takes the second. */
+  @media (max-width: 32.5rem) {
+    nav {
+      order: 3;
+      flex-basis: 100%;
+    }
+  }
+</style>

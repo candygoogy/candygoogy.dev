@@ -1,0 +1,207 @@
+---
+import type { CollectionEntry } from "astro:content";
+import { latestVersion } from "../lib/github";
+import Facts from "./Facts.astro";
+import Keep from "./Keep.astro";
+import Shot from "./Shot.astro";
+
+interface Props {
+  project: CollectionEntry<"projects">;
+  // On the project's own page the name is the page's h1 and the link to
+  // that page is dropped.
+  page?: boolean;
+}
+
+const { project, page = false } = Astro.props;
+const Heading = page ? "h1" : "h2";
+const Sub = page ? "h2" : "h3";
+const { data } = project;
+const shot = data.images[0];
+const version = latestVersion(data.repo, data.version);
+---
+
+<section id={project.id} class="band rv-band" aria-labelledby="band-title">
+  <div class="band-head">
+    <Heading
+      id="band-title"
+      class:list={["title", "letters", { "vt-project-title": page }]}
+      aria-label={data.name}
+    >
+      {[...data.name].map((ch, i) => (
+        <span class="l" aria-hidden="true" style={`--i: ${i}`}>
+          <span>{ch}</span>
+        </span>
+      ))}
+    </Heading>
+    <p class="lede rv" style="--d: 260ms">
+      <Keep text={data.summary} />
+    </p>
+  </div>
+
+  {shot && (
+    <figure
+      class="stage rv vt-project-shot"
+      style="--d: 380ms"
+      data-tilt
+      data-decode
+    >
+      <div class="tilt">
+        <Shot
+          light={shot.light}
+          dark={shot.dark}
+          alt={shot.alt}
+          sizes="(min-width: 84rem) 1200px, 90vw"
+          phone={shot.phone}
+          eager={page}
+        />
+      </div>
+    </figure>
+  )}
+
+  <div class="zig">
+    <div class="story">
+      {data.story && (
+        <>
+          <Sub class="sub rv" style="--i: 0">
+            Why
+          </Sub>
+          <p class="rv" style="--i: 1">
+            {data.story.why}
+          </p>
+          <Sub class="sub rv" style="--i: 2">
+            What was hard
+          </Sub>
+          <p class="rv" style="--i: 3">
+            {data.story.hard}
+          </p>
+          <Sub class="sub rv" style="--i: 4">
+            What it won’t do
+          </Sub>
+          <p class="rv" style="--i: 5">
+            {data.story.promise}
+          </p>
+        </>
+      )}
+      {!page && (
+        <p class="more rv" style="--i: 6">
+          <a href={`/${project.id}`}>
+            What {data.name} checks, and how it handles privacy
+          </a>
+        </p>
+      )}
+    </div>
+    <Facts data={data} version={version} />
+  </div>
+</section>
+
+<script>
+  // The screenshot leans a few degrees toward the pointer: fine pointers
+  // only, never with reduced motion. It settles back when the pointer leaves.
+  const fine = matchMedia("(hover: hover) and (pointer: fine)");
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  for (const stage of document.querySelectorAll<HTMLElement>("[data-tilt]")) {
+    const tilt = stage.querySelector<HTMLElement>(".tilt");
+    if (!tilt) continue;
+    stage.addEventListener("pointermove", (e) => {
+      if (!fine.matches || calm.matches) return;
+      const r = stage.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      tilt.style.transform = `rotateX(${(-y * 5).toFixed(2)}deg) rotateY(${(x * 6).toFixed(2)}deg)`;
+    });
+    stage.addEventListener("pointerleave", () => {
+      tilt.style.transform = "";
+    });
+  }
+</script>
+
+<style>
+  .band {
+    margin-inline: calc(-1 * var(--gutter));
+    padding: var(--space-band) var(--gutter);
+    /* Also the radius of its reveal clip (motion.css). */
+    --band-r: var(--r-band);
+    border-radius: var(--band-r);
+    background: var(--band);
+    box-shadow: inset 0 0 0 var(--rule) var(--band-edge);
+    color: var(--band-ink);
+  }
+
+  .band-head {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: var(--sp-5) var(--sp-8);
+    align-items: end;
+  }
+
+  /* Letters clip their own rise (see motion.css). */
+  .title .l {
+    display: inline-block;
+    clip-path: inset(-0.05em -0.06em -0.18em -0.06em);
+  }
+
+  .title .l > span {
+    display: inline-block;
+  }
+
+  .title {
+    font-size: var(--fs-d-band);
+    font-weight: var(--fw-heavy);
+    line-height: var(--lh-band);
+    letter-spacing: var(--ls-band);
+  }
+
+  .lede {
+    max-width: var(--measure-lede);
+    font-size: var(--fs-lede);
+    color: var(--band-soft);
+  }
+
+  .stage {
+    margin: clamp(2.5rem, 6vh, 4.5rem) 0 0;
+    perspective: 1400px;
+  }
+
+  .tilt {
+    transition: transform var(--dur-tilt) var(--ease-out);
+  }
+
+  .stage :global(img) {
+    width: 100%;
+    border-radius: var(--r-shot);
+    box-shadow: var(--shadow-shot);
+  }
+
+  .zig {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: var(--sp-7) var(--sp-9);
+    margin-top: clamp(2.5rem, 6vh, 4rem);
+  }
+
+  .sub {
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-d-sm);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .story p {
+    max-width: var(--measure);
+    margin-bottom: var(--sp-5);
+    color: var(--band-soft);
+  }
+
+  .story p.more {
+    margin: var(--sp-6) 0 0;
+  }
+
+  @media (max-width: 53.75rem) {
+    .band {
+      --band-r: var(--r-band-narrow);
+    }
+    .band-head,
+    .zig {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,44 @@
+# Dependencies and build output
+node_modules/
+dist/
+.astro/
+
+# Cloudflare / Wrangler local state
+.wrangler/
+
+# Secrets and local environment
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Fonts: downloaded by `npm run fonts` at build time (ITF FFL v2.0 forbids
+# distributing them via a repository). Never commit them.
+src/fonts/
+
+# Fresh GitHub data written by scripts/github-data.mjs at build time
+# (the committed fallback is src/data/github.snapshot.json).
+src/data/github.json
+
+# The avatar from the GitHub profile and the icons made from it, at build
+# time (the committed fallbacks are src/assets/avatar.jpg and
+# src/assets/icons/).
+src/assets/avatar.live.*
+public/favicon.ico
+public/apple-touch-icon.png
+.fonts-cache/
+
+# Tooling output
+.lighthouseci/
+playwright-report/
+.shots/
+test-results/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,118 @@
+---
+// The social preview cards (1200 x 630), rendered to public/og.png,
+// public/og-fettle.png and public/og-uses.png by scripts/og.mjs. Built only
+// in `astro dev`.
+import { getEntry } from "astro:content";
+import { Font } from "astro:assets";
+import { hero, site } from "../data/site";
+import { uses } from "../data/uses";
+import "../styles/tokens.css";
+
+export function getStaticPaths() {
+  return import.meta.env.DEV
+    ? ["og-card", "og-fettle", "og-uses"].map((ogcard) => ({
+        params: { ogcard },
+      }))
+    : [];
+}
+
+const fettle = Astro.params.ogcard === "og-fettle";
+const project = fettle ? await getEntry("projects", "fettle") : undefined;
+// A page's card: its name and one line, the way Fettle's card is made.
+// Fettle's line is the summary's first sentence, as on the page's closing
+// statement; /uses has its title and lede.
+const page = project
+  ? {
+      name: project.data.name,
+      line: `${project.data.summary.split(". ")[0]}.`,
+      url: "candygoogy.dev/fettle",
+    }
+  : Astro.params.ogcard === "og-uses"
+    ? { name: uses.title, line: uses.lede, url: "candygoogy.dev/uses" }
+    : undefined;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <title>OG card</title>
+    <Font cssVariable="--font-display" />
+    <Font cssVariable="--font-text" />
+  </head>
+  <body>
+    {page ? (
+      <div class="card">
+        <p class="mark">{site.name}</p>
+        <div class="project">
+          <p class="name">{page.name}</p>
+          <p class="line">{page.line}</p>
+        </div>
+        <p class="url">{page.url}</p>
+      </div>
+    ) : (
+      <div class="card">
+        <p class="mark">{site.name}</p>
+        <p class="headline">{hero.headline}</p>
+        <p class="url">candygoogy.dev</p>
+      </div>
+    )}
+  </body>
+</html>
+
+<style>
+  body {
+    margin: 0;
+  }
+
+  .card {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    width: 1200px;
+    height: 630px;
+    padding: 72px 80px;
+    box-sizing: border-box;
+    background: var(--band);
+    color: var(--band-ink);
+  }
+
+  .mark {
+    margin: 0;
+    font: var(--fw-heavy) 34px / 1 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .headline {
+    align-self: end;
+    max-width: 15ch;
+    margin: 0;
+    font: var(--fw-bold) 76px / var(--lh-display) var(--ff-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  /* Fettle's card: the band's wordmark, and the one-line summary. */
+  .project {
+    align-self: end;
+  }
+
+  .name {
+    margin: 0;
+    font: var(--fw-heavy) 168px / var(--lh-band) var(--ff-display);
+    letter-spacing: var(--ls-band);
+  }
+
+  .line {
+    max-width: 24ch;
+    margin: 28px 0 0;
+    font: var(--fw-medium) 36px / 1.25 var(--ff-text);
+    color: var(--band-soft);
+  }
+
+  .url {
+    margin: 40px 0 0;
+    padding-top: 20px;
+    border-top: 1px solid var(--band-line);
+    font: var(--fw-medium) 24px / 1 var(--ff-text);
+    color: var(--band-soft);
+  }
+</style>
