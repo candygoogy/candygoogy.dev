@@ -1,9 +1,12 @@
 import { execSync } from "node:child_process";
+import { site } from "../data/site";
 
 // When and from which commit this build was made, for the footer stamp.
-// Build time only. The commit comes from Workers Builds' environment, or
-// from git locally; without either, the stamp shows just the date, and
-// the build never fails over it.
+// Build time only. The commit comes from Workers Builds' environment, then
+// from git, then from the latest commit on main on GitHub (deploy-hook
+// builds carry no commit of their own). Without any of them the stamp shows
+// just the date; the build never fails over it. One log line says which
+// source was used, or why none worked.
 
 const now = new Date();
 
@@ -19,20 +22,65 @@ export const builtOn = {
   }).format(now),
 };
 
-function commitSha(): string | undefined {
-  let sha = process.env.WORKERS_CI_COMMIT_SHA;
-  if (!sha) {
-    try {
-      sha = execSync("git rev-parse HEAD", {
-        stdio: ["ignore", "pipe", "ignore"],
-      })
-        .toString()
-        .trim();
-    } catch {
-      // No git here: no commit in the stamp.
-    }
+const SHA = /^[0-9a-f]{40}$/i;
+// "https://github.com/owner/repo" -> "owner/repo"
+const REPO = new URL(site.source).pathname.slice(1);
+
+const firstLine = (error: unknown) =>
+  String(
+    (error as { stderr?: Buffer }).stderr?.toString().trim() ||
+      (error as Error).message ||
+      error,
+  ).split("\n")[0];
+
+async function commitSha(): Promise<string | undefined> {
+  const misses: string[] = [];
+
+  const env = process.env.WORKERS_CI_COMMIT_SHA?.trim();
+  if (env && SHA.test(env)) return found(env, "WORKERS_CI_COMMIT_SHA", misses);
+  misses.push(`env ${env ? "not a SHA" : "empty"}`);
+
+  try {
+    const sha = execSync("git rev-parse HEAD", {
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+      .toString()
+      .trim();
+    if (SHA.test(sha)) return found(sha, "git", misses);
+    misses.push(`git gave "${sha}"`);
+  } catch (error) {
+    misses.push(`git: ${firstLine(error)}`);
   }
-  return sha && /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : undefined;
+
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${REPO}/commits/main`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "candygoogy.dev-build",
+        },
+        signal: AbortSignal.timeout(5_000),
+      },
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { sha } = (await res.json()) as { sha?: unknown };
+    if (typeof sha === "string" && SHA.test(sha)) {
+      return found(sha, "GitHub, latest on main", misses);
+    }
+    misses.push("GitHub: no SHA in the reply");
+  } catch (error) {
+    misses.push(`GitHub: ${firstLine(error)}`);
+  }
+
+  console.warn(`build stamp: no commit (${misses.join("; ")})`);
+  return undefined;
 }
 
-export const commit = commitSha();
+function found(sha: string, source: string, misses: string[]) {
+  const why = misses.length ? ` (${misses.join("; ")})` : "";
+  console.log(`build stamp: commit ${sha.slice(0, 7)} from ${source}${why}`);
+  return sha.toLowerCase();
+}
+
+export const commit = await commitSha();
