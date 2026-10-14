@@ -168,7 +168,6 @@ const icon = (file: string) => {
       // one would read as a cut back to the old page and a fade. Registered
       // here, before first paint.
       (() => {
-        const NAMED = ".vt-project-title, .vt-project-shot";
         const REVEALS =
           ".rv, .rv-mask, .rv-line, .rv-band, .letters, .hero-title, .line-title, .heat-draw";
         const inView = (el) => {
@@ -182,8 +181,19 @@ const icon = (file: string) => {
           return r.width > 0 && seen >= 0.4 * Math.min(r.height, innerHeight);
         };
         let restored = false;
+        // The link last activated (a click, or Enter on it). Forgotten when
+        // the page shows again, so it never outlives a visit.
+        let link = null;
+        document.addEventListener(
+          "click",
+          (e) => {
+            link = e.target.closest?.("a");
+          },
+          true,
+        );
         addEventListener("pageshow", (e) => {
           restored = e.persisted;
+          link = null;
         });
         const direction = (a) =>
           a?.navigationType === "traverse" &&
@@ -191,10 +201,36 @@ const icon = (file: string) => {
           a.entry.index < a.from.index
             ? "back"
             : "forward";
-        // Names are recomputed on every navigation (a page restored from
-        // the back/forward cache keeps its inline styles).
-        const name = (el, keep) => {
-          el.style.viewTransitionName = keep(el) ? "" : "none";
+        // Each name goes to one element at most (two with the same name
+        // would cancel the whole transition): of those shown enough, the
+        // one inside the link that was followed (`from`), or else the one
+        // with the most of it on screen (on the home page, the hero
+        // index's Fettle row or the band's heading). Recomputed on every
+        // navigation (a page restored from the back/forward cache keeps
+        // its inline styles). Returns the named elements.
+        const name = (from) => {
+          const kept = [];
+          for (const sel of [".vt-project-title", ".vt-project-shot"]) {
+            let best;
+            let most = 0;
+            for (const el of document.querySelectorAll(sel)) {
+              el.style.viewTransitionName = "none";
+              const r = el.getBoundingClientRect();
+              const area = from?.contains(el)
+                ? Infinity
+                : r.width *
+                  (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
+              if (shown(el) && area > most) {
+                best = el;
+                most = area;
+              }
+            }
+            if (best) {
+              best.style.viewTransitionName = "";
+              kept.push(best);
+            }
+          }
+          return kept;
         };
         // Revealed at once: the element and the reveals around it, with
         // their entrance transitions and animations run to the end.
@@ -249,7 +285,7 @@ const icon = (file: string) => {
         addEventListener("pageswap", (e) => {
           if (!e.viewTransition) return;
           e.viewTransition.types.add(direction(e.activation));
-          for (const el of document.querySelectorAll(NAMED)) name(el, shown);
+          name(e.activation?.navigationType === "traverse" ? null : link);
         });
         addEventListener("pagereveal", (e) => {
           if (restored) {
@@ -261,10 +297,7 @@ const icon = (file: string) => {
           const landing = [];
           if (e.viewTransition) {
             e.viewTransition.types.add(direction(nav));
-            for (const el of document.querySelectorAll(NAMED)) {
-              name(el, shown);
-              if (el.style.viewTransitionName !== "none") landing.push(el);
-            }
+            landing.push(...name());
           }
           if (e.viewTransition || nav?.navigationType === "traverse") {
             for (const el of document.querySelectorAll(REVEALS)) {

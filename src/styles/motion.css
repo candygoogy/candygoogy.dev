@@ -151,9 +151,10 @@
      one, opaque from its first frame, rising 32px the way you go (up
      going forward, down coming back). The two pages are never blended:
      any crossfade between a mostly light page and a mostly dark one
-     passes through a pale veil. The project name in the hero index grows
-     into the /fettle headline and the band's screenshot moves into the
-     page's, over it all. Shared elements only morph when they're on
+     passes through a pale veil. The project's name (the hero index's
+     row, or the band's heading, whichever shows more) grows into the
+     /fettle headline and the band's screenshot moves into the page's,
+     over it all. Shared elements only morph when they're on
      screen on both pages, and they land settled (Base.astro); reloads
      don't transition. */
   @view-transition {

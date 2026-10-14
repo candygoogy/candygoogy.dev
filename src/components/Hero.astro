@@ -117,4 +117,14 @@ const [, rest = lineAfter, lastPair = ""] =
       grid-template-columns: 1fr;
     }
   }
+
+  /* In one column the index would be a full-width list, and the band and
+     the projects list right after it repeat it row for row, so on screen
+     it goes (the same breakpoint as above). Print keeps it as the
+     receipt's index (print.css). */
+  @media screen and (max-width: 53.75rem) {
+    .hero > :global(.index) {
+      display: none;
+    }
+  }
 </style>
