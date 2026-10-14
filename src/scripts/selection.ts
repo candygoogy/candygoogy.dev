@@ -2,6 +2,8 @@
 // above the text and blended (multiply in light, screen in dark and in the
 // Fettle band) so the text keeps its own color. Fine pointers only: touch,
 // inputs and no-JS visitors keep the native selection (styled in base.css).
+// Started after the first paint by the motion loader (scripts/loader.ts).
+import { EASE } from "./motion";
 
 const MAX_LINES = 120; // Bigger selections fall back to the native highlight.
 const PAD_X = 4;
@@ -160,7 +162,7 @@ function start() {
       if (fresh && !calm.matches) {
         pill.animate(
           [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
-          { duration: 180, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+          { duration: 180, easing: EASE.out },
         );
       }
     });

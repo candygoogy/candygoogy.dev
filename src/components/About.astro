@@ -5,7 +5,7 @@ import gaijinLogo from "../assets/logos/gaijin-entertainment.svg";
 import sielLogo from "../assets/logos/siel-eolie.webp";
 import { about, orgs, site, skills, work } from "../data/site";
 import { github } from "../lib/github";
-import Heatmap from "./Heatmap.svelte";
+import Heatmap from "./Heatmap.astro";
 import Section from "./Section.astro";
 
 const days = github.contributions?.days ?? [];
@@ -15,6 +15,29 @@ const logoSize = (org: keyof typeof logos) => {
   const h = org === "gaijin" ? 16 : 18;
   const { width, height } = logos[org];
   return { width: Math.round((width / height) * h), height: h };
+};
+
+// The timeline's groups: consecutive items with the same employer, headed
+// by its chip and the year it started; items without one form Education.
+type Group = {
+  org: keyof typeof orgs | undefined;
+  year?: string | undefined;
+  items: typeof work;
+};
+const groups: Group[] = [];
+for (const item of work) {
+  const last = groups.at(-1);
+  if (last && last.org === item.org) last.items.push(item);
+  else groups.push({ org: item.org, items: [item] });
+}
+for (const g of groups) {
+  const starts = g.items.flatMap((i) => (i.datetime ? [i.datetime] : []));
+  g.year = starts.sort()[0]?.slice(0, 4);
+}
+// "Mar 2024 to Dec 2025": the start goes in a <time>, the rest follows it.
+const dates = (when: string): [string, string] => {
+  const at = when.indexOf(" to ");
+  return at < 0 ? [when, ""] : [when.slice(0, at), when.slice(at)];
 };
 ---
 
@@ -26,70 +49,87 @@ const logoSize = (org: keyof typeof logos) => {
     </p>
   </div>
 
-  <ol class="tl">
-    {work.map((item, i) => (
-      <li
-        class="rv rv-line at-bottom"
-        style={`--i: ${i}; --line-color: var(--line)`}
-      >
-        {i < work.length - 1 ? (
-          <span class="seg" aria-hidden="true" />
-        ) : (
-          <span class="tail" aria-hidden="true" />
-        )}
-        <span class="node" aria-hidden="true" />
-        {item.datetime ? (
-          <time datetime={item.datetime}>{item.when}</time>
-        ) : (
-          <span class="when">{item.when}</span>
-        )}
-        <div>
-          <h3>
-            <span>{item.title}</span>
-            {item.org && " "}
-            {item.org && (
-              <span class="nobr at">
-                at{" "}
+  <!-- The timeline: one line through every role's dot, from the job going
+       on now (its tail above keeps flowing) down to the first school (its
+       tail below is still). The line, dots and tails are drawing only.
+       Its motion is scripts/motion/about.ts. -->
+  <div class="tl" data-motion="about">
+    <div class="line" aria-hidden="true">
+      <span class="ink"></span>
+      <span class="tail up">
+        <span class="flow"></span>
+      </span>
+      <span class="tail down"></span>
+    </div>
+    <ol class="groups">
+      {groups.map((g) => (
+        <li class="group">
+          {g.year && (
+            <p class="year rv" aria-hidden="true">
+              {g.year}
+            </p>
+          )}
+          <div class="body">
+            <h3 class="rv" style="--i: 1">
+              {g.org ? (
                 <a
                   class="org"
-                  href={orgs[item.org].url}
-                  data-preview={`pv-${item.org}`}
+                  href={orgs[g.org].url}
+                  data-preview={`pv-${g.org}`}
                 >
-                  <span class:list={["chip", `chip-${item.org}`]}>
+                  <span class:list={["chip", `chip-${g.org}`]}>
                     <img
-                      src={logos[item.org].src}
+                      src={logos[g.org].src}
                       alt=""
-                      width={logoSize(item.org).width}
-                      height={logoSize(item.org).height}
+                      width={logoSize(g.org).width}
+                      height={logoSize(g.org).height}
                       decoding="async"
                     />
                   </span>
-                  {orgs[item.org].name}
+                  {orgs[g.org].name}
                 </a>
-              </span>
-            )}
-          </h3>
-          {item.detail && <p>{item.detail}</p>}
-        </div>
-      </li>
-    ))}
-  </ol>
+              ) : (
+                "Education"
+              )}
+            </h3>
+            <ol class="roles">
+              {g.items.map((item, i) => {
+                const [from, rest] = dates(item.when ?? "");
+                return (
+                  <li
+                    class:list={["role", "rv", { current: item.current }]}
+                    style={`--i: ${i + 2}`}
+                  >
+                    <span class="dot" aria-hidden="true">
+                      <span></span>
+                    </span>
+                    <h4>{item.title}</h4>
+                    {item.when && (
+                      <p class="meta">
+                        {item.type && `${item.type}, `}
+                        {item.datetime ? (
+                          <time datetime={item.datetime}>{from}</time>
+                        ) : (
+                          from
+                        )}
+                        {rest}
+                      </p>
+                    )}
+                    {item.detail && <p class="detail">{item.detail}</p>}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
 </Section>
-
-<script>
-  // The timeline's top tail flows only while the timeline is on screen
-  // (motion.css: one of the site's two perpetual motions, on purpose).
-  const tl = document.querySelector<HTMLElement>(".tl");
-  if (tl && "IntersectionObserver" in window) {
-    new IntersectionObserver(([entry]) => {
-      tl.toggleAttribute("data-live", entry?.isIntersecting ?? false);
-    }).observe(tl);
-  }
-</script>
 
 <!-- Skills span the page as one row of four groups,
      so the lower half of About doesn't sit beside an empty column. -->
-<section class="skills-row" aria-labelledby="skills-title">
+<section class="skills-row rv-line" aria-labelledby="skills-title">
   <h3 id="skills-title" class="rv">
     Skills
   </h3>
@@ -117,13 +157,7 @@ const logoSize = (org: keyof typeof logos) => {
   days.length > 0 && (
     <section class="github heat-draw rv-line" aria-labelledby="github-title">
       <h3 id="github-title">On GitHub</h3>
-      <Heatmap
-        client:visible
-        start={days[0]?.date ?? ""}
-        counts={days.map((d) => d.count)}
-        levels={days.map((d) => d.level)}
-        profile={site.github}
-      />
+      <Heatmap days={days} profile={site.github} />
     </section>
   )
 }
@@ -143,127 +177,231 @@ const logoSize = (org: keyof typeof logos) => {
     color: var(--soft);
   }
 
-  /* The timeline: a node per row, a solid line from the first node to the
-     last (one segment per row, node centre to node centre), and a dotted
-     tail beyond each end: "still going" above the first, "before that"
-     below the last. Where scroll-driven animation runs (motion.css), ink
-     fills each segment quietly as you read; elsewhere the line is full. */
+  /* The timeline, grouped by employer: the start year in a narrow column
+     (a small line above the group on phones), then the group's heading
+     and its roles. The roles' dots sit in a 24px gutter on one line; the
+     headings and role text start after the gutter. */
   .tl {
-    /* The node's centre, from its row's top. */
-    --node-y: calc(var(--sp-5) + 0.875rem - 0.5px);
+    --year: 5.5rem;
+    --gut: 24px;
+    --dot: 9px;
+    /* One role title line, and the heading line above the first role. */
+    --role-lh: 1.75rem;
+    --head-lh: 2rem;
     position: relative;
+  }
+
+  .groups,
+  .roles {
     margin: 0;
-    padding: 0 0 0 var(--sp-5);
+    padding: 0;
     list-style: none;
   }
 
-  /* The tails: three dots 10px apart, fading away from the line. */
-  .tl::before,
-  .tail {
-    content: "";
+  .groups {
+    display: grid;
+    gap: var(--sp-7);
+  }
+
+  .group {
+    display: grid;
+    grid-template-columns: var(--year) minmax(0, 1fr);
+  }
+
+  .year {
+    grid-column: 1;
+    font-size: var(--fs-meta);
+    line-height: var(--head-lh);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .body {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  /* The group's heading: the employer's chip, or "Education", level with
+     the role text. */
+  .body > h3 {
+    display: flex;
+    align-items: center;
+    min-height: var(--head-lh);
+    margin-bottom: var(--sp-3);
+    padding-left: var(--gut);
+    font: var(--fw-bold) var(--fs-lede) / var(--head-lh) var(--ff-text);
+    letter-spacing: 0;
+  }
+
+  .roles {
+    display: grid;
+    gap: var(--sp-5);
+  }
+
+  .role {
+    position: relative;
+    padding-left: var(--gut);
+  }
+
+  /* A hairline ring on the line, level with the role's title; the job going
+     on now is filled with ink. Without JS this is how they rest. */
+  .dot {
     position: absolute;
-    width: 3px;
-    height: 30px;
-    background: radial-gradient(circle, var(--soft) 1.1px, transparent 1.6px)
-      center 0 / 3px 10px repeat-y;
+    z-index: 1;
+    top: calc(var(--role-lh) / 2 - var(--dot) / 2);
+    left: calc(var(--gut) / 2 - var(--dot) / 2);
+    width: var(--dot);
+    height: var(--dot);
+    border: var(--rule) solid var(--soft);
+    border-radius: 50%;
+    background: var(--bg);
   }
 
-  .tl::before {
-    top: calc(var(--node-y) - 8px - 30px);
-    left: -1px;
-    mask-image: linear-gradient(to top, #000 20%, transparent);
-  }
-
-  .tail {
-    top: calc(var(--node-y) + 8px);
-    left: calc(-1 * var(--sp-5) - 1px);
-    mask-image: linear-gradient(to bottom, #000 20%, transparent);
-  }
-
-  /* A row's segment, from its node to the next row's: the track and its
-     ink fill (::after). */
-  .seg {
+  .dot > span {
     position: absolute;
-    top: var(--node-y);
-    left: calc(-1 * var(--sp-5));
-    width: 1px;
-    height: 100%;
+    inset: calc(-1 * var(--rule));
+    border-radius: 50%;
+    background: var(--ink);
+    transform: scale(0);
+  }
+
+  .current .dot > span {
+    transform: none;
+  }
+
+  /* Read by scrolling (the script, which sets .scrubbing once it has put
+     every part where the scroll says): the ink follows, dots wait empty
+     until the ink reaches them. Without the script the
+     timeline simply shows complete. */
+  @media (prefers-reduced-motion: no-preference) {
+    .tl:global(.scrubbing) .role .dot > span {
+      transform: scale(0);
+    }
+
+    .tl:global(.scrubbing) .role .dot:global(.on) > span {
+      transform: none;
+    }
+  }
+
+  .role h4 {
+    font: var(--fw-bold) var(--fs-body) / var(--role-lh) var(--ff-text);
+  }
+
+  .meta {
+    font-size: var(--fs-sm);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .detail {
+    margin-top: var(--sp-1);
+    color: var(--soft);
+  }
+
+  /* The line: a hairline track through the dots with its ink fill, and
+     the two tails, three dots 10px apart, fading away from it. Until the
+     script measures the dots, it starts and ends at CSS's best guess. */
+  .line {
+    position: absolute;
+    top: var(
+      --line-top,
+      calc(var(--head-lh) + var(--sp-3) + var(--role-lh) / 2)
+    );
+    bottom: var(--line-bottom, 2.85rem);
+    left: calc(var(--year) + var(--gut) / 2 - var(--rule) / 2);
+    width: var(--rule);
     background: var(--line);
   }
 
-  .seg::after {
-    content: "";
+  .ink {
     position: absolute;
     inset: 0;
     background: var(--ink);
     transform-origin: top;
   }
 
-  .tl li {
-    position: relative;
-  }
-
-  /* 7px node on the track, level with the row's first line. */
-  .node {
+  .tail {
     position: absolute;
-    left: calc(-1 * var(--sp-5) - 3px);
-    top: calc(var(--sp-5) + 0.875rem - 4px);
-    width: 7px;
-    height: 7px;
-    /* Soft ring (7:1 on the page) so unfilled nodes read clearly. */
-    border: var(--rule) solid var(--soft);
-    border-radius: 50%;
-    background: var(--bg);
+    left: -1px;
+    width: 3px;
+    height: 30px;
+    overflow: hidden;
   }
 
-  .node::after {
-    content: "";
+  .tail.up {
+    bottom: calc(100% + var(--dot) / 2 + 4px);
+    mask-image: linear-gradient(to top, #000 20%, transparent);
+  }
+
+  .tail.down {
+    top: calc(100% + var(--dot) / 2 + 4px);
+    background: radial-gradient(circle, var(--soft) 1.1px, transparent 1.6px)
+      center 0 / 3px 10px repeat-y;
+    mask-image: linear-gradient(to bottom, #000 20%, transparent);
+  }
+
+  /* The top tail's dots, one step (10px) taller than the tail, so moving
+     them down by one step loops seamlessly. */
+  .flow {
     position: absolute;
-    inset: -1px;
-    border-radius: 50%;
-    background: var(--ink);
+    inset: -10px 0 0;
+    background: radial-gradient(circle, var(--soft) 1.1px, transparent 1.6px)
+      center 0 / 3px 10px repeat-y;
   }
 
-  .tl li {
-    display: grid;
-    grid-template-columns: 11rem minmax(0, 1fr);
-    gap: var(--sp-5);
-    padding-block: var(--sp-5);
-  }
+  /* The job going on now: its tail keeps flowing toward its dot, one dot
+     step every 1.5s, only while the timeline is on screen, never under
+     reduced motion; without JS it stays still. */
+  @media (prefers-reduced-motion: no-preference) {
+    .flow {
+      animation: tail-step 1.5s linear infinite paused;
+    }
 
-  /* One-line dates wherever the column has room. */
-  @media (min-width: 64rem) {
-    time,
-    .when {
-      white-space: nowrap;
+    .tl[data-live] .flow {
+      animation-play-state: running;
     }
   }
 
-  time,
-  .when {
-    color: var(--soft);
-    font-variant-numeric: tabular-nums;
+  @keyframes tail-step {
+    to {
+      transform: translateY(10px);
+    }
   }
 
-  /* Role, "at", logo chip and employer on one centered line, wrapping as
-     whole words on narrow screens. */
-  .tl h3 {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    column-gap: 0.3em;
-    /* A whole-pixel line box keeps the logo chips on whole pixels. */
-    font: var(--fw-bold) var(--fs-body) / 1.75rem var(--ff-text);
-  }
+  /* Phones: the year is a small line above its group, and the line and
+     dots run down the left edge. */
+  @media (max-width: 32.5rem) {
+    .tl {
+      --year: 0px;
+    }
 
-  .tl p {
-    color: var(--soft);
+    .group {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .year,
+    .body {
+      grid-column: 1;
+    }
+
+    .year {
+      padding-left: var(--gut);
+      line-height: 1.5rem;
+    }
+
+    .line {
+      top: var(
+        --line-top,
+        calc(1.5rem + var(--head-lh) + var(--sp-3) + var(--role-lh) / 2)
+      );
+    }
   }
 
   /* Logo chips: small, in the brand's own colors, beside the name. */
   /* Each employer is one mention chip: a hairline pill holding its logo
      and name, centred in the heading's 28px line, so it never grows it. */
   .org {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -282,8 +420,19 @@ const logoSize = (org: keyof typeof logos) => {
     transition: border-color var(--dur-ui) var(--ease-out);
   }
 
-  .org:hover {
-    border-color: color-mix(in oklab, var(--ink) 45%, var(--bg));
+  @media (hover: hover) and (pointer: fine) {
+    .org:hover {
+      border-color: color-mix(in oklab, var(--ink) 45%, var(--bg));
+    }
+  }
+
+  /* A 44px tall touch target, laid over the line without changing it. */
+  .org::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    translate: 0 -50%;
   }
 
   /* Closer than the site's 4px, so the ring clears the word before it. */
@@ -322,8 +471,11 @@ const logoSize = (org: keyof typeof logos) => {
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 12%, transparent);
   }
 
+  /* Skills and On GitHub are sibling subsections: each opens on the same
+     full-width line. */
   .skills-row {
     margin-top: var(--sp-9);
+    padding-top: var(--sp-5);
   }
 
   .skills-row > h3 {
@@ -369,10 +521,6 @@ const logoSize = (org: keyof typeof logos) => {
   }
 
   @media (max-width: 32.5rem) {
-    .tl li {
-      grid-template-columns: 1fr;
-      gap: var(--sp-1);
-    }
     .skills {
       grid-template-columns: 1fr;
     }

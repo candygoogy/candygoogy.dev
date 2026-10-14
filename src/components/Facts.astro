@@ -85,10 +85,26 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
     white-space: nowrap;
   }
 
+  /* Wrapped onto two lines (narrow phones), the links sit far enough apart
+     that their touch targets meet halfway without overlapping. */
   .links {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-1) var(--sp-5);
+    gap: var(--sp-4) var(--sp-5);
+  }
+
+  /* Each link has a 44px tall touch target, laid over the line without
+     changing it. */
+  .links a {
+    position: relative;
+  }
+
+  .links a::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    translate: 0 -50%;
   }
 
   .live {

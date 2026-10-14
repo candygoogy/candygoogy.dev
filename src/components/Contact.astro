@@ -63,9 +63,15 @@ const words = contact.question.split(" ");
   and the email with Copy; on the right, a quiet card with the Discord
   status and every other way to reach candygoogy. The card is a raised
   surface in the page's own colors, not the band's ink (the band stays the
-  one bold element).
+  one bold element). Its scripts (presence, the pill, Copy) are
+  scripts/motion/contact.ts.
 -->
-<section id="contact" class="contact rv-line" aria-labelledby="contact-title">
+<section
+  id="contact"
+  class="contact rv-line"
+  aria-labelledby="contact-title"
+  data-motion="contact"
+>
   <h2 id="contact-title" class="visually-hidden">
     Contact
   </h2>
@@ -89,6 +95,7 @@ const words = contact.question.split(" ");
     <div class="mail rv" style="--d: 460ms">
       <div class="pill">
         <a class="seg address" href={`mailto:${site.email}`}>
+          <span class="fill" aria-hidden="true"></span>
           <span class="env" aria-hidden="true">
             {["out", "in"].map((part) => (
               <svg
@@ -109,7 +116,9 @@ const words = contact.question.split(" ");
           class="seg copy"
           data-copy={site.email}
           aria-label="Copy email address"
+          aria-disabled="true"
         >
+          <span class="fill" aria-hidden="true"></span>
           <span class="stack icons" aria-hidden="true">
             <svg
               class="line-icon glyph"
@@ -126,7 +135,7 @@ const words = contact.question.split(" ");
               width="14"
               height="14"
             >
-              <path d="M3 8.5 6.5 12 13 4.5"></path>
+              <path d="M3 8.5 6.5 12 13 4.5" pathLength="1"></path>
             </svg>
           </span>
           <span class="stack copy-label" aria-hidden="true">
@@ -194,160 +203,6 @@ const words = contact.question.split(" ");
   </div>
 </section>
 
-<script>
-  // Discord presence through our own Worker (/api/presence returns only
-  // {status}). Fetched on load and when the tab becomes visible again, at
-  // most once a minute. Hidden without JS, on errors and on no status.
-  const LABELS: Record<string, string> = {
-    online: "Online",
-    idle: "Idle",
-    dnd: "Do not disturb",
-    offline: "Offline",
-  };
-  const badge = document.querySelector<HTMLElement>("[data-presence]");
-  let lastFetch = 0;
-  let pinged = false;
-
-  async function refresh() {
-    if (!badge || Date.now() - lastFetch < 60_000) return;
-    lastFetch = Date.now();
-    try {
-      const res = await fetch("/api/presence", {
-        signal: AbortSignal.timeout(4000),
-      });
-      const { status } = res.ok
-        ? ((await res.json()) as { status: string | null })
-        : { status: null };
-      const label = status ? LABELS[status] : undefined;
-      if (!status || !label) {
-        badge.hidden = true;
-        return;
-      }
-      badge.dataset.status = status;
-      const text = badge.querySelector(".state");
-      if (text) text.textContent = label;
-      badge.hidden = false;
-      // One ping when online, the first time it shows.
-      if (status === "online" && !pinged) {
-        pinged = true;
-        badge.classList.add("ping");
-      }
-    } catch {
-      badge.hidden = true;
-    }
-  }
-
-  if (badge) {
-    refresh();
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") refresh();
-    });
-  }
-
-  // Hover, on each of the pill's two segments: a soft accent fill slides
-  // in from the edge the pointer came through (the nearest of four) and
-  // leaves toward the edge it went out by. The script only sets the two
-  // edges and the state; CSS does the motion. Mouse only (by the event's
-  // own pointerType); elsewhere hover is a plain fill.
-  for (const seg of document.querySelectorAll<HTMLElement>(".pill .seg")) {
-    const edge = (e: PointerEvent) => {
-      const r = seg.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width;
-      const y = (e.clientY - r.top) / r.height;
-      const d = { l: x, r: 1 - x, t: y, b: 1 - y };
-      return (Object.keys(d) as (keyof typeof d)[]).reduce((a, k) =>
-        d[k] < d[a] ? k : a,
-      );
-    };
-    seg.classList.add("sweeps");
-    seg.addEventListener("pointerenter", (e) => {
-      if (e.pointerType !== "mouse") return;
-      delete seg.dataset.sweep;
-      seg.dataset.from = edge(e);
-      void seg.offsetWidth; // Commit the start position first.
-      seg.dataset.sweep = "in";
-    });
-    seg.addEventListener("pointerleave", (e) => {
-      if (seg.dataset.sweep !== "in") return;
-      seg.dataset.to = edge(e);
-      seg.dataset.sweep = "out";
-    });
-    seg.addEventListener("transitionend", (e) => {
-      if (e.pseudoElement === "::before" && seg.dataset.sweep === "out")
-        delete seg.dataset.sweep;
-    });
-  }
-
-  // Sending: on click (or Enter), the envelope's flap opens, the envelope
-  // leaves to the right and a fresh one slides in from the left (~420ms).
-  // It runs alongside the mailto navigation and never delays it.
-  const calm = matchMedia("(prefers-reduced-motion: reduce)");
-  const OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
-  const IN = "cubic-bezier(0.55, 0, 1, 0.45)";
-  for (const email of document.querySelectorAll<HTMLElement>(
-    ".pill .address",
-  )) {
-    const leaving = email.querySelector<SVGElement>(".env-out");
-    const flap = leaving?.querySelector<SVGElement>(".flap");
-    const arriving = email.querySelector<SVGElement>(".env-in");
-    let running: Animation[] = [];
-
-    email.addEventListener("click", () => {
-      if (calm.matches || !leaving || !flap || !arriving) return;
-      for (const a of running) a.cancel();
-      running = [
-        flap.animate([{ transform: "none" }, { transform: "scaleY(-1)" }], {
-          duration: 120,
-          easing: OUT,
-          fill: "forwards",
-        }),
-        leaving.animate(
-          [
-            { transform: "none" },
-            { transform: "translateX(14px)", opacity: 0 },
-          ],
-          { duration: 180, delay: 120, easing: IN, fill: "forwards" },
-        ),
-        arriving.animate(
-          [{ transform: "translateX(-14px)", opacity: 0 }, { opacity: 1 }],
-          { duration: 180, delay: 240, easing: OUT, fill: "both" },
-        ),
-      ];
-      // At rest the two copies look the same, so dropping every animation
-      // at the end swaps them back without a visible change.
-      const set = running;
-      Promise.all(set.map((a) => a.finished))
-        .then(() => {
-          for (const a of set) a.cancel();
-        })
-        .catch(() => {});
-    });
-  }
-
-  for (const button of document.querySelectorAll<HTMLButtonElement>(
-    "[data-copy]",
-  )) {
-    const status = button
-      .closest(".mail")
-      ?.querySelector<HTMLElement>("[data-copy-status]");
-    let timer: number | undefined;
-    button.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(button.dataset.copy ?? "");
-      } catch {
-        return; // The mailto link still works.
-      }
-      if (status) status.textContent = `${button.dataset.copy} copied`;
-      button.dataset.state = "done";
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        if (status) status.textContent = "";
-        delete button.dataset.state;
-      }, 2000);
-    });
-  }
-</script>
-
 <style>
   /* The 7:5 grid: statement on the left, card on the right, both resting
      on the same bottom line. */
@@ -375,7 +230,7 @@ const words = contact.question.split(" ");
 
   .statement .w {
     display: inline-block;
-    clip-path: inset(-0.06em -0.08em -0.2em -0.08em);
+    clip-path: inset(-0.06em -0.08em -0.14em -0.08em);
   }
 
   .statement .w > span {
@@ -419,17 +274,21 @@ const words = contact.question.split(" ");
     background: var(--surface);
     transition:
       border-color var(--dur-ui) var(--ease-out),
-      transform var(--dur-fast) var(--ease-out);
+      transform 120ms var(--ease-ui);
   }
 
   /* On hover the border leans toward the accent. */
-  .pill:has(.seg:hover) {
-    border-color: color-mix(in oklab, var(--acc) 45%, var(--chip-line));
+  @media (hover: hover) and (pointer: fine) {
+    .pill:has(.seg:hover) {
+      border-color: color-mix(in oklab, var(--acc) 45%, var(--chip-line));
+    }
   }
 
   /* Press: the whole pill, so the segments never part at the divider. */
-  .pill:has(.seg:active) {
-    transform: scale(0.98);
+  @media (prefers-reduced-motion: no-preference) {
+    .pill:has(.seg:active) {
+      transform: scale(0.97);
+    }
   }
 
   /* Each segment clips its own fill (a fill waiting off one segment's
@@ -451,60 +310,39 @@ const words = contact.question.split(" ");
   }
 
   /* The fill: a soft accent layer behind the text, waiting just off its
-     entry edge; the text stays ink (13.5:1 light, 12.6:1 dark). Without
-     the script (touch, no JS) hover is a plain fill. */
-  .seg::before {
-    content: "";
+     left edge (the script moves it for the mouse); the text stays ink
+     (13.5:1 light, 12.6:1 dark). Without the script hover is a plain
+     fill; a touch fills while pressed. */
+  .fill {
     position: absolute;
     inset: 0;
     z-index: -1;
     background: color-mix(in oklab, var(--acc) var(--mark-mix), transparent);
-    transform: translate(var(--from-x, -101%), var(--from-y, 0%));
+    transform: translate(var(--fx, -101%), var(--fy, 0%));
+    pointer-events: none;
   }
 
-  .seg:not(.sweeps):hover::before,
-  .seg:focus-visible::before {
+  .seg:not(.sweeps):hover .fill,
+  .seg:active:not([data-sweep]) .fill,
+  .seg:focus-visible .fill,
+  .seg[data-sweep="in"] .fill {
     transform: none;
   }
 
-  /* Where the fill waits (the entry edge) and where it leaves (the exit
-     edge), set by the script as l, r, t or b. */
-  .seg[data-from="r"] {
-    --from-x: 101%;
-  }
-
-  .seg[data-from="t"] {
-    --from-x: 0%;
-    --from-y: -101%;
-  }
-
-  .seg[data-from="b"] {
-    --from-x: 0%;
-    --from-y: 101%;
-  }
-
-  .seg[data-to="l"] {
-    --to-x: -101%;
-  }
-
-  .seg[data-to="t"] {
-    --to-x: 0%;
-    --to-y: -101%;
-  }
-
-  .seg[data-to="b"] {
-    --to-x: 0%;
-    --to-y: 101%;
-  }
-
-  .seg[data-sweep="in"]::before {
-    transform: none;
+  /* In over 320ms; out quicker, 240ms, on the in-out curve. Each retargets
+     from wherever the fill is. */
+  .seg[data-sweep="in"] .fill {
     transition: transform 320ms var(--ease-out);
   }
 
-  .seg[data-sweep="out"]::before {
-    transform: translate(var(--to-x, 101%), var(--to-y, 0%));
-    transition: transform 260ms var(--ease-out);
+  .seg[data-sweep="out"] .fill {
+    transition: transform 240ms var(--ease-in-out);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .seg .fill {
+      transition: none !important;
+    }
   }
 
   /* The focus ring sits inside each segment, on its own rounded end. */
@@ -571,29 +409,28 @@ const words = contact.question.split(" ");
     display: inline-flex;
   }
 
+  /* Until its script is ready, Copy rests as it looks but takes no hover
+     or press (scripts/motion/contact.ts enables it). */
+  .copy[aria-disabled="true"] {
+    cursor: default;
+    pointer-events: none;
+  }
+
   /* The icon and the label each keep both states in one grid cell, sized
-     to the larger ("Copied"), and crossfade: the pill never resizes. */
+     to the larger ("Copied"), so the pill never resizes. Which one shows
+     is plain CSS, at once; the motion between them (the words through
+     their cell, the check drawing in) is scripts/motion/contact.ts. */
   .stack {
     display: inline-grid;
   }
 
-  /* One out, then the other in (never both at once): the incoming state
-     waits for the outgoing one's 80ms fade. */
   .stack > * {
     grid-area: 1 / 1;
-    transition: opacity 80ms var(--ease-out);
   }
 
-  .copy .glyph,
-  .copy-label .idle,
-  .copy[data-state="done"] .check,
-  .copy[data-state="done"] .copy-label .done {
-    transition-delay: 80ms;
-  }
-
-  .copy[data-state="done"] .glyph,
-  .copy[data-state="done"] .copy-label .idle {
-    transition-delay: 0ms;
+  /* The words move through their cell, clipped above and below. */
+  .copy-label {
+    clip-path: inset(0 -0.25em);
   }
 
   .copy .glyph {
@@ -602,6 +439,11 @@ const words = contact.question.split(" ");
 
   .check {
     stroke-width: 2;
+  }
+
+  /* The check is drawn along its length (pathLength 1). */
+  .check path {
+    stroke-dasharray: 1;
   }
 
   .check,
@@ -614,28 +456,6 @@ const words = contact.question.split(" ");
   .copy[data-state="done"] .check,
   .copy[data-state="done"] .copy-label .done {
     opacity: 1;
-  }
-
-  /* The check draws in after the hand-off; its clip lives only in the
-     animation, so on revert it fades out with its label. */
-  .copy[data-state="done"] .check {
-    animation: draw-check 360ms var(--ease-out) 80ms both;
-  }
-
-  @keyframes draw-check {
-    from {
-      clip-path: inset(0 100% 0 0);
-    }
-    to {
-      clip-path: inset(0 0 0 0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .copy[data-state="done"] .check {
-      animation: none;
-      clip-path: none;
-    }
   }
 
   /* Phones: the pill takes the column's width, Copy still inside it. */
@@ -652,9 +472,10 @@ const words = contact.question.split(" ");
     }
   }
 
-  /* The narrowest phones: the address a step smaller and Copy an icon
-     (its name stays its accessible label), so the pill fits on one line. */
-  @media (max-width: 22.5rem) {
+  /* Narrow phones: the address a step smaller and Copy an icon (its name
+     stays its accessible label), so the pill fits on one line with room
+     to spare. */
+  @media (max-width: 25.5rem) {
     .address {
       gap: var(--sp-2);
       font-size: var(--fs-meta);
@@ -724,6 +545,18 @@ const words = contact.question.split(" ");
     display: none;
   }
 
+  /* With JS the line is kept (unseen) until the status arrives. */
+  :global(.js) .presence[hidden] {
+    display: flex;
+    visibility: hidden;
+  }
+
+  /* No status (yet): the name moves down by half the kept line (its
+     height plus its 3px margin), so it reads centred on the avatar. */
+  :global(.js) .who:has(.presence[hidden]) .name {
+    transform: translateY(calc((var(--fs-sm) * var(--lh-body) + 3px) / 2));
+  }
+
   .phrase {
     display: inline-grid;
   }
@@ -771,6 +604,12 @@ const words = contact.question.split(" ");
     .ping .dot::after {
       animation: ping 900ms var(--ease-out) 1;
     }
+  }
+
+  /* Played once: never again after the motion setting has changed during
+     the visit (html.motion-settled, motion.css). */
+  :global(html.motion-settled) .ping .dot::after {
+    animation: none;
   }
 
   @keyframes ping {
@@ -821,7 +660,9 @@ const words = contact.question.split(" ");
     background: none;
     color: var(--ink);
     font-weight: var(--fw-medium);
-    transition: background-color var(--dur-ui) var(--ease-out);
+    transition:
+      background-color var(--dur-ui) var(--ease-out),
+      transform 120ms var(--ease-ui);
   }
 
   .row svg {
@@ -843,13 +684,21 @@ const words = contact.question.split(" ");
       transform var(--dur-ui) var(--ease-out);
   }
 
-  .row:hover {
-    background: color-mix(in oklab, var(--line) 70%, transparent);
+  @media (hover: hover) and (pointer: fine) {
+    .row:hover {
+      background: color-mix(in oklab, var(--line) 70%, transparent);
+    }
+
+    .row:hover svg,
+    .row:hover .act {
+      color: var(--ink);
+    }
   }
 
-  .row:hover svg,
-  .row:hover .act {
-    color: var(--ink);
+  @media (prefers-reduced-motion: no-preference) {
+    .row:active {
+      transform: scale(0.97);
+    }
   }
 
   @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {

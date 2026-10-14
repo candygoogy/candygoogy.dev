@@ -1,6 +1,10 @@
 ---
 import { site } from "../data/site";
 import { builtOn, commit } from "../lib/build";
+
+// The page's own link is marked current, as in the header nav.
+const path = Astro.url.pathname.replace(/\.html$/, "");
+const current = (href: string) => (path === href ? "page" : undefined);
 ---
 
 <footer class="wrap">
@@ -25,8 +29,12 @@ import { builtOn, commit } from "../lib/build";
         )}
       </span>
     </p>
-    <a href="/colophon">Colophon</a>
-    <a href="/uses">Uses</a>
+    <a href="/colophon" aria-current={current("/colophon")}>
+      Colophon
+    </a>
+    <a href="/uses" aria-current={current("/uses")}>
+      Uses
+    </a>
     <a href={site.source}>Site source on GitHub</a>
     <a href="#top">Back to top</a>
     <!-- Paper only (print.css). -->
@@ -81,6 +89,35 @@ import { builtOn, commit } from "../lib/build";
     }
   }
 
+  .inner a[aria-current="page"] {
+    color: var(--ink);
+  }
+
+  /* Each link has a touch target at least 44px each way, laid over the
+     line without changing it; the rows (below) and the links stand far
+     enough apart that targets never overlap. */
+  .inner a {
+    position: relative;
+  }
+
+  .inner a::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    translate: -50% -50%;
+  }
+
+  /* Narrower, the notes and the links wrap onto rows: 24px between them
+     keeps the touch targets apart. */
+  @media (max-width: 53.75rem) {
+    .inner {
+      row-gap: var(--sp-5);
+    }
+  }
+
   .printed {
     display: none;
     margin: 0;
@@ -98,10 +135,10 @@ import { builtOn, commit } from "../lib/build";
       grid-template-columns: auto auto;
       justify-content: start;
       justify-items: start;
-      gap: var(--sp-3) var(--sp-6);
+      gap: var(--sp-5) var(--sp-6);
     }
 
-    .inner a {
+    .inner > a {
       order: -1;
     }
 

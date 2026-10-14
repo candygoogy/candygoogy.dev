@@ -8,7 +8,7 @@ interface Props {
 const { id, title } = Astro.props;
 ---
 
-<section {id} class="sh" aria-labelledby={`${id}-title`}>
+<section {id} class="sh rv-line" aria-labelledby={`${id}-title`}>
   <h2 id={`${id}-title`}>
     <span class="rv-mask">
       <span>{title}</span>
@@ -25,7 +25,9 @@ const { id, title } = Astro.props;
     grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
     gap: var(--sp-5) var(--gap-hero);
     align-items: start;
-    padding-top: var(--space-section);
+    /* It opens like Contact: the section gap, its line, then the title. */
+    margin-top: var(--space-section);
+    padding-top: var(--sp-7);
   }
 
   h2 {

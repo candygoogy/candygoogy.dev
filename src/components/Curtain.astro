@@ -26,9 +26,12 @@ import { site } from "../data/site";
 </div>
 
 <script>
-  const OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
-  const INOUT = "cubic-bezier(0.76, 0, 0.24, 1)";
   const root = document.documentElement;
+  // The site's curves (--ease-out and --ease-in-out in tokens.css).
+  const token = (name: string, fallback: string) =>
+    getComputedStyle(root).getPropertyValue(name).trim() || fallback;
+  const OUT = token("--ease-out", "ease-out");
+  const INOUT = token("--ease-in-out", "ease-in-out");
   const curtain = document.querySelector<HTMLElement>(".curtain");
 
   if (curtain && root.classList.contains("intro-on")) {

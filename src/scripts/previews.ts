@@ -9,6 +9,11 @@
 //
 // Mouse only, by the event's own pointerType: a media query like (hover:
 // hover) is false on touch-screen laptops even when a mouse is in use.
+//
+// Started after the first paint by the motion loader (scripts/loader.ts),
+// only on pages with previews. A chip already under the mouse or focused
+// by then shows its card as if it had just been reached.
+import { visible } from "./motion";
 
 const DELAY = 250;
 const GRACE = 100;
@@ -34,9 +39,7 @@ const cardFor = (chip: HTMLElement) =>
 // loading, then waits for that image to decode (at most 1.5s).
 function prepare(card: HTMLElement) {
   card.hidden = false;
-  const imgs = [...card.querySelectorAll("img")].filter((img) =>
-    img.checkVisibility(),
-  );
+  const imgs = [...card.querySelectorAll("img")].filter(visible);
   for (const img of imgs) img.loading = "eager";
   return Promise.race([
     Promise.allSettled(imgs.map((img) => img.decode())),
@@ -123,6 +126,8 @@ for (const chip of document.querySelectorAll<HTMLElement>("[data-preview]")) {
   });
   card.addEventListener("pointerenter", () => window.clearTimeout(hideTimer));
   card.addEventListener("pointerleave", hideSoon);
+  if (chip.matches(":focus-visible")) void show(chip, true, true);
+  else if (chip.matches(":hover")) void show(chip, false);
 }
 
 addEventListener("keydown", (e) => {

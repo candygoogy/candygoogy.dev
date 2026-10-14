@@ -2,7 +2,8 @@
 // scripts/avatar.mjs):
 //  - public/favicon.ico: 16, 32 and 48px (Windows uses 48 for the taskbar
 //    and shortcuts), cropped in on the subject so it still
-//    reads at tab size (the crop is in src/data/avatar.ts);
+//    reads at tab size (the crop is in src/data/avatar.ts); lossless PNGs
+//    with each row's filter picked for size (about 15% smaller);
 //  - public/apple-touch-icon.png: 180px, the whole image (the OS rounds the
 //    corners).
 // Both are gitignored. The source is the live avatar from GitHub, or the
@@ -62,8 +63,18 @@ function region(width, height, sha256) {
   };
 }
 
+// A PNG's bits per pixel, from its header: the bit depth times the
+// channels its colour type has (RGB from a photo is 24, RGBA 32).
+function bpp(png) {
+  const depth = png.readUInt8(24);
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[png.readUInt8(25)];
+  if (!channels) throw new Error("icons: not a PNG this script understands");
+  return depth * channels;
+}
+
 // An .ico is a 6-byte header, a 16-byte entry per image, then the images
-// (PNG data inside is fine for every browser).
+// (PNG data inside is fine for every browser). Each entry states its
+// image's real bit depth, so the header and the data agree.
 function ico(images) {
   const head = Buffer.alloc(6 + 16 * images.length);
   head.writeUInt16LE(1, 2);
@@ -74,7 +85,7 @@ function ico(images) {
     head.writeUInt8(size, e);
     head.writeUInt8(size, e + 1);
     head.writeUInt16LE(1, e + 4); // colour planes
-    head.writeUInt16LE(32, e + 6); // bits per pixel
+    head.writeUInt16LE(bpp(data), e + 6); // bits per pixel
     head.writeUInt32LE(data.length, e + 8);
     head.writeUInt32LE(offset, e + 12);
     offset += data.length;
@@ -92,7 +103,7 @@ try {
       await sharp(image)
         .extract(crop)
         .resize(size, size, { kernel: "lanczos3" })
-        .png({ compressionLevel: 9 })
+        .png({ compressionLevel: 9, adaptiveFiltering: true })
         .toBuffer(),
     ]),
   );

@@ -1,0 +1,429 @@
+---
+// The home network as one list: each device once, under the one it's
+// connected to, the topology drawn as wires down the left in the career
+// timeline's line-and-dot language. Solid wires are cables, dotted ones
+// Wi-Fi, and a small tag says when a link isn't a plain cable. Dots are
+// filled for my own wired devices and hollow for the Internet (not mine)
+// and the Wi-Fi clients; the access point's dot keeps a ring. "Everything
+// else" is four small dots. All HTML and CSS (nested
+// lists, the wires drawn by pseudo-elements), so it's complete without JS
+// and in print; the wires drawing in and the traffic on the Wi-Fi are
+// scripts/motion/homelab.ts. Products only: never hostnames, addresses,
+// ports or versions.
+//
+// Renders the whole tree, or with `branch` just the devices under
+// `parent` (the component calls itself for each level).
+import type { NetRow } from "../data/uses";
+
+interface Props {
+  rows: NetRow[];
+  parent?: string;
+  branch?: boolean;
+}
+
+const { rows, parent, branch = false } = Astro.props;
+const under = (id?: string) => rows.filter((r) => r.parent === id);
+const HOW = { poe: "PoE", wifi: "Wi-Fi" };
+---
+
+{branch ? (
+  <ul>
+    {under(parent).map((r) => {
+      const kids = under(r.id);
+      const how = r.link === "poe" || r.link === "wifi" ? HOW[r.link] : "";
+      return (
+        <li class:list={{ wifi: r.link === "wifi", crowd: r.crowd }}>
+          <div
+            class:list={[
+              "r",
+              { kids: kids.length, air: kids[0]?.link === "wifi" },
+            ]}
+          >
+            {r.crowd ? (
+              <span class="dots" aria-hidden="true">
+                <span class="dot" />
+                <span class="dot" />
+                <span class="dot" />
+                <span class="dot" />
+              </span>
+            ) : (
+              <span
+                class:list={[
+                  "dot",
+                  {
+                    hollow: !r.parent || r.link === "wifi",
+                    ring: kids.some((k) => k.link === "wifi"),
+                  },
+                ]}
+                aria-hidden="true"
+              />
+            )}
+            <span class="lab">
+              {r.label}
+              {how && (
+                <span class="how">
+                  <span class="visually-hidden">(</span>
+                  {how}
+                  <span class="visually-hidden">)</span>
+                </span>
+              )}
+              <span class="visually-hidden">:</span>
+            </span>
+            <span class="lead" aria-hidden="true">
+              &#8203;
+            </span>
+            <span class="val">
+              {r.href ? (
+                <a href={r.href}>{r.product}</a>
+              ) : (
+                <span>{r.product}</span>
+              )}
+              {r.detail && (
+                <span class:list={["det", { tag: !r.detail.tag }]}>
+                  <span class="visually-hidden">, </span>
+                  {r.detail.tag && (
+                    <>
+                      <span class="tag">{r.detail.tag}</span>{" "}
+                    </>
+                  )}
+                  {r.detail.href ? (
+                    <a href={r.detail.href}>{r.detail.text}</a>
+                  ) : (
+                    r.detail.text
+                  )}
+                </span>
+              )}
+            </span>
+          </div>
+          {kids.length > 0 && <Astro.self rows={rows} parent={r.id} branch />}
+        </li>
+      );
+    })}
+  </ul>
+) : (
+  <div class="net" data-motion="homelab">
+    <Astro.self rows={rows} branch />
+    <div class="packets" aria-hidden="true" />
+  </div>
+)}
+
+<style>
+  /* --y: the middle of a row's first line, from the top of its item, where
+     its dot and the wire into it sit. */
+  .net {
+    --dot: 9px;
+    --in: 26px;
+    --pad: var(--sp-4);
+    --y: calc(var(--pad) + var(--fs-body) * var(--lh-body) / 2);
+    --wire: color-mix(in oklab, var(--ink) 30%, var(--bg));
+    position: relative;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Each level steps in so its wire hangs from its parent's dot. */
+  ul ul {
+    margin-left: calc(var(--dot) / 2 - var(--rule) / 2);
+    padding-left: var(--in);
+  }
+
+  li {
+    position: relative;
+  }
+
+  /* A row: the dot, the label, a dotted leader on the first line's
+     baseline and the product right-aligned, as in the sheets below. */
+  .r {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--dot) auto minmax(var(--sp-5), 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--sp-3);
+    padding-block: var(--pad);
+  }
+
+  .dot {
+    position: relative;
+    z-index: 1;
+    align-self: start;
+    width: var(--dot);
+    height: var(--dot);
+    margin-top: calc(var(--y) - var(--pad) - var(--dot) / 2);
+    border-radius: 50%;
+    color: var(--ink);
+    background: currentColor;
+  }
+
+  .hollow,
+  .dots .dot {
+    border: 1.5px solid;
+    background: none;
+  }
+
+  .ring::before {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border: var(--rule) solid var(--wire);
+    border-radius: 50%;
+  }
+
+  .lab {
+    font-size: var(--fs-meta);
+    color: var(--soft);
+    white-space: nowrap;
+  }
+
+  .how {
+    margin-left: var(--sp-1);
+    padding: 1px 7px;
+    border: var(--rule) solid var(--chip-line);
+    border-radius: var(--r-pill);
+    font-size: var(--fs-xs);
+  }
+
+  .lead {
+    overflow: hidden;
+    font-size: var(--fs-meta);
+    line-height: 1;
+    border-bottom: var(--rule) dotted var(--chip-line);
+    transform: translateY(-0.3em);
+  }
+
+  .val {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    font-weight: var(--fw-medium);
+    color: var(--ink);
+    text-align: right;
+  }
+
+  /* Links in a row (a product, or the bot under the server) can be
+     tapped anywhere 44px tall around their line, without changing the
+     layout. */
+  .val a {
+    position: relative;
+  }
+
+  .val a::after {
+    content: "";
+    position: absolute;
+    inset: calc(50% - 22px) 0;
+  }
+
+  .det {
+    font-size: var(--fs-meta);
+    font-weight: var(--fw-regular);
+  }
+
+  .tag {
+    color: var(--soft);
+  }
+
+  /* The wires: down from a parent's dot to the bottom of its row, then
+     through each of its devices' items (to the last one's dot only), and
+     across to each dot, stopping just short of it. Dotted for Wi-Fi, like
+     the leaders. */
+  ul ul > li::before,
+  ul ul > li::after,
+  .kids::after {
+    content: "";
+    position: absolute;
+    border: 0 solid var(--wire);
+  }
+
+  ul ul > li::before,
+  .kids::after {
+    border-left-width: var(--rule);
+    transform-origin: top;
+  }
+
+  ul ul > li::before {
+    top: 0;
+    bottom: 0;
+    left: calc(-1 * var(--in));
+  }
+
+  ul ul > li:last-child::before {
+    bottom: auto;
+    height: var(--y);
+  }
+
+  ul ul > li::after {
+    top: var(--y);
+    left: calc(-1 * var(--in));
+    width: calc(var(--in) - 6px);
+    border-top-width: var(--rule);
+    transform-origin: left;
+  }
+
+  .kids::after {
+    top: calc(var(--y) + var(--dot) / 2);
+    bottom: 0;
+    left: calc(var(--dot) / 2 - var(--rule) / 2);
+  }
+
+  ul ul > .wifi::before,
+  ul ul > .wifi::after,
+  .air::after {
+    border-style: dotted;
+  }
+
+  /* Everything else: four small dots, in a box that keeps their width
+     while one is swapped for another (the script), so the label never
+     moves. */
+  .crowd > .r {
+    grid-template-columns: auto auto minmax(var(--sp-5), 1fr) auto;
+  }
+
+  .dots {
+    --dot: 7px;
+    --gap: 4px;
+    display: flex;
+    gap: var(--gap);
+    align-self: start;
+    width: calc(var(--dot) * 4 + var(--gap) * 3);
+  }
+
+  .dots .dot {
+    flex: none;
+  }
+
+  .crowd .val {
+    font-weight: var(--fw-regular);
+    color: var(--soft);
+  }
+
+  /* The packets on the Wi-Fi (the script): ink dots with a soft halo,
+     moved by transform from the top left of the tree. */
+  .packets {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .packets :global(i) {
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 15%, transparent);
+  }
+
+  /* Phones: the product under its label, no leaders. The dot and the wire
+     into it sit on the label's line. */
+  @media (max-width: 32.5rem) {
+    .net {
+      --in: 20px;
+      --y: calc(var(--pad) + var(--fs-meta) * var(--lh-body) / 2);
+    }
+
+    .r,
+    .crowd > .r {
+      grid-template-columns: auto 1fr;
+      row-gap: var(--sp-1);
+    }
+
+    .lead {
+      display: none;
+    }
+
+    .val {
+      grid-column: 2;
+      justify-items: start;
+      text-align: left;
+    }
+  }
+
+  /* The wires wait undrawn, the dots and words unseen, for a tree that was
+     still off screen when the script started (.pending) and hasn't
+     arrived yet; never without the script, or on paper. */
+  @media screen and (prefers-reduced-motion: no-preference) {
+    :global(html.motion-ready) .pending:not(:global(.is-in)) li::before,
+    :global(html.motion-ready) .pending:not(:global(.is-in)) li::after,
+    :global(html.motion-ready) .pending:not(:global(.is-in)) .kids::after,
+    :global(html.motion-ready) .pending:not(:global(.is-in)) .dot {
+      transform: scale(0);
+    }
+
+    :global(html.motion-ready) .pending:not(:global(.is-in)) :is(.lab, .val),
+    :global(html.motion-ready) .pending:not(:global(.is-in)) .lead {
+      opacity: 0;
+    }
+  }
+
+  /* Paper: the same tree on the receipt's narrow column, each product
+     under its label as on phones (print.css flattens every other grid and
+     drops backgrounds and rounding). */
+  @media print {
+    .net {
+      --dot: 6px;
+      --in: 4mm;
+      --pad: 1mm;
+      --y: calc(var(--pad) + var(--fs-meta) * 1.4 / 2);
+      --wire: #000;
+      line-height: 1.4;
+    }
+
+    .dots {
+      --dot: 5px;
+      --gap: 2px;
+    }
+
+    .r,
+    .crowd > .r {
+      grid-template-columns: auto minmax(0, 1fr) !important;
+      column-gap: 2mm !important;
+      row-gap: 0 !important;
+    }
+
+    .r > * {
+      grid-column: 2 !important;
+      text-align: start;
+    }
+
+    .r > :is(.dot, .dots) {
+      grid-column: 1 !important;
+    }
+
+    .lead {
+      display: none;
+    }
+
+    .val {
+      justify-items: start;
+    }
+
+    .dot {
+      background-color: currentColor !important;
+      border-radius: 50% !important;
+      print-color-adjust: exact;
+    }
+
+    .hollow,
+    .dots .dot {
+      border-width: 1px;
+      background-color: transparent !important;
+    }
+
+    .ring::before {
+      inset: -3px;
+    }
+
+    .how {
+      border-radius: var(--r-pill) !important;
+    }
+
+    .packets {
+      display: none;
+    }
+  }
+</style>

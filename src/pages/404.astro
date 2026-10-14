@@ -3,7 +3,7 @@
 // page's own words and the way home. Beside them, a three-hop status
 // trace (you, this site, this page), drawn once in hairlines: the first
 // two work, the page isn't found. With JS the last hop is also a button
-// that tries the oldest IT fix (the script below).
+// that tries the oldest IT fix (scripts/motion/notfound.ts).
 import Base from "../layouts/Base.astro";
 
 // Every state a hop can show, stacked in one cell so the status keeps the
@@ -50,7 +50,7 @@ const hops = [
       </p>
     </div>
 
-    <div class="trace" data-trace>
+    <div class="trace" data-trace data-motion="notfound">
       <span class="tick tl" aria-hidden="true"></span>
       <span class="tick tr" aria-hidden="true"></span>
       <span class="tick bl" aria-hidden="true"></span>
@@ -94,9 +94,22 @@ const hops = [
                 <span class="status" data-state={hop.state}>
                   <span class="dot" aria-hidden="true"></span>
                   <span class="states" aria-hidden="true">
-                    {Object.entries(states).map(([key, text]) => (
-                      <span data-is={key}>{text}</span>
-                    ))}
+                    {Object.entries(states).map(([key, text]) =>
+                      key === "checking" ? (
+                        // Its dots are separate, so they can appear in
+                        // turn while the hop is being checked.
+                        <span data-is={key}>
+                          Checking
+                          <span class="dots">
+                            <span>.</span>
+                            <span>.</span>
+                            <span>.</span>
+                          </span>
+                        </span>
+                      ) : (
+                        <span data-is={key}>{text}</span>
+                      ),
+                    )}
                   </span>
                   <span class="visually-hidden" data-sr>
                     {states[hop.state]}
@@ -122,152 +135,6 @@ const hops = [
     </div>
   </section>
 </Base>
-
-<script>
-  // The trace, once the 404 has typed in: each hop appears "Checking…",
-  // resolves, and the line draws on to the next (~450ms a step). The
-  // header shows the time of this request in UTC (set once, not a clock). Then the
-  // last hop is a button: "turning it off and on again" shows
-  // "Restarting…" for 600ms, then "Not found" again, and says so once in
-  // the live line. Without JS it's the final state; under reduced motion
-  // it's the final state at once, and the egg still works.
-  const STEP = 450;
-  const RESTART = 600;
-  const LABELS: Record<string, string> = {
-    checking: "Checking…",
-    ok: "Working",
-    missing: "Not found",
-    restarting: "Restarting…",
-  };
-  const calm = matchMedia("(prefers-reduced-motion: reduce)");
-  const trace = document.querySelector<HTMLElement>("[data-trace]");
-
-  if (trace) {
-    const hops = [...trace.querySelectorAll<HTMLElement>(".hop")];
-    const line = trace.querySelector<HTMLElement>("[data-egg-line]");
-
-    const setState = (hop: HTMLElement | undefined, state: string) => {
-      const status = hop?.querySelector<HTMLElement>(".status");
-      const sr = hop?.querySelector<HTMLElement>("[data-sr]");
-      if (status) status.dataset.state = state;
-      if (sr) sr.textContent = LABELS[state] ?? "";
-    };
-
-    // The real path and the visitor's time (UTC), in the trace and the
-    // metadata line.
-    const path = decodeURI(location.pathname);
-    // Long paths keep their start and their end, with an ellipsis between:
-    // up to 28 characters in the footer, 20 under the narrow hop.
-    const middle = (max: number) => {
-      if (path.length <= max) return path;
-      const head = Math.ceil((max - 1) / 2);
-      return `${path.slice(0, head)}…${path.slice(-(max - 1 - head))}`;
-    };
-    for (const [selector, max] of [
-      ["[data-path]", 20],
-      ["[data-path-value]", 28],
-    ] as const) {
-      const el = trace.querySelector<HTMLElement>(selector);
-      if (!el) continue;
-      el.textContent = middle(max);
-      el.title = path;
-    }
-    const timeValue = trace.querySelector<HTMLElement>("[data-time-value]");
-    if (timeValue) {
-      timeValue.textContent = `${new Date().toISOString().slice(11, 19)} UTC`;
-    }
-    for (const el of trace.querySelectorAll<HTMLElement>("[data-meta-path]")) {
-      el.hidden = false;
-    }
-
-    // The sequence.
-    const timers: number[] = [];
-    let running = false;
-    const finish = () => {
-      for (const t of timers.splice(0)) window.clearTimeout(t);
-      running = false;
-      hops.forEach((hop, i) => {
-        hop.dataset.shown = "";
-        hop.dataset.drawn = "";
-        setState(hop, i === hops.length - 1 ? "missing" : "ok");
-      });
-      trace.dataset.done = "";
-    };
-
-    const play = () => {
-      running = true;
-      let t = 0;
-      hops.forEach((hop, i) => {
-        const last = i === hops.length - 1;
-        timers.push(
-          window.setTimeout(() => {
-            hop.dataset.shown = "";
-            setState(hop, "checking");
-          }, t),
-        );
-        t += STEP;
-        timers.push(
-          window.setTimeout(() => {
-            setState(hop, last ? "missing" : "ok");
-            if (!last) hop.dataset.drawn = "";
-          }, t),
-        );
-        if (!last) t += STEP;
-      });
-      timers.push(window.setTimeout(finish, t + 50));
-    };
-
-    if (calm.matches) {
-      finish();
-    } else {
-      trace.dataset.run = "";
-      const lastDigit = document.querySelector(".code .l:last-child > span");
-      let started = false;
-      const start = () => {
-        if (started) return;
-        started = true;
-        play();
-      };
-      lastDigit?.addEventListener("animationend", start, { once: true });
-      timers.push(window.setTimeout(start, 1500)); // If it never reports.
-    }
-
-    // The egg: the last hop as a button.
-    const lastHop = hops.at(-1);
-    const node = lastHop?.querySelector<HTMLElement>(".node");
-    if (lastHop && node && line) {
-      const button = document.createElement("button");
-      for (const attr of node.attributes) {
-        button.setAttribute(attr.name, attr.value);
-      }
-      button.type = "button";
-      button.append(...node.childNodes);
-      node.replaceWith(button);
-      // Its name stays what it shows ("This page, Not found"); the question
-      // is its description, from a hidden note (read only through the
-      // button, never as page text).
-      const hint = document.createElement("span");
-      hint.id = "egg-hint";
-      hint.hidden = true;
-      hint.textContent = "Have you tried turning it off and on again?";
-      lastHop.append(hint);
-      button.setAttribute("aria-describedby", hint.id);
-
-      let busy = false;
-      button.addEventListener("click", () => {
-        if (busy) return;
-        if (running || !("done" in trace.dataset)) finish();
-        busy = true;
-        setState(lastHop, "restarting");
-        window.setTimeout(() => {
-          setState(lastHop, "missing");
-          line.textContent = "Tried it. Still a 404.";
-          busy = false;
-        }, RESTART);
-      });
-    }
-  }
-</script>
 
 <style>
   /* The 404 and its words on the left, the trace on the right (6:5, so
@@ -326,6 +193,12 @@ const hops = [
     :global(.js) .l > span {
       animation: nf-rise 620ms var(--ease-out) calc(60ms + var(--i) * 30ms) both;
     }
+  }
+
+  /* Played once: never again after the motion setting has changed during
+     the visit (html.motion-settled, motion.css). */
+  :global(html.motion-settled) .l > span {
+    animation: none;
   }
 
   @keyframes nf-rise {
@@ -404,7 +277,13 @@ const hops = [
     flex: 1;
     align-content: center;
     gap: var(--sp-5);
-    padding: var(--sp-7) var(--sp-4) var(--sp-5);
+    /* The hops sit in the middle of the panel, the reply's line under
+       them: the space above matches the line, its gap and the space
+       below. The total stays what it was, so the panel keeps its size. */
+    --reply: calc(1.6 * var(--fs-body));
+    --air: calc((var(--sp-7) - var(--reply)) / 2);
+    padding: calc(var(--air) + var(--sp-5) + var(--reply)) var(--sp-4)
+      var(--air);
   }
 
   /* A narrower panel (the 1024 column): one step down, so the three hops
@@ -482,12 +361,35 @@ const hops = [
   button.node {
     border-radius: 10px;
     cursor: pointer;
+    transition: transform 120ms var(--ease-ui);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    button.node:active {
+      transform: scale(0.97);
+    }
   }
 
   /* The egg's quiet affordance: the page icon gets a hairline frame on
-     hover, enough for the curious to try it. */
-  button.node:hover .glyph {
-    box-shadow: inset 0 0 0 var(--rule) var(--chip-line);
+     hover, enough for the curious to try it. Touch screens get the same
+     frame once, fading, when the trace is done (the script). */
+  @media (hover: hover) {
+    button.node:hover .glyph {
+      box-shadow: inset 0 0 0 var(--rule) var(--chip-line);
+    }
+  }
+
+  .glyph.cue {
+    animation: egg-cue 1.2s var(--ease-out) forwards;
+  }
+
+  @keyframes egg-cue {
+    from {
+      box-shadow: inset 0 0 0 var(--rule) var(--chip-line);
+    }
+    to {
+      box-shadow: inset 0 0 0 var(--rule) transparent;
+    }
   }
 
   button.node:focus-visible {
@@ -571,8 +473,11 @@ const hops = [
   }
 
   /* Square-ish dots: green working, grey while checking, a hollow red
-     ring when not found. */
+     ring when not found. The green is a layer over the grey (::before),
+     so it can fill in from the centre; ::after is the one ring a hop
+     sends out as it resolves (scripts/motion/notfound.ts). */
   .dot {
+    position: relative;
     flex: none;
     width: 9px;
     height: 9px;
@@ -580,8 +485,26 @@ const hops = [
     background: var(--st-offline);
   }
 
-  .status[data-state="ok"] .dot {
+  .dot::before,
+  .dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .dot::before {
     background: var(--st-online);
+  }
+
+  .dot::after {
+    box-shadow: 0 0 0 1px var(--st-online);
+  }
+
+  .status[data-state="ok"] .dot::before {
+    opacity: 1;
   }
 
   .status[data-state="missing"] .dot {
@@ -589,8 +512,14 @@ const hops = [
     box-shadow: inset 0 0 0 1.5px var(--st-missing);
   }
 
+  /* The words share one cell, clipped above and below, so a changing
+     word can leave upward and the next rise in from under it. */
   .states {
     display: inline-grid;
+    clip-path: inset(0 -0.5em);
+    /* Every word starts right by the dot, whatever its length (the cell
+       keeps the width of the longest, centred with the hop). */
+    text-align: start;
   }
 
   .states > span {
@@ -599,6 +528,63 @@ const hops = [
     white-space: nowrap;
   }
 
+  /* An answer reads in ink; the in-between states stay soft. */
+  .status[data-state="ok"] [data-is="ok"],
+  .status[data-state="missing"] [data-is="missing"] {
+    color: var(--ink);
+  }
+
+  /* While a hop is being checked, the dots of "Checking..." appear in
+     turn, 0.18s apart, and start again: only while it's checking (it
+     ends as the hop answers). Still under reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    .status[data-state="checking"] .dots > span {
+      animation: dot-1 720ms infinite;
+    }
+
+    .status[data-state="checking"] .dots > span:nth-child(2) {
+      animation-name: dot-2;
+    }
+
+    .status[data-state="checking"] .dots > span:nth-child(3) {
+      animation-name: dot-3;
+    }
+  }
+
+  @keyframes dot-1 {
+    0%,
+    24.9% {
+      opacity: 0;
+    }
+    25%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dot-2 {
+    0%,
+    49.9% {
+      opacity: 0;
+    }
+    50%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes dot-3 {
+    0%,
+    74.9% {
+      opacity: 0;
+    }
+    75%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .states > [data-leaving],
   .status[data-state="checking"] [data-is="checking"],
   .status[data-state="ok"] [data-is="ok"],
   .status[data-state="missing"] [data-is="missing"],
@@ -623,35 +609,23 @@ const hops = [
   }
 
   /* The sequence (JS, motion allowed): hops wait unseen and links
-     undrawn until the script reaches them, and all show on their own at
-     4s if it never does. */
+     undrawn from the first paint until the script (loaded after it)
+     reaches them, and all show on their own at 4s if it never does. The
+     panel is on screen at load, so this keys on .js (set before the first
+     paint), not .motion-ready, which would show the end state first. */
   @media (prefers-reduced-motion: no-preference) {
-    .hop {
-      transition:
-        opacity 450ms var(--ease-out),
-        transform 450ms var(--ease-out);
-    }
-
-    .hop::after {
-      transition: transform 450ms var(--ease-out);
-    }
-
-    .hop::before {
-      transition: opacity 150ms var(--ease-out) 350ms;
-    }
-
-    :global(.js) .trace:not([data-done]) .hop:not([data-shown]) {
+    :global(html.js) .trace:not([data-done]) .hop:not([data-shown]) {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(24px);
       animation: trace-shown 1ms linear 4000ms forwards;
     }
 
-    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
+    :global(html.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
       transform: scaleX(0);
       animation: trace-drawn 1ms linear 4000ms forwards;
     }
 
-    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::before {
+    :global(html.js) .trace:not([data-done]) .hop:not([data-drawn])::before {
       opacity: 0;
       animation: trace-shown 1ms linear 4000ms forwards;
     }
@@ -772,7 +746,7 @@ const hops = [
       transform: rotate(135deg);
     }
 
-    :global(.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
+    :global(html.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
       transform: scaleY(0);
     }
   }
@@ -780,6 +754,15 @@ const hops = [
   @media (max-width: 22.5rem) {
     .meta {
       flex-direction: column;
+    }
+  }
+
+  /* Paper lists the hops one under another (print.css), so the links and
+     arrowheads drawn between them across the panel have nowhere to go. */
+  @media print {
+    .hop::before,
+    .hop::after {
+      display: none;
     }
   }
 </style>

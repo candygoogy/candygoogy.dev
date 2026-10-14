@@ -22,16 +22,16 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
       How this site is made, for anyone who wonders.
     </p>
 
-    <dl class="rows rv-line at-bottom" style="--line-color: var(--line)">
+    <dl class="rows">
       <div class="row rv rv-line" style="--i: 0; --line-color: var(--line)">
         <dt>Stack</dt>
         <dd>
           <p>
-            Astro builds every page ahead of time as plain HTML. The
-            contribution grid is Svelte; the other interactive parts are small
-            scripts in plain TypeScript. Cloudflare serves it, and a small
-            Worker of my own handles the three things that can’t be static: the
-            Discord status, a daily rebuild and a plain-text page for terminals.
+            Astro builds every page ahead of time as plain HTML, and the
+            interactive parts are small scripts in plain TypeScript, loaded only
+            on the pages that use them. Cloudflare serves it, and a small Worker
+            of my own handles the three things that can’t be static: the Discord
+            status, a daily rebuild and a plain-text page for terminals.
           </p>
         </dd>
       </div>
@@ -97,7 +97,8 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
         <dd>
           <p>
             The source is <a href={site.source}>on GitHub</a>, and the footer
-            shows the commit this version was built from.
+            shows the commit this version was{" "}
+            <span class="nobr">built from.</span>
           </p>
         </dd>
       </div>

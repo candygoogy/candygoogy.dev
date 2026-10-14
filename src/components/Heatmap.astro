@@ -1,0 +1,574 @@
+---
+// GitHub contributions for the last year, rendered at build time (private
+// ones are included as plain counts, as on the GitHub profile).
+// Without JS: a table whose every day carries its count in its label, plus
+// a text summary. With JS (scripts/motion/heatmap.ts, after first paint):
+// one tab stop with arrow-key movement, a tooltip for pointer and keyboard
+// users, the total rolling into place, and on phones, where the grid gives
+// way to one bar per week, reading a week by tapping or dragging.
+import type { Day } from "../lib/github";
+
+interface Props {
+  days: Day[];
+  profile: string;
+}
+
+const { days, profile } = Astro.props;
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const fmtLong = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const fmtShort = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const fmtMonth = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  timeZone: "UTC",
+});
+// The strip's ends: the first and last day's month and year.
+const fmtSpan = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const fmtDay = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+const parse = (iso: string) => new Date(`${iso}T00:00:00Z`);
+const plural = (n: number) =>
+  `${n.toLocaleString("en-US")} contribution${n === 1 ? "" : "s"}`;
+
+// Weeks as columns (Sunday first), the way GitHub lays them out. Days
+// before the first date are empty padding cells.
+type Cell = (Day & { label: string }) | null;
+const weeks: Cell[][] = [];
+const firstDate = days[0]?.date;
+if (firstDate) {
+  const first = parse(firstDate).getUTCDay();
+  let week: Cell[] = Array.from({ length: first }, () => null);
+  for (const d of days) {
+    week.push({
+      ...d,
+      label: `${d.count ? plural(d.count) : "No contributions"} on ${fmtLong.format(parse(d.date))}`,
+    });
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
+  }
+  if (week.length) {
+    while (week.length < 7) week.push(null);
+    weeks.push(week);
+  }
+}
+
+// A month label sits over the first week that starts in that month.
+const months = weeks.map((week, i) => {
+  const firstDay = week.find((c) => c !== null);
+  if (!firstDay) return "";
+  const m = fmtMonth.format(parse(firstDay.date));
+  const prev = weeks[i - 1]?.find((c) => c !== null);
+  return i === 0 || (prev && fmtMonth.format(parse(prev.date)) !== m) ? m : "";
+});
+
+const total = days.reduce((sum, d) => sum + d.count, 0);
+const busiest = days.reduce<Day | undefined>(
+  (best, d) => (d.count > (best?.count ?? 0) ? d : best),
+  undefined,
+);
+
+// Roving focus starts on the last day: the one tabbable cell.
+const lastWeek = weeks.length - 1;
+const lastDay = weeks[lastWeek]?.findLastIndex((c) => c !== null) ?? 0;
+
+// Phones: one bar per week of the same year, its height the week's
+// total, its color the level of the week's busiest day. A week is named
+// by its first day shown and spans to its last ("Oct 4–10",
+// "Sep 28–Oct 4"); the year shows only for days outside the year the data
+// ends in, on the side that differs ("Oct 12–18, 2025",
+// "Dec 28, 2025–Jan 3"). The script draws the strip from this.
+const thisYear = parse(days.at(-1)?.date ?? firstDate ?? "").getUTCFullYear();
+const span = (from: string, to: string) => {
+  const a = parse(from);
+  const b = parse(to);
+  const ya = a.getUTCFullYear();
+  const yb = b.getUTCFullYear();
+  if (ya !== yb) {
+    const side = (d: Date, y: number) =>
+      fmtDay.format(d) + (y === thisYear ? "" : `, ${y}`);
+    return `${side(a, ya)}–${side(b, yb)}`;
+  }
+  const end =
+    a.getUTCMonth() === b.getUTCMonth()
+      ? String(b.getUTCDate())
+      : fmtDay.format(b);
+  return `${fmtDay.format(a)}–${end}${ya === thisYear ? "" : `, ${ya}`}`;
+};
+const weekly = weeks.map((week) => {
+  const cells = week.filter((c): c is NonNullable<Cell> => c !== null);
+  const from = cells[0]?.date ?? firstDate ?? "";
+  return {
+    range: span(from, cells.at(-1)?.date ?? from),
+    total: cells.reduce((sum, c) => sum + c.count, 0),
+    level: Math.max(0, ...cells.map((c) => c.level)),
+  };
+});
+---
+
+<div class="heatmap" data-motion="heatmap" data-start={firstDate}>
+  <p class="summary">
+    <span class="count">
+      <span class="real">{total.toLocaleString("en-US")}</span>
+    </span>{" "}
+    contribution{total === 1 ? "" : "s"} in the last year.{" "}
+    {busiest && (
+      <>
+        The busiest was{" "}
+        <span class="busiest">{fmtShort.format(parse(busiest.date))}</span>,
+        with {plural(busiest.count)}.{" "}
+      </>
+    )}
+    <a href={profile}>See them on GitHub</a>.
+  </p>
+
+  <!-- Phones: the weekly strip, drawn by the script from its data (its
+       box is kept from the first paint), and the reading under it. -->
+  <div
+    class="strip"
+    data-weeks={JSON.stringify(weekly)}
+    data-from={firstDate ? fmtSpan.format(parse(firstDate)) : ""}
+    data-to={days.at(-1) ? fmtSpan.format(parse(days.at(-1)?.date ?? "")) : ""}
+  >
+    <p class="readout"></p>
+  </div>
+
+  <div class="grid-wrap">
+    {/* A data grid (ARIA allows the grid role on a table): one tab stop,
+        arrow keys move between days (the script). */}
+    {/* eslint-disable astro/jsx-a11y/no-noninteractive-element-to-interactive-role */}
+    <table
+      role="grid"
+      aria-readonly="true"
+      aria-label="GitHub contributions, last year"
+    >
+      {/* eslint-enable astro/jsx-a11y/no-noninteractive-element-to-interactive-role */}
+      <thead aria-hidden="true">
+        <tr>
+          <td></td>
+          {months.map((m) => (
+            <th scope="col" class="m">
+              <span>{m}</span>
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {DAY_NAMES.map((name, d) => (
+          <tr>
+            <th scope="row" class="dn" aria-hidden="true">
+              <span>{d % 2 === 1 ? name : ""}</span>
+            </th>
+            {weeks.map((week, w) => {
+              const cell = week[d];
+              return cell ? (
+                <td
+                  role="gridcell"
+                  tabindex={w === lastWeek && d === lastDay ? 0 : -1}
+                  aria-label={cell.label}
+                  data-level={cell.level}
+                  data-busiest={cell.date === busiest?.date ? "" : undefined}
+                  style={`--w: ${w}`}
+                >
+                  <span />
+                </td>
+              ) : (
+                <td class="pad">
+                  <span />
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span>Less</span>
+    {[0, 1, 2, 3, 4].map((level) => (
+      <span class="key" data-level={level} />
+    ))}
+    <span>More</span>
+  </div>
+</div>
+
+<!-- Global, under .heatmap: the script adds elements of its own (the
+     tooltip, the odometer's reels, the strip's drawing), and the 365 cells
+     need no scoping attribute each. -->
+<style is:global>
+  .heatmap {
+    --cell-0: color-mix(in oklab, var(--ink) 7%, var(--bg));
+    --cell-1: color-mix(in oklab, var(--acc) 30%, var(--bg));
+    --cell-2: color-mix(in oklab, var(--acc) 52%, var(--bg));
+    --cell-3: color-mix(in oklab, var(--acc) 76%, var(--bg));
+    --cell-4: var(--acc);
+  }
+
+  .heatmap .summary {
+    color: var(--soft);
+    max-width: var(--measure);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The rolling copy lies over the real number, which sets the width, so
+     nothing reflows while it rolls. An inline block one line tall, so the
+     copy's digits sit on the same baseline (and copied text has no line
+     break in it, as it would with a grid). */
+  .heatmap .count {
+    position: relative;
+    display: inline-block;
+  }
+
+  .heatmap .rolling .real {
+    color: transparent;
+  }
+
+  .heatmap .face {
+    position: absolute;
+    inset: 0;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  /* Forced colors repaint the hidden real number, so a roll that was
+     already going when they came on shows the real number alone. */
+  @media (forced-colors: active) {
+    .heatmap .face {
+      display: none;
+    }
+  }
+
+  /* One digit's window, a line tall, and its reel. Passing digits fade
+     out at the window's top and bottom edges instead of being cut. (A
+     line is given in em first for browsers without the lh unit.) */
+  .heatmap .col {
+    display: inline-block;
+    height: calc(var(--lh-body) * 1em);
+    height: 1lh;
+    overflow: hidden;
+    vertical-align: top;
+    mask-image: linear-gradient(transparent, #000 25%, #000 75%, transparent);
+  }
+
+  .heatmap .reel {
+    display: block;
+  }
+
+  .heatmap .reel > span {
+    display: block;
+    height: calc(var(--lh-body) * 1em);
+    height: 1lh;
+  }
+
+  /* The link stays one piece, so its marker never wraps into a lone "See". */
+  .heatmap .summary a {
+    white-space: nowrap;
+  }
+
+  /* The busiest date: a quiet dotted underline says it points somewhere
+     (hovering it marks its day in the grid). */
+  .heatmap .busiest {
+    text-decoration: underline dotted
+      color-mix(in oklab, var(--soft) 60%, transparent);
+    text-underline-offset: 3px;
+  }
+
+  .heatmap .grid-wrap {
+    position: relative;
+    margin-top: var(--sp-5);
+  }
+
+  .heatmap table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 3px;
+    margin: -3px;
+  }
+
+  .heatmap th {
+    font-weight: var(--fw-regular);
+    font-size: var(--fs-xs);
+    color: var(--soft);
+    text-align: left;
+    padding: 0;
+    transition: color 120ms var(--ease-out);
+  }
+
+  /* The marked day's weekday and month labels. */
+  .heatmap th.hot {
+    color: var(--ink);
+  }
+
+  .heatmap thead th {
+    height: 1.25rem;
+    vertical-align: bottom;
+    overflow: visible;
+    white-space: nowrap;
+  }
+
+  .heatmap thead td,
+  .heatmap .dn {
+    width: 2rem;
+  }
+
+  .heatmap .dn span {
+    display: block;
+    line-height: 1;
+  }
+
+  .heatmap td {
+    padding: 0;
+  }
+
+  .heatmap td > span {
+    display: block;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    background: var(--cell-0);
+    /* A hairline edge so each day reads as a square on any theme. */
+    box-shadow: inset 0 0 0 0.5px
+      color-mix(in oklab, var(--ink) 6%, transparent);
+    transition:
+      transform 120ms var(--ease-out),
+      box-shadow 120ms var(--ease-out);
+  }
+
+  /* The crosshair's band: every other day in the marked row and column,
+     tinted a touch toward ink (empty pads stay clear). */
+  .heatmap td.band[role="gridcell"] > span {
+    box-shadow:
+      inset 0 0 0 0.5px color-mix(in oklab, var(--ink) 6%, transparent),
+      inset 0 0 0 99px color-mix(in oklab, var(--ink) 9%, transparent);
+  }
+
+  /* The marked day: raised a little, ringed in ink. */
+  .heatmap td.hot > span {
+    position: relative;
+    z-index: 1;
+    transform: scale(1.25);
+    box-shadow: 0 0 0 1px var(--ink);
+  }
+
+  .heatmap .pad > span {
+    background: none;
+    box-shadow: none;
+  }
+
+  .heatmap [data-level="1"] > span,
+  .heatmap .key[data-level="1"] {
+    background: var(--cell-1);
+  }
+  .heatmap [data-level="2"] > span,
+  .heatmap .key[data-level="2"] {
+    background: var(--cell-2);
+  }
+  .heatmap [data-level="3"] > span,
+  .heatmap .key[data-level="3"] {
+    background: var(--cell-3);
+  }
+  .heatmap [data-level="4"] > span,
+  .heatmap .key[data-level="4"] {
+    background: var(--cell-4);
+  }
+
+  .heatmap td[role="gridcell"]:focus-visible {
+    outline: var(--focus-width) solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .heatmap .tip {
+    position: absolute;
+    transform: translate(-50%, calc(-100% - 8px));
+    width: max-content;
+    max-width: 100%;
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--fs-xs);
+    background: var(--ink);
+    color: var(--bg);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .heatmap .legend {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+    margin-top: var(--sp-3);
+    font-size: var(--fs-xs);
+    color: var(--soft);
+  }
+
+  .heatmap .legend span:first-child {
+    margin-right: var(--sp-1);
+  }
+
+  .heatmap .legend span:last-child {
+    margin-left: var(--sp-1);
+  }
+
+  .heatmap .key {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    background: var(--cell-0);
+  }
+
+  /* The weekly strip, phones only. Its hit area reaches 8px past the
+     bars above and below; vertical swipes still scroll the page. */
+  .heatmap .strip,
+  .heatmap .readout {
+    display: none;
+  }
+
+  .heatmap .strip {
+    position: relative;
+    height: 90px;
+    margin: calc(var(--sp-5) - 8px) 0 -8px;
+    padding-block: 8px;
+    box-sizing: content-box;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .heatmap .strip svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .heatmap .base {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+
+  .heatmap .bar {
+    fill: var(--chip-line);
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  .heatmap .bar[data-level="1"] {
+    fill: var(--cell-1);
+  }
+
+  .heatmap .bar[data-level="2"] {
+    fill: var(--cell-2);
+  }
+
+  .heatmap .bar[data-level="3"] {
+    fill: var(--cell-3);
+  }
+
+  .heatmap .bar[data-level="4"] {
+    fill: var(--cell-4);
+  }
+
+  .heatmap .bar.peak {
+    fill: var(--ink);
+  }
+
+  .heatmap .peak-date,
+  .heatmap .axis {
+    font: var(--fw-regular) var(--fs-xs) var(--ff-text);
+    fill: var(--soft);
+  }
+
+  .heatmap .axis {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .heatmap .marker {
+    stroke: var(--ink);
+    stroke-width: 1;
+    opacity: 0;
+    transition: transform 120ms var(--ease-ui);
+  }
+
+  .heatmap .marker.on {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .heatmap .marker {
+      transition: none;
+    }
+  }
+
+  /* Until they grow (the script), the bars wait flat on the baseline and
+     the busiest week's dates unseen: only once the motion script runs,
+     never under reduced motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    html.motion-ready .heatmap .strip:not(.grown) .bar {
+      transform: scaleY(0.02);
+    }
+
+    html.motion-ready .heatmap .strip:not(.grown) .peak-date {
+      opacity: 0;
+    }
+  }
+
+  /* A reading takes the row under the baseline, where the strip's first
+     and last month rest; they step aside while it shows. Its place is
+     the strip's own, so a reading never moves the page. */
+  .heatmap .readout {
+    position: absolute;
+    top: calc(8px + 73px);
+    right: 0;
+    left: 0;
+    margin: 0;
+    font-size: var(--fs-sm);
+    line-height: 17px;
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  .heatmap .strip:has(.readout:not(:empty)) .axis {
+    opacity: 0;
+  }
+
+  /* Phones: the summary carries the numbers, so the grid and its legend
+     go, and the busiest date has nothing to point at. The strip takes
+     the grid's place (with JS; without, the summary says it all). */
+  @media (max-width: 40rem) {
+    .heatmap .grid-wrap,
+    .heatmap .legend {
+      display: none;
+    }
+
+    .heatmap .busiest {
+      text-decoration: none;
+    }
+
+    .js .heatmap .strip,
+    .js .heatmap .readout {
+      display: block;
+    }
+  }
+</style>

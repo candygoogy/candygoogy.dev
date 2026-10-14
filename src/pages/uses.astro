@@ -2,10 +2,16 @@
 // What I use: the home network and the machines, as spec sheets. A head
 // with an index of the sections, then one section per group: its title on
 // the left, the sheet on the right (label, a dotted leader, the products,
-// one per line). The words are in src/data/uses.ts.
-import HomelabMap from "../components/HomelabMap.astro";
+// one per line); the homelab's sheet is its network, drawn as a tree. The
+// words are in src/data/uses.ts.
+import HomelabTree from "../components/HomelabTree.astro";
 import { uses } from "../data/uses";
 import Base from "../layouts/Base.astro";
+
+// The homelab's count: the devices, not the Internet or the crowd.
+const devices = uses.sections
+  .flatMap((s) => ("net" in s ? s.net : []))
+  .filter((r) => r.parent && !r.crowd).length;
 ---
 
 <Base
@@ -32,14 +38,17 @@ import Base from "../layouts/Base.astro";
       <ol>
         {uses.sections.map((s, i) => (
           <li
-            class="rv rv-line at-bottom"
+            class:list={[
+              "rv",
+              { "rv-line at-bottom": i < uses.sections.length - 1 },
+            ]}
             style={`--d: 360ms; --i: ${i}; --line-color: var(--line)`}
           >
             <a class="shift" href={`#${s.id}`}>
               <span class="name">{s.title}</span>
               <span class="visually-hidden">, </span>
               <span class="n">
-                {s.rows.length}
+                {"net" in s ? devices : s.rows.length}
                 <span class="visually-hidden"> items</span>
               </span>
             </a>
@@ -62,40 +71,47 @@ import Base from "../layouts/Base.astro";
         </span>
       </h2>
       <div class="sheet">
-        {s.id === "homelab" && <HomelabMap />}
-        <dl class="spec">
-          {s.rows.map((r, i) => (
-            <div
-              class="row rv rv-line at-bottom"
-              style={`--i: ${i}; --line-color: var(--line)`}
-            >
-              <dt>{r.label}</dt>
-              <span class="leader" aria-hidden="true">
-                &#8203;
-              </span>
-              <dd>
-                {r.items.map((item) =>
-                  typeof item === "string" ? (
-                    <span>{item}</span>
-                  ) : (
-                    <span class="detail">
-                      <span class="tag">{item.tag}:</span>{" "}
-                      {item.text.split(", ").map((drive, i, all) => (
-                        <>
-                          <span class="nobr">
-                            {drive}
-                            {i < all.length - 1 && ","}
-                          </span>
-                          {i < all.length - 1 && " "}
-                        </>
-                      ))}
-                    </span>
-                  ),
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        {"net" in s ? (
+          <HomelabTree rows={s.net} />
+        ) : (
+          <dl class="spec">
+            {s.rows.map((r, i) => (
+              <div
+                class:list={[
+                  "row",
+                  "rv",
+                  { "rv-line at-bottom": i < s.rows.length - 1 },
+                ]}
+                style={`--i: ${i}; --line-color: var(--line)`}
+              >
+                <dt>{r.label}</dt>
+                <span class="leader" aria-hidden="true">
+                  &#8203;
+                </span>
+                <dd>
+                  {r.items.map((item) =>
+                    typeof item === "string" ? (
+                      <span>{item}</span>
+                    ) : (
+                      <span class="detail">
+                        <span class="tag">{item.tag}:</span>{" "}
+                        {item.text.split(", ").map((drive, i, all) => (
+                          <>
+                            <span class="nobr">
+                              {drive}
+                              {i < all.length - 1 && ","}
+                            </span>
+                            {i < all.length - 1 && " "}
+                          </>
+                        ))}
+                      </span>
+                    ),
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
     </section>
   ))}
@@ -155,8 +171,10 @@ import Base from "../layouts/Base.astro";
     transition: color var(--dur-ui) var(--ease-out);
   }
 
-  .toc a:hover .name {
-    color: var(--acc);
+  @media (hover: hover) and (pointer: fine) {
+    .toc a:hover .name {
+      color: var(--acc);
+    }
   }
 
   .n {

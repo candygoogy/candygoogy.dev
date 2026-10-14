@@ -9,7 +9,7 @@ const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
 const prefix = path === "/" ? "" : "/";
 const nav = [
   { href: "/fettle", label: "Fettle" },
-  { href: `${prefix}#websites`, label: "Websites" },
+  { href: `${prefix}#projects`, label: "Projects" },
   { href: `${prefix}#about`, label: "About" },
   { href: `${prefix}#contact`, label: "Contact" },
 ];
@@ -48,11 +48,21 @@ const nav = [
   }
 
   .brand {
+    position: relative;
     margin-right: auto;
     color: var(--ink);
     background: none;
     font: var(--fw-heavy) 1.125rem / 1 var(--ff-display);
     letter-spacing: var(--ls-d-sm);
+  }
+
+  /* A 44px tall touch target, laid over the line without changing it. */
+  .brand::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    translate: 0 -50%;
   }
 
   ul {
@@ -66,6 +76,7 @@ const nav = [
   /* Nav links rest without an underline; on hover it draws in from the
      left, the same 1px line every other link uses. */
   nav a {
+    position: relative;
     color: var(--soft);
     background-size: 0 1px;
     background-position: 0 100%;
@@ -76,10 +87,20 @@ const nav = [
       background-size var(--dur-move) var(--ease-out);
   }
 
-  nav a:hover {
-    color: var(--ink);
-    background-size: 100% 1px;
-    background-position: 0 100%;
+  /* A 44px-tall touch target over each link, meeting its neighbours
+     halfway across the gap. */
+  nav a::after {
+    content: "";
+    position: absolute;
+    inset: -12px calc(var(--sp-5) / -2);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    nav a:hover {
+      color: var(--ink);
+      background-size: 100% 1px;
+      background-position: 0 100%;
+    }
   }
 
   nav a[aria-current="page"] {

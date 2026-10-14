@@ -26,13 +26,21 @@ export const about = {
   away: "Off the clock I read, get lost in anything to do with aeronautics, or just take it easy, and there’s usually a side project open somewhere.",
 };
 
+// The career timeline (About). Consecutive items with the same employer
+// form one group under its logo chip; items without one form Education.
 export interface WorkItem {
-  when: string;
-  // Machine-readable start for <time>, e.g. "2026-02".
+  // The dates as shown, e.g. "Mar 2024 to Dec 2025", or "Feb 2026 to now"
+  // for the job going on now.
+  when?: string;
+  // Machine-readable start for <time>, e.g. "2026-02"; its year heads the
+  // employer's group.
   datetime?: string;
+  // The kind of job, e.g. "Full-time".
+  type?: string;
   title: string;
-  // For jobs: the employer, shown after "at" with its logo chip.
   org?: keyof typeof orgs;
+  // The job going on now: its dot is filled with ink.
+  current?: boolean;
   detail?: string;
 }
 
@@ -50,25 +58,26 @@ export const work: WorkItem[] = [
   {
     when: "Feb 2026 to now",
     datetime: "2026-02",
+    type: "Full-time",
     title: "IT Technician",
     org: "siel",
+    current: true,
     detail:
       "IT infrastructure, rack builds and cabling, diagnostics, and the firm’s PCs.",
   },
   {
     when: "Mar 2024 to Dec 2025",
     datetime: "2024-03",
+    type: "Freelance",
     title: "QA Tester",
     org: "gaijin",
-    detail: "Freelance and remote. Tested builds and reported bugs.",
+    detail: "Remote. Tested builds and reported bugs.",
   },
   {
-    when: "University",
     title: "Bachelor’s degree in computer engineering",
     detail: "Three-year university degree.",
   },
   {
-    when: "School",
     title: "Technical diploma",
     detail: "Information technology.",
   },

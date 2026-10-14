@@ -28,7 +28,7 @@ A small, static site with one job: show what I've made, starting with [Fettle](h
 
 ## How it's built
 
-- **Site:** [Astro](https://astro.build), static output, with Svelte islands only where something moves.
+- **Site:** [Astro](https://astro.build), static output. A small theme script runs before the first paint, so the page never flashes the wrong theme; the rest of the interactive parts are small TypeScript scripts that load after it.
 - **Hosting:** Cloudflare Workers static assets, on the apex domain only.
 - **Deploys:** Workers Builds, from this repo's `main` branch.
 - **Type:** Cabinet Grotesk and Satoshi, from [Fontshare](https://www.fontshare.com).

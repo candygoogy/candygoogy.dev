@@ -208,8 +208,10 @@ a:not(
   vertical-align: -0.14em;
 }
 
-.mention:hover {
-  border-color: color-mix(in oklab, var(--ink) 45%, var(--bg));
+@media (hover: hover) and (pointer: fine) {
+  .mention:hover {
+    border-color: color-mix(in oklab, var(--ink) 45%, var(--bg));
+  }
 }
 
 /* Closer than the site's 4px, so the ring clears the word before it. */
@@ -248,32 +250,11 @@ a:not(
   transform: none;
 }
 
-/* Screenshots follow the theme: light shots in light, dark shots in dark
-   mode. Both are lazy, so only the one shown is downloaded. */
-.shot-dark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .shot-light {
-    display: none;
-  }
-  :root:not([data-theme]) .shot-dark {
-    display: block;
-  }
-}
-
-[data-theme="dark"] .shot-light {
-  display: none;
-}
-
-[data-theme="dark"] .shot-dark {
-  display: block;
-}
-
 /* While the theme switch captures the new theme, nothing transitions,
-   so the snapshot is the final state. */
-html.theme-switching *,
+   so the snapshot is the final state. The switch's own pill and its
+   clipped labels only move (no colour transitions), so they finish their
+   slide. */
+html.theme-switching *:not([data-theme-switch] :is(.pill, .ink)),
 html.theme-switching *::before,
 html.theme-switching *::after {
   transition: none !important;

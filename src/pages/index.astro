@@ -11,8 +11,7 @@ import { orderedProjects } from "../lib/projects";
 
 const projects = await orderedProjects();
 const products = projects.filter((p) => p.data.kind === "product");
-const sides = projects.filter((p) => p.data.kind === "side");
-const websites = projects.filter((p) => p.data.kind === "website");
+const others = projects.filter((p) => p.data.kind !== "product");
 
 // Structured data: who the site belongs to (the public handle only).
 const schema = {
@@ -29,10 +28,7 @@ const schema = {
   {products.map((p) => (
     <FettleBand project={p} />
   ))}
-  {sides.length > 0 && (
-    <ProjectRows id="side-projects" title="Side projects" projects={sides} />
-  )}
-  <ProjectRows id="websites" title="Websites" projects={websites} />
+  <ProjectRows projects={others} />
   <About />
   <Contact />
   <Previews />

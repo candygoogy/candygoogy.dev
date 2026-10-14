@@ -13,11 +13,28 @@ export interface UseRow {
   items: (string | UseDetail)[];
 }
 
-export interface UseSection {
+// The homelab is a tree: each device under the one it's connected to,
+// drawn as wires down the left (HomelabTree.astro).
+export interface NetRow {
   id: string;
-  title: string;
-  rows: UseRow[];
+  label: string;
+  product: string;
+  // The device it's connected to (its id); none for the Internet.
+  parent?: string;
+  // A cable unless said: a cable that also powers it (PoE), or Wi-Fi.
+  link?: "cable" | "poe" | "wifi";
+  // Where the product has its own section.
+  href?: string;
+  // A line under the product: soft, or led by a soft tag (shown as
+  // written) with the rest in ink.
+  detail?: { tag?: string; text: string; href?: string };
+  // Not one device: whatever else is on the Wi-Fi, coming and going.
+  crowd?: boolean;
 }
+
+export type UseSection =
+  | { id: string; title: string; rows: UseRow[] }
+  | { id: string; title: string; net: NetRow[] };
 
 export const uses = {
   title: "What I use",
@@ -26,11 +43,63 @@ export const uses = {
     {
       id: "homelab",
       title: "Homelab",
-      rows: [
-        { label: "Router", items: ["MikroTik Chateau 5G R17 ax"] },
-        { label: "Access point", items: ["TP-Link Omada EAP610"] },
-        { label: "Switch", items: ["Netgear ProSAFE GS108"] },
-        { label: "Server", items: ["Lenovo V15"] },
+      // In the order they're drawn: each device's own devices follow it.
+      net: [
+        { id: "internet", label: "Internet", product: "5G" },
+        {
+          id: "router",
+          label: "Router",
+          product: "MikroTik Chateau 5G R17 ax",
+          parent: "internet",
+        },
+        {
+          id: "ap",
+          label: "Access point",
+          product: "TP-Link Omada EAP610",
+          parent: "router",
+          link: "poe",
+          detail: { text: "Wi-Fi 6" },
+        },
+        {
+          id: "laptop",
+          label: "Laptop",
+          product: "ASUS Zenbook 14",
+          parent: "ap",
+          link: "wifi",
+          href: "#laptop",
+        },
+        {
+          id: "crowd",
+          label: "Everything else",
+          product: "Whatever asks for the password",
+          parent: "ap",
+          link: "wifi",
+          crowd: true,
+        },
+        {
+          id: "switch",
+          label: "Switch",
+          product: "Netgear ProSAFE GS108",
+          parent: "router",
+        },
+        {
+          id: "server",
+          label: "Server",
+          product: "Lenovo V15",
+          parent: "switch",
+          detail: {
+            tag: "Runs",
+            text: "candygoogy-bot",
+            href: "/#candygoogy-bot",
+          },
+        },
+        {
+          id: "desktop",
+          label: "Desktop",
+          product: "Ryzen 7 9800X3D, RX 6900 XT",
+          parent: "router",
+          href: "#desktop",
+        },
       ],
     },
     {

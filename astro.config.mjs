@@ -1,14 +1,19 @@
 // @ts-check
 import sitemap from "@astrojs/sitemap";
-import svelte from "@astrojs/svelte";
 import { defineConfig, fontProviders } from "astro/config";
+import inlineScripts from "./scripts/inline-scripts.mjs";
+import motionLoader from "./scripts/motion-loader.mjs";
 
 export default defineConfig({
   site: "https://candygoogy.dev",
   output: "static",
   trailingSlash: "never",
   devToolbar: { enabled: false },
-  integrations: [svelte(), sitemap()],
+  // motionLoader: the page's motion starts after the page has first
+  // painted, so drawing the page never waits for it (scripts/motion-loader.mjs).
+  // inlineScripts: the scripts written into every page ship minified
+  // (scripts/inline-scripts.mjs).
+  integrations: [sitemap(), motionLoader(), inlineScripts()],
   build: {
     format: "file",
     // The CSS is small: inlining it removes render-blocking requests.

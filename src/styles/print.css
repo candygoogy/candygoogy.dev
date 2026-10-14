@@ -87,6 +87,7 @@
   .tilt {
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
 
   .rv-line::before {
@@ -227,32 +228,48 @@
     display: none !important;
   }
 
-  /* The timeline as receipt lines: no track, nodes or tails; the date on
-     its own line in soft, then the role, then the detail, tight. */
-  .tl {
-    padding: 0 !important;
-  }
-
-  .tl::before,
-  .tl .tail,
-  .tl .seg,
-  .tl .node {
+  /* The timeline as receipt lines: no line, dots or tails; each group's
+     year (soft) on its own line, the employer, then each role, its dates
+     and its detail, tight. */
+  .tl .line,
+  .tl .dot {
     display: none !important;
   }
 
-  .tl li {
-    display: block !important;
-    padding-block: 1.5mm !important;
+  .tl .groups {
+    gap: 3mm !important;
   }
 
-  .tl h3 {
+  .tl .group {
     display: block !important;
+  }
+
+  .tl .year {
     line-height: 1.35 !important;
+    color: #444;
   }
 
-  .tl :is(time, .when) {
-    display: block;
-    color: #444;
+  .tl .body > h3,
+  .tl .role {
+    padding-left: 0 !important;
+  }
+
+  .tl .body > h3 {
+    min-height: 0 !important;
+    margin-bottom: 1mm !important;
+  }
+
+  .tl .roles {
+    gap: 1.5mm !important;
+  }
+
+  /* The total as the plain number, never mid-roll. */
+  .heatmap .face {
+    display: none !important;
+  }
+
+  .heatmap .rolling .real {
+    color: inherit !important;
   }
 
   /* The contact question: a section title on paper. */
@@ -344,14 +361,6 @@
   picture {
     max-width: 100% !important;
     height: auto !important;
-  }
-
-  .shot-dark {
-    display: none !important;
-  }
-
-  .shot-light {
-    display: block !important;
   }
 
   /* Links: underlined text; outside links add their address. */

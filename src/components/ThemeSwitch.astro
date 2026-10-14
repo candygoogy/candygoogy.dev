@@ -62,40 +62,6 @@ const options = [
   // The wipe starts while the pill is still landing.
   const SLIDE = 120;
 
-  // Theme-dependent screenshots (Shot.astro: light and dark copies, lazy,
-  // the hidden one never loaded). Before a theme change, the copies for
-  // the new theme are loaded and decoded, so the reveal never captures a
-  // blank or late image. A slow network never blocks the switch (350ms).
-  const shotsFor = (look: string) => [
-    ...document.querySelectorAll<HTMLImageElement>(`img.shot-${look}`),
-  ];
-
-  const ready = async (look: string) => {
-    const imgs = shotsFor(look);
-    for (const img of imgs) img.loading = "eager";
-    await Promise.race([
-      Promise.allSettled(imgs.map((img) => img.decode())),
-      new Promise((resolve) => setTimeout(resolve, 350)),
-    ]);
-  };
-
-  // Once the page is idle, quietly warm the other theme's copy of the
-  // first screenshot (the band's), so the common case is instant.
-  const idle =
-    window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500));
-  addEventListener("load", () =>
-    idle(() => {
-      const osDark = matchMedia("(prefers-color-scheme: dark)").matches;
-      const current = root.dataset.theme ?? (osDark ? "dark" : "light");
-      const look = current === "light" ? "dark" : "light";
-      const first = shotsFor(look)[0];
-      if (first) {
-        first.fetchPriority = "low";
-        first.loading = "eager";
-      }
-    }),
-  );
-
   for (const group of document.querySelectorAll<HTMLElement>(
     "[data-theme-switch]",
   )) {
@@ -103,6 +69,8 @@ const options = [
     const resolved = group.querySelector<HTMLElement>("[data-resolved]");
     let pending = 0;
     let latest = 0;
+    // The wipe running now, if any.
+    let active: ViewTransition | null = null;
 
     const sync = () => {
       const current = root.dataset.theme ?? "auto";
@@ -137,11 +105,13 @@ const options = [
     const looks = (value: string) =>
       value === "auto" ? (dark.matches ? "dark" : "light") : value;
 
+    // Every click counts and the last one wins: a click back before the
+    // wipe has started just cancels it, and a change during a wipe ends
+    // that one at once (on its new theme) and runs its own.
     group.addEventListener("click", (event) => {
       const button = (event.target as Element).closest("button");
       const value = button?.dataset.value;
-      const before = root.dataset.theme ?? "auto";
-      if (!button || !value || value === before) return;
+      if (!button || !value || value === group.dataset.current) return;
 
       // 1. The pill (and its clipped labels) slide to the new option.
       group.dataset.current = value;
@@ -149,31 +119,58 @@ const options = [
         b.setAttribute("aria-pressed", String(b === button));
       }
       window.clearTimeout(pending);
+      const run = ++latest;
+      const before = root.dataset.theme ?? "auto";
+      if (value === before) return;
 
       const sameLook = looks(value) === looks(before);
       if (calm.matches || sameLook || !document.startViewTransition) {
+        active?.skipTransition();
         apply(value);
         return;
       }
 
-      // 2. Once it lands (and the new theme's screenshots are decoded), the
-      //    new theme wipes down from the top.
-      const target = looks(value);
-      const prepared = ready(target);
-      const run = ++latest;
-      pending = window.setTimeout(async () => {
-        await prepared;
+      // 2. Once it lands, the new theme wipes down from the top.
+      pending = window.setTimeout(() => {
         if (run !== latest) return; // A newer click took over.
         // The new state is captured with every CSS transition off, so the
         // snapshot is the final theme, not a frame of a colour fade.
         root.classList.add("theme-vt", "theme-switching");
-        const vt = document.startViewTransition(() => apply(value));
-        vt.finished.finally(() =>
-          root.classList.remove("theme-vt", "theme-switching"),
-        );
+        // Starting a wipe ends one still running; a wipe ended before it
+        // got to change the theme leaves it to the newer click.
+        const vt = document.startViewTransition(() => {
+          if (run === latest) apply(value);
+        });
+        active = vt;
+        vt.finished.finally(() => {
+          if (active !== vt) return;
+          active = null;
+          root.classList.remove("theme-vt", "theme-switching");
+        });
       }, SLIDE);
     });
 
+    // A page restored from the back/forward cache comes back with the
+    // theme it was left with; one chosen on another page since is put on
+    // at once, before it's seen: no wipe, no colour fades, and the pill
+    // already in place.
+    addEventListener("pageshow", (event) => {
+      if (!event.persisted) return;
+      let saved: string | null;
+      try {
+        saved = localStorage.getItem("theme");
+      } catch {
+        return;
+      }
+      const value = saved === "light" || saved === "dark" ? saved : "auto";
+      if (value === (root.dataset.theme ?? "auto")) return;
+      root.classList.add("theme-switching", "theme-restore");
+      apply(value);
+      void root.offsetWidth; // The new state is in place with transitions off.
+      requestAnimationFrame(() =>
+        root.classList.remove("theme-switching", "theme-restore"),
+      );
+    });
     dark.addEventListener("change", sync);
     sync();
   }
@@ -210,7 +207,13 @@ const options = [
     border-radius: var(--r-pill);
     background: var(--switch-on-bg);
     transform: translateX(calc(var(--at) * 100%));
-    transition: transform 220ms var(--ease-out);
+    transition: transform 220ms var(--ease-in-out);
+  }
+
+  /* Restored from the back/forward cache with another theme: the pill and
+     its labels are already in place (the script). */
+  :global(html.theme-restore) :is(.pill, .ink) {
+    transition: none;
   }
 
   button {
@@ -229,8 +232,17 @@ const options = [
     transition: color var(--dur-ui) var(--ease-out);
   }
 
-  button:hover {
-    color: var(--ink);
+  /* The visible pill stays 32px; the touch target is 44px tall. */
+  button::after {
+    content: "";
+    position: absolute;
+    inset: -6px 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    button:hover {
+      color: var(--ink);
+    }
   }
 
   button:focus-visible {
@@ -251,7 +263,7 @@ const options = [
       0 calc(100% - (var(--at) + 1) * 100% / 3) 0 calc(var(--at) * 100% / 3)
         round var(--r-pill)
     );
-    transition: clip-path 220ms var(--ease-out);
+    transition: clip-path 220ms var(--ease-in-out);
   }
 
   .ink .face {
@@ -308,14 +320,14 @@ const options = [
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13 9.6A5.5 5.5 0 1 1 6.4 3a4.3 4.3 0 0 0 6.6 6.6Z' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 
-  /* At 360px and below the switch shows icons only, so the wordmark and
+  /* At 384px and below the switch shows icons only, so the wordmark and
      the switch share one row. The names stay as the buttons' accessible
      names. */
-  @media (max-width: 22.5rem) {
+  @media (max-width: 24rem) {
     button,
     .ink .face {
       padding: 0 var(--sp-2);
-      min-width: 2.25rem;
+      min-width: 2.75rem;
     }
 
     .icon {

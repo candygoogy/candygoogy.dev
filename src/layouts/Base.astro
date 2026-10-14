@@ -101,8 +101,8 @@ const icon = (file: string) => {
     )}
     <script is:inline>
       // Before first paint: apply a saved theme so there's no flash. No saved
-      // choice means Auto (follow the OS). Also marks JS as available, which
-      // is what allows motion to start from a hidden state.
+      // choice means Auto (follow the OS). Also marks JS as available: the
+      // hero's entrance and the intro only play with it (motion.css).
       (() => {
         const root = document.documentElement;
         if ("IntersectionObserver" in window) root.classList.add("js");
@@ -141,7 +141,11 @@ const icon = (file: string) => {
             !sessionStorage.getItem("intro-seen")
           ) {
             sessionStorage.setItem("intro-seen", "1");
-            root.classList.add("intro-on", "intro-hold");
+            // intro-played stays after the curtain is gone (motion.css).
+            root.classList.add("intro-on", "intro-hold", "intro-played");
+            // If the curtain never releases the page (its script failed to
+            // load), the hero plays anyway after 2.6s (motion.css).
+            setTimeout(() => root.classList.add("intro-late"), 2600);
           }
         } catch {
           // Storage blocked: no intro.
@@ -196,8 +200,12 @@ const icon = (file: string) => {
         // their entrance transitions and animations run to the end.
         const settle = (els) => {
           for (const el of els) {
+            // checkVisibility() throws on older iOS Safari (as in
+            // scripts/motion.ts, which this inline script can't import).
             const imgs = [...el.querySelectorAll("img")].filter((img) =>
-              img.checkVisibility(),
+              typeof img.checkVisibility === "function"
+                ? img.checkVisibility()
+                : img.getClientRects().length > 0,
             );
             for (const img of imgs) {
               img.loading = "eager";
@@ -217,8 +225,7 @@ const icon = (file: string) => {
                 Promise.allSettled(imgs.map((img) => img.decode())),
                 new Promise((resolve) => setTimeout(resolve, 2500)),
               ]).then(() => {
-                el.style.transition =
-                  "opacity 220ms cubic-bezier(0.16, 1, 0.3, 1)";
+                el.style.transition = "opacity 220ms var(--ease-out)";
                 el.style.opacity = "";
                 el.addEventListener(
                   "transitionend",
@@ -283,88 +290,57 @@ const icon = (file: string) => {
     </main>
     <Footer />
     <script>
-      import "../scripts/selection";
-      import "../scripts/marker";
-      // For the curious, once per page.
-      console.info(
-        "Hi. Curious how this works? The source is at github.com/candygoogy/candygoogy.dev",
-      );
+      // The page's motion and pointer details (scripts/loader.ts). In the
+      // built site this tag is made inert (scripts/motion-loader.mjs) and
+      // the script below starts it; in development it simply runs.
+      import "../scripts/loader";
     </script>
-    <script>
-      // Marks animated elements once they scroll into view (or at once, if
-      // they're already in view); the CSS in motion.css does the rest.
-      // While the intro curtain is up (html.intro-hold), arrivals wait and
-      // play together as it lifts.
-      const root = document.documentElement;
-      const waiting = new Set<Element>();
-      // Elements marked data-decode (the band's screenshot) hold their
-      // reveal until their visible images have decoded, at most 300ms, so
-      // they never reveal a blank or half-painted image.
-      const show = (el: Element) => {
-        if (!el.hasAttribute("data-decode")) return el.classList.add("is-in");
-        const imgs = [...el.querySelectorAll("img")].filter((img) =>
-          img.checkVisibility(),
-        );
-        for (const img of imgs) img.loading = "eager";
-        Promise.race([
-          Promise.allSettled(imgs.map((img) => img.decode())),
-          new Promise((resolve) => setTimeout(resolve, 300)),
-        ]).then(() => el.classList.add("is-in"));
-      };
-      const arrive: IntersectionObserverCallback = (entries, observer) => {
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          observer.unobserve(entry.target);
-          // Arriving while the intro is still on (the band's children, which
-          // only come into view as the band unclips after the release, on
-          // large windows) counts as released by it.
-          if (root.classList.contains("intro-on"))
-            entry.target.classList.add("from-intro");
-          if (root.classList.contains("intro-hold")) waiting.add(entry.target);
-          else show(entry.target);
-        }
-      };
-      // Things reveal a little after they enter, 10% up from the bottom.
-      const io = new IntersectionObserver(arrive, {
-        rootMargin: "0px 0px -10% 0px",
-      });
-      // The footer is the page's last thing: at full scroll on a tall
-      // window it can end up inside that bottom 10%, where it would never
-      // reveal. It's watched with no margin.
-      const end = new IntersectionObserver(arrive);
-      // Everything the intro releases is marked .from-intro: the band's
-      // wordmark skips its own letter reveal and rises with the band, and
-      // the band and its screenshot settle a little quicker (motion.css).
-      addEventListener("intro:release", () => {
-        for (const el of waiting) {
-          el.classList.add("from-intro");
-          show(el);
-        }
-        waiting.clear();
-      });
-      // Line-masked statements below the hero: number their lines (again
-      // once the fonts are in) so the lines rise in turn.
-      const numberLines = () => {
-        for (const title of document.querySelectorAll(".line-title")) {
-          let line = -1;
-          let top: number | null = null;
-          for (const w of title.querySelectorAll<HTMLElement>(".w")) {
-            if (w.offsetTop !== top) {
-              top = w.offsetTop;
-              line++;
+    <script is:inline>
+      // Starts the page's motion once the page has first painted, so the
+      // first paint never waits for it and its files aren't even requested
+      // before then. Without JS, nothing here matters: content never
+      // depends on it.
+      (() => {
+        let started = false;
+        const start = () => {
+          if (started) return;
+          const tag = document.querySelector(
+            'script[type="text/motion-loader"]',
+          );
+          if (!tag) {
+            // Not parsed yet: try again once it is (in development there's
+            // no tag, and the loader has run on its own).
+            if (document.readyState === "loading") {
+              document.addEventListener("DOMContentLoaded", start, {
+                once: true,
+              });
             }
-            w.style.setProperty("--line", String(line));
+            return;
           }
+          started = true;
+          const script = document.createElement("script");
+          script.type = "module";
+          script.src = tag.dataset.src;
+          document.head.append(script);
+        };
+        // The load event often comes before the first paint, so it's only
+        // the fallback: 1s after it if the paint is never reported (as in a
+        // background tab), or at once without paint timing.
+        let fallback = 0;
+        try {
+          new PerformanceObserver((list, observer) => {
+            if (!list.getEntriesByName("first-contentful-paint").length) return;
+            observer.disconnect();
+            start();
+          }).observe({ type: "paint", buffered: true });
+          fallback = 1000;
+        } catch {
+          // No paint timing: the load event starts it.
         }
-      };
-      numberLines();
-      document.fonts?.ready.then(numberLines);
-
-      for (const el of document.querySelectorAll(
-        ".rv, .rv-mask, .rv-line, .rv-band, .letters, .hero-title, .line-title, .heat-draw",
-      )) {
-        (el.closest("footer") ? end : io).observe(el);
-      }
+        addEventListener("load", () => setTimeout(start, fallback), {
+          once: true,
+        });
+      })();
     </script>
   </body>
 </html>

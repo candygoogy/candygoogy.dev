@@ -82,8 +82,7 @@ const plain = page.uses.filter((u) => u.shot === undefined);
               <figure class="rv" style="--d: 120ms" data-tilt>
                 <div class="tilt">
                   <Shot
-                    light={shot.light}
-                    dark={shot.dark}
+                    src={shot.light}
                     alt={shot.alt}
                     sizes="(min-width: 53.75rem) 700px, 90vw"
                   />
@@ -324,9 +323,11 @@ const plain = page.uses.filter((u) => u.shot === undefined);
       transform var(--dur-fast) var(--ease-out);
   }
 
-  .get:hover {
-    background: var(--acc);
-    color: var(--bg);
+  @media (hover: hover) and (pointer: fine) {
+    .get:hover {
+      background: var(--acc);
+      color: var(--bg);
+    }
   }
 
   .get:active {
@@ -337,8 +338,18 @@ const plain = page.uses.filter((u) => u.shot === undefined);
     outline-offset: 3px;
   }
 
+  /* A 44px tall touch target, laid over the line without changing it. */
   .source {
+    position: relative;
     font-weight: var(--fw-medium);
+  }
+
+  .source::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    translate: 0 -50%;
   }
 
   .facts {
