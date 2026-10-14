@@ -3,6 +3,7 @@ import sitemap from "@astrojs/sitemap";
 import { defineConfig, fontProviders } from "astro/config";
 import inlineScripts from "./scripts/inline-scripts.mjs";
 import motionLoader from "./scripts/motion-loader.mjs";
+import thirdPartyLicenses from "./scripts/third-party-licenses.mjs";
 
 export default defineConfig({
   site: "https://candygoogy.dev",
@@ -13,7 +14,14 @@ export default defineConfig({
   // painted, so drawing the page never waits for it (scripts/motion-loader.mjs).
   // inlineScripts: the scripts written into every page ship minified
   // (scripts/inline-scripts.mjs).
-  integrations: [sitemap(), motionLoader(), inlineScripts()],
+  // thirdPartyLicenses: the notices for third-party code in the pages, as
+  // /third-party-licenses.txt (scripts/third-party-licenses.mjs).
+  integrations: [
+    sitemap(),
+    motionLoader(),
+    inlineScripts(),
+    thirdPartyLicenses(),
+  ],
   build: {
     format: "file",
     // The CSS is small: inlining it removes render-blocking requests.
