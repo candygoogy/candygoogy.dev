@@ -27,12 +27,18 @@ images:
       dark: ./fettle/receipt-dark-phone.png
   - light: ./fettle/print-light.png
     dark: ./fettle/print-dark.png
-    alt: "Fettle’s print preview: the receipt laid out on an A4 page, three pages in all, with a Print button."
+    alt: "Fettle’s print preview: the receipt laid out on an A4 page."
     caption: "Print preview: the pages exactly as they’ll print."
+    phone:
+      light: ./fettle/print-light-phone.png
+      dark: ./fettle/print-dark-phone.png
   - light: ./fettle/share-light.png
     dark: ./fettle/share-dark.png
-    alt: "Fettle’s Share view: keep the link for 7 days, 30 days or a year, an optional password, and a Create the link button."
+    alt: "Fettle’s Share view: keep the link for 7 days, 30 days or a year, and an optional password."
     caption: "Sharing: choose how long the link lasts, and add a password if you like."
+    phone:
+      light: ./fettle/share-light-phone.png
+      dark: ./fettle/share-dark-phone.png
 page:
   checks:
     - name: Storage

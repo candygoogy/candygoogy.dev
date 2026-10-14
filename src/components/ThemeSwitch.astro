@@ -173,6 +173,9 @@ const options = [
     });
     dark.addEventListener("change", sync);
     sync();
+    requestAnimationFrame(() => {
+      group.dataset.ready = "";
+    });
   }
 </script>
 
@@ -192,12 +195,23 @@ const options = [
     display: inline-grid;
   }
 
+  /* At first paint the pill sits on the saved theme (set by the head
+     script before paint); once the script has synced, data-current leads,
+     since a click moves the pill before the theme changes. */
+  :global(html[data-theme="light"]) .themes:not([data-current]),
   .themes[data-current="light"] {
     --at: 1;
   }
 
+  :global(html[data-theme="dark"]) .themes:not([data-current]),
   .themes[data-current="dark"] {
     --at: 2;
+  }
+
+  /* Nothing slides until the script has synced (it sets data-ready a frame
+     later), so the pill's first placement never animates. */
+  .themes:not([data-ready]) :is(.pill, .ink) {
+    transition: none;
   }
 
   .pill {
