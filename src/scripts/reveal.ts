@@ -344,15 +344,33 @@ if (held) setTimeout(release, Math.max(0, 2600 - performance.now()));
 // is in view, so it opens where it's seen. The footer is the page's last
 // thing, so it reveals as soon as it shows. (Anything else that a tall
 // window never brings above its line is caught at the end of the page,
-// below.)
-const lines = {
-  rest: phone() ? 0.92 : 0.85,
-  band: phone() ? 0.8 : 0.7,
-  footer: 1,
-};
+// below.) For the window as it is now: a phone turned can cross the line.
+const line = (el: Element) =>
+  el.matches(BAND)
+    ? phone()
+      ? 0.8
+      : 0.7
+    : el.closest("footer")
+      ? 1
+      : phone()
+        ? 0.92
+        : 0.85;
 
 // Elements still waiting to arrive, with the function that stops watching.
 const watching = new Map<Element, () => void>();
+
+const watch = (el: Element) => {
+  const margin = `0px 0px -${Math.round((1 - line(el)) * 100)}% 0px`;
+  const stop = inView(
+    el,
+    () => {
+      watching.delete(el);
+      arrive(el);
+    },
+    { margin },
+  );
+  watching.set(el, stop);
+};
 
 const all = [
   ...document.querySelectorAll<HTMLElement>(`${BLOCKS}, ${TITLES}, ${BAND}`),
@@ -366,28 +384,42 @@ const seen =
   performance.getEntriesByType("paint").length > 0 &&
   !root.classList.contains("intro-hold");
 for (const el of all) {
-  const kind = el.matches(BAND)
-    ? "band"
-    : el.closest("footer")
-      ? "footer"
-      : "rest";
   const top = el.getBoundingClientRect().top;
-  if (top < (seen ? 1 : lines[kind]) * innerHeight) {
-    arrived(el);
-    continue;
-  }
-  const margin = `0px 0px -${Math.round((1 - lines[kind]) * 100)}% 0px`;
-  const stop = inView(
-    el,
-    () => {
-      watching.delete(el);
-      arrive(el);
-    },
-    { margin },
-  );
-  watching.set(el, stop);
+  if (top < (seen ? 1 : line(el)) * innerHeight) arrived(el);
+  else watch(el);
 }
 if (motion) root.classList.add("motion-ready");
+
+// A resize (a phone or tablet turned, a window resized) moves things with
+// no scroll, and the observer misses some of them: it measures the band
+// inside its start clip, 10% of its height below its real top. So on a
+// resize, whatever a load at the new size would have shown arrives now,
+// measured as on load; the rest are watched again if the lines changed.
+// Once a frame at most, and only until everything has arrived.
+let narrow = phone();
+let sizing = 0;
+const resized = () => {
+  if (!watching.size) {
+    removeEventListener("resize", resized);
+    return;
+  }
+  if (sizing) return;
+  sizing = requestAnimationFrame(() => {
+    sizing = 0;
+    const turned = phone() !== narrow;
+    narrow = phone();
+    for (const [el, stop] of [...watching]) {
+      const below = el.getBoundingClientRect().top >= line(el) * innerHeight;
+      if (below && !turned) continue;
+      stop();
+      watching.delete(el);
+      if (below) watch(el);
+      else arrive(el);
+    }
+    if (!watching.size) removeEventListener("resize", resized);
+  });
+};
+if (watching.size) addEventListener("resize", resized, { passive: true });
 
 // At the end of the page (the footer's bottom edge in the window),
 // whatever is in the window and still waiting arrives: on a tall window,
