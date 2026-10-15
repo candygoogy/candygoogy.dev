@@ -8,8 +8,8 @@ const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
 // On the home page the nav jumps to sections; elsewhere it links back to them.
 const prefix = path === "/" ? "" : "/";
 const nav = [
-  { href: "/fettle", label: "Fettle" },
   { href: `${prefix}#projects`, label: "Projects" },
+  { href: "/experiments", label: "Experiments" },
   { href: `${prefix}#about`, label: "About" },
   { href: `${prefix}#contact`, label: "Contact" },
 ];
@@ -66,8 +66,9 @@ const nav = [
   }
 
   ul {
+    --nav-gap: var(--sp-5);
     display: flex;
-    gap: var(--sp-5);
+    gap: var(--nav-gap);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -92,7 +93,7 @@ const nav = [
   nav a::after {
     content: "";
     position: absolute;
-    inset: -12px calc(var(--sp-5) / -2);
+    inset: -12px calc(var(--nav-gap) / -2);
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -119,6 +120,14 @@ const nav = [
     nav {
       order: 3;
       flex-basis: 100%;
+    }
+  }
+
+  /* The narrowest phones: a tighter gap keeps the four links on one line
+     inside the page edges. */
+  @media (max-width: 22.5rem) {
+    ul {
+      --nav-gap: var(--sp-3);
     }
   }
 </style>

@@ -1,6 +1,5 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import { experiments } from "../data/experiments";
 import Rows, { type Row } from "./Rows.astro";
 
 // Everything made besides the products, in the hero index's order: side
@@ -54,18 +53,4 @@ const rows: Row[] = projects.map((p) => {
   title="More things I’ve made"
   rows={rows}
   aliases={["websites", "side-projects"]}
->
-  {/* After the last row, with no rule: the list still ends on text. */}
-  <p class="closing rv">
-    {experiments.closing.before}
-    <a href="/experiments">{experiments.title}</a>
-    {experiments.closing.after}
-  </p>
-</Rows>
-
-<style>
-  .closing {
-    margin-top: var(--sp-8);
-    color: var(--soft);
-  }
-</style>
+/>

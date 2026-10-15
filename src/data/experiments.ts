@@ -6,6 +6,4 @@ export const experiments = {
   // Each row's kind, under its name.
   kind: "Experiment",
   credit: "Open source, MIT.",
-  // The closing line under the projects list; the link is the page's name.
-  closing: { before: "Smaller tools and toys live in ", after: "." },
 };
