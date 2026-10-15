@@ -2,8 +2,6 @@
 // src/content/experiments/).
 export const experiments = {
   title: "Experiments",
-  lede: "Small tools and toys that run in your browser. Nothing you drop into them is uploaded.",
-  // Each row's kind, under its name.
-  kind: "Experiment",
+  lede: "Small tools that run in your browser. Nothing you drop into them is uploaded.",
   credit: "Open source, MIT.",
 };

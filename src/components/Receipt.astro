@@ -3,8 +3,9 @@
 // installed and how on the left, its lines on the right, group by group,
 // and a caption that links to where it comes from. Each line's mark is its
 // list marker, so its meaning never depends on color. Paths break after
-// their backslashes, so a long one wraps instead of scrolling sideways, and
-// a size keeps its unit on its line.
+// their backslashes, so a long one wraps instead of scrolling sideways, a
+// size keeps its unit on its line, and a command's option ("--all") never
+// splits at its dashes.
 import type { CollectionEntry } from "astro:content";
 
 type Receipt = NonNullable<CollectionEntry<"projects">["data"]["receipt"]>;
@@ -29,7 +30,8 @@ const line = (raw: string) => ({
   mark: MARKS[raw.charAt(0)] ?? "note",
   html: esc(raw.slice(2))
     .replaceAll("\\", "\\<wbr>")
-    .replace(/ (?=[KMGT]?B\b)/g, "&nbsp;"),
+    .replace(/ (?=[KMGT]?B\b)/g, "&nbsp;")
+    .replace(/(^|[\s(])(--?[a-z][\w-]*)/gi, '$1<span class="nobr">$2</span>'),
 });
 ---
 
@@ -54,7 +56,13 @@ const line = (raw: string) => ({
   </div>
   {caption && (
     <figcaption class="rv" style={`--i: ${groups.length + 1}`}>
-      {href ? <a href={href}>{caption}</a> : caption}
+      {href ? (
+        <a class="tap" href={href}>
+          {caption}
+        </a>
+      ) : (
+        caption
+      )}
     </figcaption>
   )}
 </figure>

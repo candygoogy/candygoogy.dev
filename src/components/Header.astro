@@ -2,6 +2,14 @@
 import { site } from "../data/site";
 import ThemeSwitch from "./ThemeSwitch.astro";
 
+interface Props {
+  // The nav item the page belongs under, marked current though it links
+  // elsewhere (a product page is one of the projects).
+  section?: string | undefined;
+}
+
+const { section } = Astro.props;
+
 // Pages are built as files (fettle.html), so the path is compared without
 // the extension, the way Base.astro builds the canonical URL.
 const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
@@ -25,7 +33,13 @@ const nav = [
         <li>
           <a
             href={item.href}
-            aria-current={path === item.href ? "page" : undefined}
+            aria-current={
+              path === item.href
+                ? "page"
+                : section === item.label
+                  ? "true"
+                  : undefined
+            }
           >
             {item.label}
           </a>
@@ -96,6 +110,12 @@ const nav = [
     inset: -12px calc(var(--nav-gap) / -2);
   }
 
+  /* The last one has no neighbour on its right: its target ends with it,
+     so it never reaches past the page's edge (as with wider spacing). */
+  nav li:last-child a::after {
+    right: 0;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     nav a:hover {
       color: var(--ink);
@@ -104,7 +124,7 @@ const nav = [
     }
   }
 
-  nav a[aria-current="page"] {
+  nav a[aria-current] {
     color: var(--ink);
   }
 

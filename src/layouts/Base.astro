@@ -25,6 +25,8 @@ interface Props {
   ogAlt?: string;
   // Structured data (schema.org JSON-LD) for this page.
   schema?: Record<string, unknown>;
+  // The header nav item this page belongs under (product pages: Projects).
+  section?: string;
 }
 
 const {
@@ -35,6 +37,7 @@ const {
   ogImage: ogPath = "/og.png",
   ogAlt = `${site.name}: ${hero.headline}`,
   schema,
+  section,
 } = Astro.props;
 // Pages are built as files (index.html, fettle.html), but served and
 // listed in the sitemap without the extension: / and /fettle.
@@ -318,7 +321,7 @@ const icon = (file: string) => {
     <a class="skip" href="#main">
       Skip to content
     </a>
-    <Header />
+    <Header section={section} />
     <main id="main" class="wrap">
       <slot />
     </main>

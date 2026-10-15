@@ -389,6 +389,24 @@
     overflow-wrap: anywhere;
   }
 
+  /* A Source link's address is a long GitHub path: noise on paper. */
+  a.src::after {
+    content: none !important;
+  }
+
+  /* The download button prints as its words, in line with the column,
+     with its address after a space. */
+  .get {
+    display: inline !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Privacy's own rule would sit right on the section's dashed one. */
+  .pair > .rv-line::before {
+    display: none !important;
+  }
+
   /* The footer: the notes, then the "Printed from" line; its links go. */
   footer .inner {
     display: block !important;

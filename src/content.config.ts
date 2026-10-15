@@ -31,6 +31,9 @@ const projects = defineCollection({
           .optional(),
         license: z.string().min(1).optional(),
         runsOn: z.string().min(1).optional(),
+        // The command it runs as, when that isn't its name (Install diff
+        // is idiff), named once in its facts.
+        command: z.string().min(1).optional(),
         story: z
           .object({
             why: z.string().min(1),
@@ -87,15 +90,20 @@ const projects = defineCollection({
             checksNote: z.string().min(1).optional(),
             uses: z
               .array(
-                z.object({
-                  text: z.string().min(1),
-                  // Index into images: this use's screenshot, shown beside it.
-                  shot: z.number().int().min(0).optional(),
-                  // A phrase in the text that links out.
-                  link: z
-                    .object({ text: z.string().min(1), href: z.url() })
-                    .optional(),
-                }),
+                z
+                  .object({
+                    text: z.string().min(1),
+                    // Index into images: this use's screenshot, shown beside it.
+                    shot: z.number().int().min(0).optional(),
+                    // A phrase in the text that links out, as written there.
+                    link: z
+                      .object({ text: z.string().min(1), href: z.url() })
+                      .optional(),
+                  })
+                  .refine((u) => !u.link || u.text.includes(u.link.text), {
+                    message: "link.text must appear in text, as written there.",
+                    path: ["link", "text"],
+                  }),
               )
               .min(1),
             privacy: z.string().min(1),

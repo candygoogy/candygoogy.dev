@@ -16,7 +16,6 @@ const entries = (
 const rows: Row[] = entries.map(({ id, data }) => ({
   id,
   name: data.name,
-  kind: words.kind,
   year: data.date.getUTCFullYear(),
   summary: data.summary,
   link: { href: data.url, kind: "live", label: new URL(data.url).hostname },
@@ -130,15 +129,30 @@ const rows: Row[] = entries.map(({ id, data }) => ({
     }
   }
 
-  /* Phones: the links stack; far enough apart that their targets don't
-     touch. */
+  /* Phones: the two links share a line, 24px apart so their targets
+     don't touch; the sentence goes under them. */
   @media (max-width: 53.75rem) {
     :global(#experiments .meta) {
-      gap: var(--sp-5);
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--sp-3) var(--sp-5);
+    }
+
+    :global(#experiments .meta > p) {
+      flex-basis: 100%;
     }
 
     :global(#experiments .src) {
       align-self: flex-start;
+    }
+  }
+
+  /* The smallest phones: the longest address and Source don't fit on one
+     line, so every row stacks them, 24px apart. */
+  @media (max-width: 22.5rem) {
+    :global(#experiments .meta) {
+      flex-direction: column;
+      gap: var(--sp-5);
     }
   }
 </style>

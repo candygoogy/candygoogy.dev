@@ -1,5 +1,6 @@
 ---
 import type { CollectionEntry } from "astro:content";
+import { site } from "../data/site";
 import Rows, { type Row } from "./Rows.astro";
 
 // Everything made besides the products, in the hero index's order: side
@@ -12,11 +13,11 @@ const { projects } = Astro.props;
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 const kind = { side: "Side project", website: "Website", product: "Product" };
 
-// The row's one link: a product's own page; else a live site; otherwise
-// the source.
+// The row's one link, named by where it goes: a product's own page (its
+// address on this site); else a live site; otherwise the source.
 const link = ({ id, data }: CollectionEntry<"projects">): Row["link"] =>
   data.kind === "product"
-    ? { href: `/${id}`, kind: "page" }
+    ? { href: `/${id}`, kind: "page", label: `${host(site.url)}/${id}` }
     : data.links.live
       ? { href: data.links.live, kind: "live", label: host(data.links.live) }
       : data.links.source

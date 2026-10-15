@@ -1,6 +1,7 @@
 // @ts-check
 import sitemap from "@astrojs/sitemap";
 import { defineConfig, fontProviders } from "astro/config";
+import csp from "./scripts/csp.mjs";
 import inlineScripts from "./scripts/inline-scripts.mjs";
 import motionLoader from "./scripts/motion-loader.mjs";
 import thirdPartyLicenses from "./scripts/third-party-licenses.mjs";
@@ -16,11 +17,14 @@ export default defineConfig({
   // (scripts/inline-scripts.mjs).
   // thirdPartyLicenses: the notices for third-party code in the pages, as
   // /third-party-licenses.txt (scripts/third-party-licenses.mjs).
+  // csp: each page's Content-Security-Policy, from the page as it ships
+  // (scripts/csp.mjs). Last, so no step changes a page after it.
   integrations: [
     sitemap(),
     motionLoader(),
     inlineScripts(),
     thirdPartyLicenses(),
+    csp(),
   ],
   build: {
     format: "file",

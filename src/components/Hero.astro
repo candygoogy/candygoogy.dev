@@ -80,9 +80,12 @@ const [, rest = lineAfter, lastPair = ""] =
     translate: 0 -50%;
   }
 
+  /* The index never gets narrower than its longest line (about 20rem),
+     so each project's line stays on one line down to where the columns
+     stack. */
   .hero {
     display: grid;
-    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    grid-template-columns: minmax(0, 7fr) minmax(21rem, 4fr);
     gap: var(--gap-hero);
     align-items: start;
     padding-block: var(--space-hero-top) var(--space-hero-bottom);

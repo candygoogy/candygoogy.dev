@@ -70,13 +70,14 @@ const href = (p: CollectionEntry<"projects">) =>
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: var(--sp-3);
-    padding-block: var(--sp-5);
+    padding-block: var(--sp-4);
     background: none;
     color: var(--ink);
   }
 
+  /* Names are one line: no extra leading above or below. */
   .name {
-    font: var(--fw-bold) var(--fs-d-lg) / var(--lh-tight) var(--ff-display);
+    font: var(--fw-bold) var(--fs-d-lg) / 1 var(--ff-display);
     letter-spacing: var(--ls-d-md);
     transition: color var(--dur-ui) var(--ease-out);
   }
@@ -86,19 +87,21 @@ const href = (p: CollectionEntry<"projects">) =>
     color: var(--acc);
   }
 
+  /* The line runs under the year too, so it stays on one line in the
+     hero's narrower index (Hero.astro). */
   .blurb {
-    grid-column: 1;
+    grid-column: 1 / -1;
     margin-top: var(--sp-1);
     font-size: var(--fs-meta);
     color: var(--soft);
     text-wrap: balance;
   }
 
+  /* The year sits on the name's baseline. */
   .year {
     grid-column: 2;
     grid-row: 1;
-    align-self: start;
-    padding-top: 0.35em;
+    align-self: baseline;
     font-size: var(--fs-meta);
     color: var(--soft);
     font-variant-numeric: tabular-nums;

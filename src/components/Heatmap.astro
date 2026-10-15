@@ -88,6 +88,13 @@ const busiest = days.reduce<Day | undefined>(
   undefined,
 );
 
+// Each day's week number (--w, its column; the day name comes first in
+// its row), for the charge-up's left-to-right start (motion.css): one rule
+// per week here rather than a style attribute on every day.
+const weekRules = weeks
+  .map((_, w) => `.heatmap td:nth-child(${w + 2}){--w:${w}}`)
+  .join("");
+
 // Roving focus starts on the last day: the one tabbable cell.
 const lastWeek = weeks.length - 1;
 const lastDay = weeks[lastWeek]?.findLastIndex((c) => c !== null) ?? 0;
@@ -188,7 +195,6 @@ const weekly = weeks.map((week) => {
                   aria-label={cell.label}
                   data-level={cell.level}
                   data-busiest={cell.date === busiest?.date ? "" : undefined}
-                  style={`--w: ${w}`}
                 >
                   <span />
                 </td>
@@ -202,6 +208,7 @@ const weekly = weeks.map((week) => {
         ))}
       </tbody>
     </table>
+    <style is:inline set:html={weekRules}></style>
   </div>
 
   <div class="legend" aria-hidden="true">

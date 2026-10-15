@@ -31,6 +31,8 @@ export default function init(net: HTMLElement) {
   if (reduced() || !("pseudoElement" in KeyframeEffect.prototype)) return;
   if (!layer || !ap || !laptop || !crowd) return;
 
+  // The arrival's own animations, so focus can finish them (below).
+  const arriving: Animation[] = [];
   // Arrival. Each device lands 240ms after the one it's connected to (its
   // siblings 60ms apart); its wire starts 200ms before, the stub across
   // 110ms before, and the wire down to its own devices just after.
@@ -39,15 +41,17 @@ export default function init(net: HTMLElement) {
     if (reduced()) return;
     const lands = new Map<Element, number>();
     const draw = (el: Element, pseudo: string, from: string, at: number) =>
-      el.animate(
-        { transform: [from, "none"] },
-        {
-          pseudoElement: pseudo,
-          delay: at,
-          duration: 400,
-          easing: EASE.out,
-          fill: "backwards",
-        },
+      arriving.push(
+        el.animate(
+          { transform: [from, "none"] },
+          {
+            pseudoElement: pseudo,
+            delay: at,
+            duration: 400,
+            easing: EASE.out,
+            fill: "backwards",
+          },
+        ),
       );
     for (const li of net.querySelectorAll("li")) {
       const list = li.parentElement;
@@ -68,33 +72,40 @@ export default function init(net: HTMLElement) {
         draw(row, "::after", "scaleY(0)", t + 40);
       }
       row.querySelectorAll(".dot").forEach((dot, i) =>
-        dot.animate(
-          { transform: ["scale(0)", "none"] },
-          {
-            delay: t + i * 60,
-            duration: 600,
-            easing: EASE.spring,
-            fill: "backwards",
-          },
+        arriving.push(
+          dot.animate(
+            { transform: ["scale(0)", "none"] },
+            {
+              delay: t + i * 60,
+              duration: 600,
+              easing: EASE.spring,
+              fill: "backwards",
+            },
+          ),
         ),
       );
       row.querySelectorAll(".lab, .val").forEach((el, i) =>
-        el.animate(
-          { transform: [`translateY(${RISE()}px)`, "none"], opacity: [0, 1] },
-          {
-            delay: t - 40 + i * STAGGER_MS,
-            duration: 900,
-            easing: EASE.out,
-            fill: "backwards",
-          },
+        arriving.push(
+          el.animate(
+            { transform: [`translateY(${RISE()}px)`, "none"], opacity: [0, 1] },
+            {
+              delay: t - 40 + i * STAGGER_MS,
+              duration: 900,
+              easing: EASE.out,
+              fill: "backwards",
+            },
+          ),
         ),
       );
-      row
-        .querySelector(".lead")
-        ?.animate(
-          { opacity: [0, 1] },
-          { delay: t, duration: 600, easing: EASE.out, fill: "backwards" },
+      const lead = row.querySelector(".lead");
+      if (lead) {
+        arriving.push(
+          lead.animate(
+            { opacity: [0, 1] },
+            { delay: t, duration: 600, easing: EASE.out, fill: "backwards" },
+          ),
         );
+      }
     }
   };
 
@@ -322,8 +333,19 @@ export default function init(net: HTMLElement) {
   } else {
     net.classList.add("pending");
     inView(net, () => {
+      if (arrived) return;
       arrive();
       arrived = true;
+      sync();
+    });
+    // Keyboard focus on a link in the tree before it has arrived: it's
+    // all there at once, labels and wires, so focus never lands on
+    // something unseen (as reveal.ts does for the page's reveals).
+    net.addEventListener("focusin", () => {
+      for (const a of arriving.splice(0)) a.finish();
+      if (arrived) return;
+      arrived = true;
+      net.classList.add("is-in");
       sync();
     });
   }

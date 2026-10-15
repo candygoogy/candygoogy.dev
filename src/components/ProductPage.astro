@@ -48,9 +48,27 @@ const schema = {
 // Uses with a screenshot get it beside them; the rest sit together after.
 const shown = page.uses.filter((u) => u.shot !== undefined);
 const plain = page.uses.filter((u) => u.shot === undefined);
+// A use's linked phrase, split out of its text. The phrase must be in the
+// text as written (the schema checks it too).
+const parts = (text: string, phrase: string) => {
+  const at = text.indexOf(phrase);
+  if (at < 0) throw new Error(`"${phrase}" isn't in the use "${text}"`);
+  return [text.slice(0, at), text.slice(at + phrase.length)];
+};
+
+// The checks run three across (two on tablets, one on phones). When the
+// last row has room left, the note sits in it, beside the last check,
+// rather than under a row with gaps in it.
+const checks = page.checks.length;
+const beside = [
+  checks % 3 === 1 && "beside-3",
+  checks % 2 === 1 && "beside-2",
+].filter(Boolean);
+const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks / 2)}`;
 ---
 
 <Base
+  section="Projects"
   title={`${data.name} – candygoogy`}
   description={data.summary}
   ogImage={`/og-${project.id}.png`}
@@ -64,22 +82,28 @@ const plain = page.uses.filter((u) => u.shot === undefined);
     <FettleBand project={project} page />
   </div>
 
-  <!-- What it checks: six items on a grid, each under a drawn hairline. -->
+  <!-- What it checks: the items on a grid, each under a drawn hairline,
+       and the note after them. -->
   <section class="sec" aria-labelledby="checks-title">
     <h2 id="checks-title">
       <span class="rv-mask">
         <span>What it checks</span>
       </span>
     </h2>
-    <ul class="checks">
-      {page.checks.map((c, i) => (
-        <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
-          <h3>{c.name}</h3>
-          <p>{c.text}</p>
-        </li>
-      ))}
-    </ul>
-    {page.checksNote && <p class="note rv">{page.checksNote}</p>}
+    <div
+      class:list={["checks-grid", page.checksNote && beside]}
+      style={page.checksNote && beside.length ? rows : undefined}
+    >
+      <ul class="checks">
+        {page.checks.map((c, i) => (
+          <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
+            <h3>{c.name}</h3>
+            <p>{c.text}</p>
+          </li>
+        ))}
+      </ul>
+      {page.checksNote && <p class="note rv">{page.checksNote}</p>}
+    </div>
   </section>
 
   <!-- What you can do: each screenshot sits beside the line it shows. -->
@@ -117,9 +141,9 @@ const plain = page.uses.filter((u) => u.shot === undefined);
         <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
           {u.link ? (
             <>
-              {u.text.slice(0, u.text.indexOf(u.link.text))}
+              {parts(u.text, u.link.text)[0]}
               <a href={u.link.href}>{u.link.text}</a>
-              {u.text.slice(u.text.indexOf(u.link.text) + u.link.text.length)}
+              {parts(u.text, u.link.text)[1]}
             </>
           ) : (
             u.text
@@ -130,9 +154,10 @@ const plain = page.uses.filter((u) => u.shot === undefined);
     <slot name="example" />
   </section>
 
-  <!-- Privacy and what I learned: short, so they sit as a pair. -->
+  <!-- Privacy and what I learned: short, so they sit as a pair. Privacy
+       alone sits on the page's 4/7 columns, its heading on the left. -->
   <section
-    class="pair"
+    class:list={["pair", { single: !page.learned }]}
     aria-label={page.learned ? "Privacy and what I learned" : "Privacy"}
   >
     <div class="rv rv-line">
@@ -183,7 +208,9 @@ const plain = page.uses.filter((u) => u.shot === undefined);
       {data.license && <li>Free and open source, {data.license}</li>}
     </ul>
     <p class="back rv" style="--d: 300ms">
-      <a href="/">Back to all work</a>
+      <a class="tap" href="/#projects">
+        Back to all projects
+      </a>
     </p>
   </section>
 </Base>
@@ -211,7 +238,7 @@ const plain = page.uses.filter((u) => u.shot === undefined);
     list-style: none;
   }
 
-  /* Six checks, three across on desktop. */
+  /* The checks, three across on desktop. */
   .checks {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -238,6 +265,56 @@ const plain = page.uses.filter((u) => u.shot === undefined);
   .note {
     max-width: var(--measure);
     margin-top: var(--sp-6);
+  }
+
+  /* The note beside the last check: the list's rows become the outer
+     grid's (subgrid), and the note takes the free cells of the last one,
+     its text level with the checks' names. Without subgrid it stays
+     under the list. */
+  @supports (grid-template-rows: subgrid) {
+    @media (min-width: 53.76rem) {
+      .beside-3 {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--sp-6) var(--sp-7);
+      }
+
+      .beside-3 > .checks {
+        grid-column: 1 / -1;
+        grid-row: 1 / span var(--rows-3);
+        grid-template-columns: subgrid;
+        grid-template-rows: subgrid;
+      }
+
+      .beside-3 > .note {
+        grid-column: 2 / -1;
+        grid-row: var(--rows-3);
+        margin-top: 0;
+        padding-top: var(--sp-4);
+      }
+    }
+
+    @media (min-width: 32.51rem) and (max-width: 53.75rem) {
+      .beside-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--sp-6) var(--sp-7);
+      }
+
+      .beside-2 > .checks {
+        grid-column: 1 / -1;
+        grid-row: 1 / span var(--rows-2);
+        grid-template-columns: subgrid;
+        grid-template-rows: subgrid;
+      }
+
+      .beside-2 > .note {
+        grid-column: 2;
+        grid-row: var(--rows-2);
+        margin-top: 0;
+        padding-top: var(--sp-4);
+      }
+    }
   }
 
   /* Each use with its screenshot: the line on the left (4), the picture
@@ -278,15 +355,16 @@ const plain = page.uses.filter((u) => u.shot === undefined);
     color: var(--soft);
   }
 
-  /* The uses without a screenshot: the same lede size and 4/7 columns
-     as the ones above, so they read as the list's end, not a footnote. */
+  /* The uses without a screenshot: the same lede size, two equal columns
+     at the measure, so they read as the list's end, not a footnote. */
   .more {
     display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 var(--gap-hero);
   }
 
   .more li {
+    max-width: var(--measure);
     padding-block: var(--sp-5);
     font-size: var(--fs-lede);
     color: var(--ink);
@@ -302,6 +380,25 @@ const plain = page.uses.filter((u) => u.shot === undefined);
 
   .pair > div {
     padding-top: var(--sp-5);
+  }
+
+  .single {
+    grid-template-columns: 1fr;
+  }
+
+  .single > div {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    column-gap: var(--gap-hero);
+    align-items: start;
+  }
+
+  .single h2 {
+    grid-row: 1 / span 9;
+  }
+
+  .single p {
+    grid-column: 2;
   }
 
   .pair h2 {
@@ -405,8 +502,17 @@ const plain = page.uses.filter((u) => u.shot === undefined);
 
     .use,
     .more,
-    .pair {
+    .pair,
+    .single > div {
       grid-template-columns: 1fr;
+    }
+
+    .single h2 {
+      grid-row: auto;
+    }
+
+    .single p {
+      grid-column: auto;
     }
   }
 

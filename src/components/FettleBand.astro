@@ -21,17 +21,14 @@ const Sub = page ? "h2" : "h3";
 const { data } = project;
 const shot = data.images[0];
 const version = latestVersion(data.repo, data.version);
-// Without a screenshot the band is text only: the story sits further from
-// the lede, so the name and its line read as the header. Set here, not in
-// the styles below, so a band with a screenshot is untouched.
-const textOnly = shot
-  ? undefined
-  : "margin-top: clamp(var(--sp-8), 10vh, var(--sp-9))";
+// Without a screenshot the band is text only (.bare): the story sits
+// further from the lede, so the name and its line read as the header, and
+// the facts start at the lede's edge, so the right side has one edge.
 ---
 
 <section
   id={project.id}
-  class="band rv-band"
+  class:list={["band", "rv-band", { bare: !shot }]}
   aria-labelledby={bandTitleId(project.id)}
 >
   <div class="band-head">
@@ -76,7 +73,7 @@ const textOnly = shot
     </figure>
   )}
 
-  <div class="zig" style={textOnly}>
+  <div class="zig">
     <div class="story">
       {data.story && (
         <>
@@ -102,7 +99,7 @@ const textOnly = shot
       )}
       {!page && (
         <p class="more rv" style="--i: 6">
-          <a href={`/${project.id}`}>
+          <a class="tap" href={`/${project.id}`}>
             What {data.name} checks, and how it handles privacy
           </a>
         </p>
@@ -197,6 +194,12 @@ const textOnly = shot
     margin-top: clamp(2.5rem, 6vh, 4rem);
   }
 
+  .bare .zig {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: var(--sp-8);
+    margin-top: clamp(var(--sp-8), 10vh, var(--sp-9));
+  }
+
   .sub {
     margin-bottom: var(--sp-2);
     font-size: var(--fs-d-sm);
@@ -237,7 +240,8 @@ const textOnly = shot
       --band-r: var(--r-band-narrow);
     }
     .band-head,
-    .zig {
+    .zig,
+    .bare .zig {
       grid-template-columns: 1fr;
     }
   }

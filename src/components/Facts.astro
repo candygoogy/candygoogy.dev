@@ -40,6 +40,16 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
       </dd>
     </>
   )}
+  {data.command && (
+    <>
+      <dt class="rv" style="--i: 3">
+        Command
+      </dt>
+      <dd class="rv" style="--i: 3">
+        {data.command}
+      </dd>
+    </>
+  )}
   {data.license && (
     <>
       <dt class="rv" style="--i: 3">

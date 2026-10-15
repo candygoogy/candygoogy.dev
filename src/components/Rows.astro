@@ -10,13 +10,14 @@ import { vtAttr } from "../lib/vt";
 export interface Row {
   id: string;
   name: string;
-  kind: string;
+  // Left out where every row would say the same: then only the year shows.
+  kind?: string;
   year: number;
   summary: string;
-  // The row's link: a page on this site ("Read more"), a live site (its
+  // The row's link: a page on this site (its address), a live site (its
   // domain and ↗) or its source.
   link?:
-    | { kind: "page"; href: string }
+    | { kind: "page"; href: string; label: string }
     | { kind: "live"; href: string; label: string }
     | { kind: "source"; href: string };
   // The source, as a second link, when the row's link is a live site.
@@ -92,7 +93,7 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
               </h3>
             )}
             <p class="kind">
-              <span>{row.kind}</span>
+              {row.kind && <span>{row.kind}</span>}
               <span>{row.year}</span>
             </p>
           </div>
@@ -104,8 +105,7 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
               {go &&
                 (go.kind === "page" ? (
                   <a class="go" href={go.href}>
-                    Read more
-                    <span class="visually-hidden"> about {row.name}</span>
+                    {go.label}
                   </a>
                 ) : go.kind === "live" ? (
                   <a class="go" href={go.href}>

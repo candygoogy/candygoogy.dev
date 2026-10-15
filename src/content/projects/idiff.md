@@ -9,6 +9,7 @@ version: 1.0.0
 repo: fettle-page/idiff
 license: MIT
 runsOn: Windows 10 and 11 (64-bit)
+command: idiff
 stack: [Rust]
 story:
   why: "Installers can do far more than copy files: add background services with full system rights, schedule daily updaters, start with Windows, open the firewall. Windows doesn’t tell you, and uninstalling often leaves some of it behind."

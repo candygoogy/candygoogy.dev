@@ -77,6 +77,10 @@ async function home(request: Request, env: Env) {
           "Cache-Control": "public, max-age=0, must-revalidate",
           Vary: "User-Agent",
           "x-hello": HELLO,
+          // Plain text runs and loads nothing; the pages' own policy is in
+          // their HTML and public/_headers, which this response skips.
+          "Content-Security-Policy":
+            "default-src 'none'; frame-ancestors 'none'",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "strict-origin-when-cross-origin",
         },

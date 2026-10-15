@@ -142,26 +142,26 @@ const current = (href: string) => (path === href ? "page" : undefined);
       order: -1;
     }
 
-    /* The notes start their own row after the links, as two columns,
-       with the stamp last on its own line. */
+    /* The notes start their own row after the links, side by side
+       while they fit (each wraps to its own line when it doesn't, as with
+       wider letter spacing), with the stamp last on its own line. */
     .notes {
-      display: grid;
       grid-column: 1 / -1;
-      grid-template-columns: auto auto;
-      justify-content: start;
-      justify-items: start;
       gap: var(--sp-3) var(--sp-6);
     }
 
     .stamp {
-      grid-column: 1 / -1;
+      flex-basis: 100%;
     }
   }
 
   @media (max-width: 22.5rem) {
-    .inner,
-    .notes {
+    .inner {
       grid-template-columns: auto;
+    }
+
+    .notes {
+      flex-direction: column;
     }
   }
 </style>

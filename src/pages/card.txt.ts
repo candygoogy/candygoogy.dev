@@ -3,6 +3,7 @@
 // site. The Worker serves it on "/" to curl, Wget, HTTPie and xh
 // (worker/index.ts). Under 80 columns, no colors, plain layout.
 import type { APIRoute } from "astro";
+import { experiments } from "../data/experiments";
 import { hero, site } from "../data/site";
 import { builtOn, commit } from "../lib/build";
 import { orderedProjects } from "../lib/projects";
@@ -61,6 +62,8 @@ export const GET: APIRoute = async () => {
     wrap(hero.line),
     heading(hero.indexTitle),
     rows.join("\n"),
+    heading(experiments.title),
+    `${wrap(experiments.lede)}\n${site.url}/experiments`,
     heading("Contact"),
     [
       site.email,
