@@ -1,8 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
-import { GITHUB } from "../data/icons";
-import Keep from "./Keep.astro";
-import { vtAttr } from "../lib/vt";
+import { experiments } from "../data/experiments";
+import Rows, { type Row } from "./Rows.astro";
 
 // Everything made besides the products, in the hero index's order: side
 // projects and client sites share one list and one row shape.
@@ -16,13 +15,13 @@ const kind = { side: "Side project", website: "Website", product: "Product" };
 
 // The row's one link: a product's own page; else a live site; otherwise
 // the source.
-const link = ({ id, data }: CollectionEntry<"projects">) =>
+const link = ({ id, data }: CollectionEntry<"projects">): Row["link"] =>
   data.kind === "product"
-    ? { href: `/${id}`, kind: "page" as const }
+    ? { href: `/${id}`, kind: "page" }
     : data.links.live
-      ? { href: data.links.live, kind: "live" as const }
+      ? { href: data.links.live, kind: "live", label: host(data.links.live) }
       : data.links.source
-        ? { href: data.links.source, kind: "source" as const }
+        ? { href: data.links.source, kind: "source" }
         : undefined;
 
 // What I did (the role, or the license for my own code), then the stack.
@@ -32,304 +31,41 @@ const credit = ({ data }: CollectionEntry<"projects">) =>
     : data.license
       ? `Open source, ${data.license}.`
       : "";
+
+const rows: Row[] = projects.map((p) => {
+  const go = link(p);
+  return {
+    id: p.id,
+    name: p.data.name,
+    kind: kind[p.data.kind],
+    year: p.data.date.getUTCFullYear(),
+    summary: p.data.summary,
+    ...(go ? { link: go } : {}),
+    // A product's title carries its view-transition name to its page.
+    ...(p.data.kind === "product" ? { vt: p.id } : {}),
+    credit: credit(p),
+    stack: p.data.stack,
+  };
+});
 ---
 
-<!--
-  The section opens like Contact: the section gap, its line, then the
-  heading. Each row then uses the section grid: the name with its kind and
-  year on the left; the description on the right, under it the row's one
-  link and one quiet sentence (what I did in ink, the stack soft).
--->
-<section
+<Rows
   id="projects"
-  class="projects rv-line"
-  aria-labelledby="projects-title"
+  title="More things I’ve made"
+  rows={rows}
+  aliases={["websites", "side-projects"]}
 >
-  <!-- Old links to the two lists this one replaced still land here. -->
-  <span id="websites" class="alias"></span>
-  <span id="side-projects" class="alias"></span>
-  <h2 id="projects-title">
-    <span class="rv-mask">
-      <span>More things I’ve made</span>
-    </span>
-  </h2>
-  <ol class="rows">
-    {projects.map((p, i) => {
-      const go = link(p);
-      const last = i === projects.length - 1;
-      return (
-        <li
-          id={p.id}
-          class:list={["row", "rv", { "rv-line at-bottom": !last }]}
-          data-arrive
-          style={last ? `--i: ${i}` : `--i: ${i}; --line-color: var(--line)`}
-        >
-          <div class="who">
-            <h3
-              {...(p.data.kind === "product" ? vtAttr(p.id) : {})}
-              class:list={[
-                "name",
-                { "vt-project-title": p.data.kind === "product" },
-              ]}
-            >
-              {p.data.name}
-            </h3>
-            <p class="kind">
-              <span>{kind[p.data.kind]}</span>
-              <span>{p.data.date.getUTCFullYear()}</span>
-            </p>
-          </div>
-          <div class="what">
-            <p class="desc">
-              <Keep text={p.data.summary} />
-            </p>
-            <div class="meta">
-              {go &&
-                (go.kind === "page" ? (
-                  <a class="go" href={go.href}>
-                    Read more
-                    <span class="visually-hidden"> about {p.data.name}</span>
-                  </a>
-                ) : go.kind === "live" ? (
-                  <a class="go" href={go.href}>
-                    {host(go.href)}
-                    <svg
-                      class="arr"
-                      viewBox="0 0 16 16"
-                      width="14"
-                      height="14"
-                      aria-hidden="true"
-                    >
-                      <path d="M5 11 11 5M6 5h5v5" />
-                    </svg>
-                  </a>
-                ) : (
-                  <a class="go" href={go.href}>
-                    <svg
-                      class="mark"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      aria-hidden="true"
-                    >
-                      <path d={GITHUB} />
-                    </svg>
-                    Source
-                    <span class="visually-hidden">
-                      {" "}
-                      of {p.data.name} on GitHub
-                    </span>
-                  </a>
-                ))}
-              <p>
-                <span class="role">{credit(p)}</span> {p.data.stack.join(", ")}.
-              </p>
-            </div>
-          </div>
-        </li>
-      );
-    })}
-  </ol>
-</section>
+  {/* After the last row, with no rule: the list still ends on text. */}
+  <p class="closing rv">
+    {experiments.closing.before}
+    <a href="/experiments">{experiments.title}</a>
+    {experiments.closing.after}
+  </p>
+</Rows>
 
 <style>
-  .projects {
-    margin-top: var(--space-section);
-    padding-top: var(--sp-7);
-  }
-
-  .alias {
-    position: absolute;
-    top: 0;
-  }
-
-  h2 {
-    margin-bottom: var(--sp-7);
-    font-size: var(--fs-d-section);
-    line-height: 1;
-    letter-spacing: var(--ls-section);
-  }
-
-  .rows {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .row {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
-    column-gap: var(--gap-hero);
-    row-gap: var(--sp-4);
-    padding-block: var(--sp-7);
-    scroll-margin-top: var(--sp-5);
-    isolation: isolate;
-  }
-
-  /* The list ends on its last line of text: no rule under it, so the gap
-     to About is the usual section gap. */
-  .row:last-child {
-    padding-bottom: 0;
-  }
-
-  /* Identity: the name reads as a title; the kind and year sit under it. */
-  .name {
-    font-size: clamp(1.75rem, 1rem + 1.6vw, 2.5rem);
-    line-height: var(--lh-tight);
-    letter-spacing: var(--ls-section);
-  }
-
-  .kind {
-    display: flex;
-    gap: var(--sp-3);
-    margin-top: var(--sp-3);
-    font-size: var(--fs-meta);
+  .closing {
+    margin-top: var(--sp-8);
     color: var(--soft);
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* The description in ink at lede size; the meta row shares its measure,
-     so the column has one right edge. */
-  .desc,
-  .meta {
-    max-width: 60ch;
-  }
-
-  .desc {
-    font-size: var(--fs-lede);
-    color: var(--ink);
-    text-wrap: pretty;
-  }
-
-  .meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: var(--sp-2) var(--sp-5);
-    margin-top: var(--sp-5);
-    font-size: var(--fs-meta);
-    color: var(--soft);
-  }
-
-  .role {
-    color: var(--ink);
-  }
-
-  /* The row's one link. An exception to the link colour: ink at medium
-     weight, not the accent, and no marker (the row's tint is its hover);
-     it turns the accent with the row. */
-  .go {
-    display: inline-flex;
-    align-items: center;
-    align-self: center;
-    gap: var(--sp-2);
-    margin-inline: 0;
-    padding-inline: 0;
-    border-radius: var(--r-focus);
-    background: none;
-    font-weight: var(--fw-medium);
-    color: var(--ink);
-    text-decoration: none;
-    transition: color var(--dur-ui) var(--ease-ui);
-  }
-
-  .go svg {
-    flex: none;
-    transition: transform var(--dur-ui) var(--ease-ui);
-  }
-
-  .mark {
-    fill: currentColor;
-  }
-
-  .arr {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  /* The whole row is the link: its box stretches over the row. */
-  .go::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-  }
-
-  /* The row's tint, like the contact card's rows: on hover, on keyboard
-     focus, and briefly on arrival from a link on the page (.arrived, set
-     by scripts/loader.ts; not on a load or reload), so the eye finds the
-     row it jumped to. It is its own layer reaching a little past the
-     text, so the text keeps the page's left edge and the rule stays on
-     the content edges. */
-  .row::after {
-    content: "";
-    position: absolute;
-    inset: var(--sp-2) calc(-1 * var(--sp-4));
-    z-index: -1;
-    border-radius: 14px;
-    background: color-mix(in oklab, var(--line) 45%, transparent);
-    opacity: 0;
-    transition: opacity var(--dur-ui) var(--ease-out);
-  }
-
-  .row:last-child::after {
-    bottom: calc(-1 * var(--sp-5));
-  }
-
-  .row:has(.go:focus-visible)::after {
-    opacity: 1;
-  }
-
-  @media (prefers-reduced-motion: no-preference) {
-    .row:global(.arrived)::after {
-      animation: row-arrive 2.4s var(--ease-out) 350ms;
-    }
-  }
-
-  @keyframes row-arrive {
-    15%,
-    55% {
-      opacity: 1;
-    }
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .row:hover::after {
-      opacity: 1;
-    }
-
-    .row:hover .go {
-      color: var(--acc);
-    }
-
-    .row:hover .arr {
-      transform: translate(2px, -2px);
-    }
-
-    .row:hover .mark {
-      transform: rotate(-8deg);
-    }
-  }
-
-  /* Phones: one column; the link on its own line, the sentence under it. */
-  @media (max-width: 53.75rem) {
-    .row {
-      grid-template-columns: 1fr;
-      padding-block: var(--sp-6);
-    }
-
-    .meta {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: var(--sp-2);
-      margin-top: var(--sp-4);
-    }
-
-    .go {
-      align-self: flex-start;
-    }
   }
 </style>

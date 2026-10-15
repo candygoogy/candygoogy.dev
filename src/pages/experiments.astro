@@ -1,0 +1,144 @@
+---
+// Experiments: small tools that run in the browser, each on its own
+// subdomain, as text rows like the projects list. Each row links to the
+// tool (the whole row) and to its source.
+import { getCollection } from "astro:content";
+import Rows, { type Row } from "../components/Rows.astro";
+import Base from "../layouts/Base.astro";
+import { experiments as words } from "../data/experiments";
+
+const entries = (
+  await getCollection(
+    "experiments",
+    ({ data }) => !data.draft && data.status !== "retired",
+  )
+).sort((a, b) => a.id.localeCompare(b.id));
+const rows: Row[] = entries.map(({ id, data }) => ({
+  id,
+  name: data.name,
+  kind: words.kind,
+  year: data.date.getUTCFullYear(),
+  summary: data.summary,
+  link: { href: data.url, kind: "live", label: new URL(data.url).hostname },
+  source: data.source,
+  credit: words.credit,
+  stack: data.stack,
+}));
+---
+
+<Base
+  title={`${words.title} – candygoogy`}
+  description={words.lede}
+  ogImage="/og-experiments.png"
+  ogAlt={`${words.title}: ${words.lede}`}
+>
+  <div class="head">
+    <h1 id="experiments-title">
+      <span class="rv-mask">
+        <span>{words.title}</span>
+      </span>
+    </h1>
+    <p class="lede rv" style="--d: 200ms">
+      {words.lede}
+    </p>
+  </div>
+  <Rows id="experiments" labelledBy="experiments-title" rows={rows} level={2} />
+</Base>
+
+<style>
+  .head {
+    padding-block: var(--space-hero-top) var(--sp-8);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  .lede {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-6);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  /* The list starts right under the head, not a section gap away. */
+  :global(#experiments.projects) {
+    margin-top: 0;
+  }
+
+  /* Here the rows' names are the page's h2s: no list-heading margin. */
+  :global(#experiments .name) {
+    margin-bottom: 0;
+  }
+
+  /* Source, the row's second link: above the row's stretched link, in
+     the row link's ink at rest, the accent on its own hover. Its touch
+     target is 44px tall and stays clear of the row link's text. */
+  :global(#experiments .src) {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    gap: var(--sp-2);
+    border-radius: var(--r-focus);
+    background: none;
+    font-weight: var(--fw-medium);
+    color: var(--ink);
+    transition: color var(--dur-ui) var(--ease-ui);
+  }
+
+  :global(#experiments .src::before) {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: 44px;
+    translate: -50% -50%;
+  }
+
+  :global(#experiments .src svg) {
+    flex: none;
+    fill: currentColor;
+    transition: transform var(--dur-ui) var(--ease-ui);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :global(#experiments .src:hover) {
+      color: var(--acc);
+    }
+
+    :global(#experiments .src:hover svg) {
+      transform: rotate(-8deg);
+    }
+
+    /* Pointing at Source isn't pointing at the tool: no row tint, and
+       the row link stays ink. */
+    :global(#experiments .row:has(.src:hover)::after) {
+      opacity: 0;
+    }
+
+    :global(#experiments .row:has(.src:hover) .go) {
+      color: var(--ink);
+    }
+
+    :global(#experiments .row:has(.src:hover) .arr) {
+      transform: none;
+    }
+  }
+
+  /* Phones: the links stack; far enough apart that their targets don't
+     touch. */
+  @media (max-width: 53.75rem) {
+    :global(#experiments .meta) {
+      gap: var(--sp-5);
+    }
+
+    :global(#experiments .src) {
+      align-self: flex-start;
+    }
+  }
+</style>

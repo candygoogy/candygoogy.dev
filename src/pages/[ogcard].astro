@@ -1,10 +1,11 @@
 ---
 // The social preview cards (1200 x 630), rendered to public/og.png,
-// public/og-<product>.png and public/og-uses.png by scripts/og.mjs. Built
-// only in `astro dev`.
+// public/og-<product>.png, public/og-uses.png and public/og-experiments.png
+// by scripts/og.mjs. Built only in `astro dev`.
 import { getCollection } from "astro:content";
 import { Font } from "astro:assets";
 import { hero, site } from "../data/site";
+import { experiments } from "../data/experiments";
 import { uses } from "../data/uses";
 import "../styles/tokens.css";
 
@@ -14,9 +15,12 @@ export async function getStaticPaths() {
   const products = (await getCollection("projects")).filter(
     (p) => p.data.kind === "product",
   );
-  return ["og-card", "og-uses", ...products.map((p) => `og-${p.id}`)].map(
-    (ogcard) => ({ params: { ogcard } }),
-  );
+  return [
+    "og-card",
+    "og-uses",
+    "og-experiments",
+    ...products.map((p) => `og-${p.id}`),
+  ].map((ogcard) => ({ params: { ogcard } }));
 }
 
 const project = import.meta.env.DEV
@@ -35,7 +39,13 @@ const page = project
     }
   : Astro.params.ogcard === "og-uses"
     ? { name: uses.title, line: uses.lede, url: "candygoogy.dev/uses" }
-    : undefined;
+    : Astro.params.ogcard === "og-experiments"
+      ? {
+          name: experiments.title,
+          line: experiments.lede,
+          url: "candygoogy.dev/experiments",
+        }
+      : undefined;
 ---
 
 <!doctype html>

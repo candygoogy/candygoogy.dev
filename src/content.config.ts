@@ -115,4 +115,22 @@ const projects = defineCollection({
       }),
 });
 
-export const collections = { projects };
+// One Markdown file per experiment: a small tool on its own subdomain,
+// listed on /experiments.
+const experiments = defineCollection({
+  loader: glob({ pattern: "*.md", base: "./src/content/experiments" }),
+  schema: z.object({
+    name: z.string().min(1),
+    blurb: z.string().min(1).max(64),
+    summary: z.string().min(1).max(320),
+    url: z.url(),
+    // Its folder on GitHub.
+    source: z.url(),
+    date: z.coerce.date(),
+    status: z.enum(["live", "retired"]),
+    stack: z.array(z.string().min(1)).min(1),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { projects, experiments };

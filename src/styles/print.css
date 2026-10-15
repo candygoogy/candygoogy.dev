@@ -277,8 +277,9 @@
     font-size: var(--fs-d-section) !important;
   }
 
-  /* The side project and website names: a title, not a poster. */
-  h3.name {
+  /* The side project, website and experiment names: a title, not a
+     poster. */
+  :is(h2, h3).name {
     font-size: var(--fs-d-lg) !important;
   }
 

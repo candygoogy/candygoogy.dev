@@ -29,6 +29,9 @@ const current = (href: string) => (path === href ? "page" : undefined);
         )}
       </span>
     </p>
+    <a href="/experiments" aria-current={current("/experiments")}>
+      Experiments
+    </a>
     <a href="/colophon" aria-current={current("/colophon")}>
       Colophon
     </a>

@@ -1,6 +1,6 @@
 // Renders the social preview cards from the dev server into public/:
-// og.png (the site), og-fettle.png (the Fettle page) and og-uses.png
-// (/uses).
+// og.png (the site), og-<product>.png (each product’s page), og-uses.png
+// (/uses) and og-experiments.png (/experiments).
 //   npm run dev   (in another terminal)
 //   node scripts/og.mjs http://localhost:4321
 
@@ -13,6 +13,7 @@ const cards = {
   "og-fettle": "og-fettle.png",
   "og-idiff": "og-idiff.png",
   "og-uses": "og-uses.png",
+  "og-experiments": "og-experiments.png",
 };
 
 const browser = await chromium.launch();
