@@ -14,7 +14,7 @@ import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const USER = "candygoogy";
-const REPOS = ["fettle-page/fettle"];
+const REPOS = ["fettle-page/fettle", "fettle-page/idiff"];
 const DATA = join(import.meta.dirname, "..", "src", "data");
 const OUT = join(DATA, "github.json");
 const SNAPSHOT = join(DATA, "github.snapshot.json");

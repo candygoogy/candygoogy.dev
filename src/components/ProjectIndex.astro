@@ -3,6 +3,7 @@
 // line, year), in the home page's hero.
 import type { CollectionEntry } from "astro:content";
 import { hero } from "../data/site";
+import { vtAttr } from "../lib/vt";
 import Keep from "./Keep.astro";
 
 interface Props {
@@ -33,6 +34,7 @@ const href = (p: CollectionEntry<"projects">) =>
       >
         <a class="shift" href={href(p)}>
           <span
+            {...(p.data.kind === "product" ? vtAttr(p.id) : {})}
             class:list={[
               "name",
               { "vt-project-title": p.data.kind === "product" },

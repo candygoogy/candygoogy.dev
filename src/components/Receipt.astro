@@ -1,0 +1,153 @@
+---
+// A real receipt as an example, set like the rest of the page: what was
+// installed and how on the left, its lines on the right, group by group,
+// and a caption that links to where it comes from. Each line's mark is its
+// list marker, so its meaning never depends on color. Paths break after
+// their backslashes, so a long one wraps instead of scrolling sideways, and
+// a size keeps its unit on its line.
+import type { CollectionEntry } from "astro:content";
+
+type Receipt = NonNullable<CollectionEntry<"projects">["data"]["receipt"]>;
+
+interface Props {
+  receipt: Receipt;
+}
+
+const { title, how, groups, caption, href } = Astro.props.receipt;
+
+const MARKS: Record<string, string> = {
+  "✓": "ok",
+  "⚠": "warn",
+  "✗": "bad",
+  "·": "note",
+};
+
+const esc = (t: string) =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+const line = (raw: string) => ({
+  mark: MARKS[raw.charAt(0)] ?? "note",
+  html: esc(raw.slice(2))
+    .replaceAll("\\", "\\<wbr>")
+    .replace(/ (?=[KMGT]?B\b)/g, "&nbsp;"),
+});
+---
+
+<figure class="receipt rv-line" style="--line-color: var(--line)">
+  <div class="head rv">
+    <h3>{title}</h3>
+    {how && <p class="how">{how}</p>}
+  </div>
+  <div class="groups">
+    {groups.map((g, i) => (
+      <div class="group rv" style={`--i: ${i + 1}`}>
+        <p class="label" id={`receipt-group-${i}`}>
+          {g.label}
+        </p>
+        <ul aria-labelledby={`receipt-group-${i}`}>
+          {g.lines.map(line).map((l) => (
+            <li class={l.mark} set:html={l.html} />
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+  {caption && (
+    <figcaption class="rv" style={`--i: ${groups.length + 1}`}>
+      {href ? <a href={href}>{caption}</a> : caption}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  /* The page's 4/7 columns, as the uses above it. */
+  .receipt {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: var(--sp-5) var(--gap-hero);
+    align-items: start;
+    margin: 0;
+    padding-top: var(--sp-6);
+  }
+
+  h3 {
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-d-sm);
+    letter-spacing: var(--ls-d-sm);
+    text-wrap: balance;
+  }
+
+  .how,
+  .label,
+  figcaption {
+    color: var(--soft);
+  }
+
+  .how {
+    max-width: 34ch;
+  }
+
+  .group + .group {
+    margin-top: var(--sp-5);
+  }
+
+  .label,
+  figcaption {
+    font-size: var(--fs-meta);
+  }
+
+  .label {
+    margin-bottom: var(--sp-2);
+  }
+
+  /* The marks hang in their own column; a wrapped line continues under
+     its text. */
+  ul {
+    margin: 0;
+    padding: 0 0 0 1.5em;
+    list-style-position: outside;
+  }
+
+  li {
+    max-width: var(--measure);
+    overflow-wrap: break-word;
+  }
+
+  li + li {
+    margin-top: var(--sp-2);
+  }
+
+  li::marker {
+    color: var(--soft);
+  }
+
+  .ok {
+    list-style-type: "✓\2002";
+  }
+
+  .warn {
+    list-style-type: "⚠\2002";
+  }
+
+  .bad {
+    list-style-type: "✗\2002";
+  }
+
+  .note {
+    list-style-type: "·\2002";
+  }
+
+  figcaption {
+    grid-column: 2;
+  }
+
+  @media (max-width: 53.75rem) {
+    .receipt {
+      grid-template-columns: 1fr;
+    }
+
+    figcaption {
+      grid-column: auto;
+    }
+  }
+</style>

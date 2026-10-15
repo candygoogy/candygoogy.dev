@@ -11,6 +11,7 @@ const base = process.argv[2] ?? "http://localhost:4321";
 const cards = {
   "og-card": "og.png",
   "og-fettle": "og-fettle.png",
+  "og-idiff": "og-idiff.png",
   "og-uses": "og-uses.png",
 };
 

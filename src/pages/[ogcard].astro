@@ -1,23 +1,29 @@
 ---
 // The social preview cards (1200 x 630), rendered to public/og.png,
-// public/og-fettle.png and public/og-uses.png by scripts/og.mjs. Built only
-// in `astro dev`.
-import { getEntry } from "astro:content";
+// public/og-<product>.png and public/og-uses.png by scripts/og.mjs. Built
+// only in `astro dev`.
+import { getCollection } from "astro:content";
 import { Font } from "astro:assets";
 import { hero, site } from "../data/site";
 import { uses } from "../data/uses";
 import "../styles/tokens.css";
 
-export function getStaticPaths() {
-  return import.meta.env.DEV
-    ? ["og-card", "og-fettle", "og-uses"].map((ogcard) => ({
-        params: { ogcard },
-      }))
-    : [];
+// Every product gets a card (development only).
+export async function getStaticPaths() {
+  if (!import.meta.env.DEV) return [];
+  const products = (await getCollection("projects")).filter(
+    (p) => p.data.kind === "product",
+  );
+  return ["og-card", "og-uses", ...products.map((p) => `og-${p.id}`)].map(
+    (ogcard) => ({ params: { ogcard } }),
+  );
 }
 
-const fettle = Astro.params.ogcard === "og-fettle";
-const project = fettle ? await getEntry("projects", "fettle") : undefined;
+const project = import.meta.env.DEV
+  ? (await getCollection("projects")).find(
+      (p) => p.data.kind === "product" && `og-${p.id}` === Astro.params.ogcard,
+    )
+  : undefined;
 // A page's card: its name and one line, the way Fettle's card is made.
 // Fettle's line is the summary's first sentence, as on the page's closing
 // statement; /uses has its title and lede.
@@ -25,7 +31,7 @@ const page = project
   ? {
       name: project.data.name,
       line: `${project.data.summary.split(". ")[0]}.`,
-      url: "candygoogy.dev/fettle",
+      url: `candygoogy.dev/${project.id}`,
     }
   : Astro.params.ogcard === "og-uses"
     ? { name: uses.title, line: uses.lede, url: "candygoogy.dev/uses" }

@@ -1,0 +1,30 @@
+---
+// The View Transition names of every product but the featured one, which
+// keeps the plain names in motion.css. Each product's name and screenshot
+// are named for it (project-title-<id>, project-shot-<id>) on elements
+// that carry data-vt="<id>", and get the same timing as the plain ones.
+// Rendered into the head only where such a product appears, so a site
+// with just the featured product ships none of this.
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  projects: CollectionEntry<"projects">[];
+}
+
+const css = Astro.props.projects
+  .map(
+    ({ id }) => `
+.vt-project-title[data-vt="${id}"]{view-transition-name:project-title-${id}}
+.vt-project-shot[data-vt="${id}"]{view-transition-name:project-shot-${id}}
+@media (prefers-reduced-motion:no-preference){
+::view-transition-group(project-title-${id}),::view-transition-group(project-shot-${id}){animation-duration:500ms;animation-timing-function:var(--ease-in-out)}
+::view-transition-group(project-title-${id}){z-index:2}
+::view-transition-group(project-shot-${id}){z-index:1}
+::view-transition-old(project-title-${id}){animation:vt-fade-out 180ms var(--ease-out) both;mix-blend-mode:plus-lighter}
+::view-transition-new(project-title-${id}){animation:vt-fade-in 180ms var(--ease-out) both;mix-blend-mode:plus-lighter}
+}`,
+  )
+  .join("");
+---
+
+{css && <style set:html={css} />}

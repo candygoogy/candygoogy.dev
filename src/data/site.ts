@@ -109,3 +109,8 @@ export const contact = {
   question: "Have a project, a broken PC story, or a question about Fettle?",
   lead: "Write to me. I read everything and reply, though not always right away.",
 };
+
+// The product that has the home page's band, the unprefixed View
+// Transition names, and the first place in every list. Other products
+// have a page of their own and a row in "More things I’ve made".
+export const featuredProject = "fettle";

@@ -1,0 +1,418 @@
+---
+// A product's page (/fettle, /idiff): the band as the header, what it
+// checks, what you can do with it, privacy, what I learned, and the way to
+// get it. Everything comes from the project's entry.
+import type { CollectionEntry } from "astro:content";
+import FettleBand from "./FettleBand.astro";
+import Keep from "./Keep.astro";
+import ProjectNames from "./ProjectNames.astro";
+import Shot from "./Shot.astro";
+import Base from "../layouts/Base.astro";
+import { featuredProject, site } from "../data/site";
+import { release } from "../lib/projects";
+
+interface Props {
+  project: CollectionEntry<"projects">;
+  // Slot "example": a real example of what it makes, at the end of what
+  // you can do with it.
+}
+
+const { project } = Astro.props;
+const { data } = project;
+const page = data.page;
+if (!page) throw new Error(`projects/${project.id}.md needs its page sections`);
+const { version, get } = release(project);
+// A product without a site of its own is described by this page, with the
+// release as its download and the repository as the same thing elsewhere.
+const own = !data.links.live;
+
+// Structured data: the product as a free Windows application.
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: data.name,
+  description: data.summary,
+  url: data.links.live ?? `${site.url}/${project.id}`,
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Windows 10, Windows 11",
+  softwareVersion: version,
+  license:
+    data.license &&
+    `https://opensource.org/license/${data.license.toLowerCase()}`,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  author: { "@type": "Person", name: site.name, url: site.url },
+  downloadUrl: own ? get : undefined,
+  sameAs: own ? data.links.source : undefined,
+};
+
+// Uses with a screenshot get it beside them; the rest sit together after.
+const shown = page.uses.filter((u) => u.shot !== undefined);
+const plain = page.uses.filter((u) => u.shot === undefined);
+---
+
+<Base
+  title={`${data.name} – candygoogy`}
+  description={data.summary}
+  ogImage={`/og-${project.id}.png`}
+  ogAlt={`${data.name}: ${data.summary.split(". ")[0]}.`}
+  schema={schema}
+>
+  {project.id !== featuredProject && (
+    <ProjectNames slot="head" projects={[project]} />
+  )}
+  <div class="top">
+    <FettleBand project={project} page />
+  </div>
+
+  <!-- What it checks: six items on a grid, each under a drawn hairline. -->
+  <section class="sec" aria-labelledby="checks-title">
+    <h2 id="checks-title">
+      <span class="rv-mask">
+        <span>What it checks</span>
+      </span>
+    </h2>
+    <ul class="checks">
+      {page.checks.map((c, i) => (
+        <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
+          <h3>{c.name}</h3>
+          <p>{c.text}</p>
+        </li>
+      ))}
+    </ul>
+    {page.checksNote && <p class="note rv">{page.checksNote}</p>}
+  </section>
+
+  <!-- What you can do: each screenshot sits beside the line it shows. -->
+  <section class="sec" aria-labelledby="uses-title">
+    <h2 id="uses-title">
+      <span class="rv-mask">
+        <span>What you can do with the receipt</span>
+      </span>
+    </h2>
+    <ul class="uses">
+      {shown.map((u) => {
+        const shot = data.images[u.shot ?? 0];
+        return (
+          <li class="use rv-line" style="--line-color: var(--line)">
+            <p class="rv">{u.text}</p>
+            {shot && (
+              <figure class="rv" style="--d: 120ms" data-tilt>
+                <div class="tilt">
+                  <Shot
+                    src={shot.light}
+                    phone={shot.phone?.light}
+                    alt={shot.alt}
+                    sizes="(min-width: 53.75rem) 700px, 90vw"
+                  />
+                </div>
+                <figcaption>{shot.caption}</figcaption>
+              </figure>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+    <ul class="more">
+      {plain.map((u, i) => (
+        <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
+          {u.link ? (
+            <>
+              {u.text.slice(0, u.text.indexOf(u.link.text))}
+              <a href={u.link.href}>{u.link.text}</a>
+              {u.text.slice(u.text.indexOf(u.link.text) + u.link.text.length)}
+            </>
+          ) : (
+            u.text
+          )}
+        </li>
+      ))}
+    </ul>
+    <slot name="example" />
+  </section>
+
+  <!-- Privacy and what I learned: short, so they sit as a pair. -->
+  <section
+    class="pair"
+    aria-label={page.learned ? "Privacy and what I learned" : "Privacy"}
+  >
+    <div class="rv rv-line">
+      <h2>Privacy</h2>
+      {page.privacy.split("\n\n").map((para) => (
+        <p>
+          <Keep text={para} />
+        </p>
+      ))}
+    </div>
+    {page.learned && (
+      <div class="rv rv-line" style="--i: 1">
+        <h2>What I learned</h2>
+        {page.learned.split("\n\n").map((para) => (
+          <p>{para}</p>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <!-- The landing: the promise, the download, and a way back. -->
+  <section class="cta rv-line" aria-labelledby="cta-title">
+    <h2 id="cta-title" class="visually-hidden">
+      Get {data.name}
+    </h2>
+    <p class="statement rv">
+      <Keep text={`${data.summary.split(". ")[0]}.`} />
+    </p>
+    <div class="actions rv" style="--d: 160ms">
+      {get && (
+        <a class="get" href={get}>
+          Get {data.name}
+        </a>
+      )}
+      {data.links.source && (
+        <a class="source" href={data.links.source}>
+          Source on GitHub
+        </a>
+      )}
+    </div>
+    <ul class="facts rv" style="--d: 240ms">
+      {version && <li>Version {version}</li>}
+      {data.runsOn && (
+        <li>
+          <Keep text={data.runsOn} />
+        </li>
+      )}
+      {data.license && <li>Free and open source, {data.license}</li>}
+    </ul>
+    <p class="back rv" style="--d: 300ms">
+      <a href="/">Back to all work</a>
+    </p>
+  </section>
+</Base>
+
+<style>
+  .top {
+    padding-top: var(--sp-5);
+  }
+
+  .sec {
+    padding-top: var(--space-section);
+  }
+
+  .sec > h2,
+  .pair h2 {
+    margin-bottom: var(--sp-7);
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Six checks, three across on desktop. */
+  .checks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-6) var(--sp-7);
+  }
+
+  .checks li {
+    padding-top: var(--sp-4);
+  }
+
+  .checks h3 {
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-d-sm);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .checks p,
+  .note,
+  .pair p,
+  .use > p {
+    color: var(--soft);
+  }
+
+  .note {
+    max-width: var(--measure);
+    margin-top: var(--sp-6);
+  }
+
+  /* Each use with its screenshot: the line on the left (4), the picture
+     on the right (7), on the page's section grid. */
+  .use {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: var(--sp-5) var(--gap-hero);
+    align-items: start;
+    padding-block: var(--sp-6);
+  }
+
+  .use > p {
+    max-width: 34ch;
+    padding-top: var(--sp-2);
+    font-size: var(--fs-lede);
+    color: var(--ink);
+  }
+
+  figure {
+    margin: 0;
+    perspective: 1400px;
+  }
+
+  .tilt {
+    transition: transform var(--dur-tilt) var(--ease-out);
+  }
+
+  figure :global(img) {
+    width: 100%;
+    border-radius: var(--r-shot);
+    border: var(--rule) solid var(--line);
+  }
+
+  figcaption {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  /* The uses without a screenshot: the same lede size and 4/7 columns
+     as the ones above, so they read as the list's end, not a footnote. */
+  .more {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    gap: 0 var(--gap-hero);
+  }
+
+  .more li {
+    padding-block: var(--sp-5);
+    font-size: var(--fs-lede);
+    color: var(--ink);
+  }
+
+  /* Privacy and What I learned, side by side. */
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-7) var(--gap-hero);
+    padding-top: var(--sp-9);
+  }
+
+  .pair > div {
+    padding-top: var(--sp-5);
+  }
+
+  .pair h2 {
+    margin-bottom: var(--sp-4);
+    font-size: var(--fs-d-md);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  .pair p {
+    max-width: var(--measure);
+  }
+
+  .pair p + p {
+    margin-top: var(--sp-4);
+  }
+
+  /* The landing. */
+  .cta {
+    margin-top: var(--space-section);
+    padding-top: var(--sp-7);
+  }
+
+  .statement {
+    max-width: 22ch;
+    font: var(--fw-bold) var(--fs-d-section) / 1.08 var(--ff-display);
+    letter-spacing: var(--ls-section);
+    text-wrap: balance;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-4) var(--sp-6);
+    margin-top: var(--sp-6);
+  }
+
+  /* The one solid button on the site: ink fill, page-colored text. */
+  .get {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3rem;
+    padding: 0 var(--sp-6);
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--bg);
+    font: var(--fw-bold) var(--fs-body) / 1 var(--ff-display);
+    letter-spacing: var(--ls-d-sm);
+    transition:
+      background-color var(--dur-ui) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .get:hover {
+      background: var(--acc);
+      color: var(--bg);
+    }
+  }
+
+  .get:active {
+    transform: scale(0.97);
+  }
+
+  .get:focus-visible {
+    outline-offset: 3px;
+  }
+
+  /* A 44px tall touch target, laid over the line without changing it. */
+  .source {
+    position: relative;
+    font-weight: var(--fw-medium);
+  }
+
+  .source::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 44px;
+    translate: 0 -50%;
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-2) var(--sp-6);
+    margin-top: var(--sp-6);
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  .back {
+    margin-top: var(--sp-7);
+    font-size: var(--fs-meta);
+  }
+
+  @media (max-width: 53.75rem) {
+    .checks {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .use,
+    .more,
+    .pair {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 32.5rem) {
+    .checks {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

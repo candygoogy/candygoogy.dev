@@ -311,6 +311,7 @@ const icon = (file: string) => {
     <link rel="expect" href="#main" blocking="render" />
     <Font cssVariable="--font-display" preload />
     <Font cssVariable="--font-text" preload />
+    <slot name="head" />
   </head>
   <body>
     {intro && <Curtain />}

@@ -1,0 +1,22 @@
+---
+// The pages of the products other than Fettle (/idiff, ...), from the
+// shared product template, with a real receipt as an example if the
+// product has one.
+import ProductPage from "../components/ProductPage.astro";
+import Receipt from "../components/Receipt.astro";
+import { orderedProjects, ownPages } from "../lib/projects";
+
+export async function getStaticPaths() {
+  return ownPages(await orderedProjects()).map((project) => ({
+    params: { product: project.id },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { receipt } = project.data;
+---
+
+<ProductPage project={project}>
+  {receipt && <Receipt slot="example" receipt={receipt} />}
+</ProductPage>

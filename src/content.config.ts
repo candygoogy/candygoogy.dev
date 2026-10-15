@@ -57,6 +57,25 @@ const projects = defineCollection({
             }),
           )
           .default([]),
+        // A real receipt, shown as an example on a product's page: what was
+        // installed, how, and its lines group by group. Each line starts
+        // with its mark (✓, ⚠, ✗ or ·) and keeps the receipt's own words.
+        receipt: z
+          .object({
+            title: z.string().min(1),
+            how: z.string().min(1).optional(),
+            groups: z
+              .array(
+                z.object({
+                  label: z.string().min(1),
+                  lines: z.array(z.string().regex(/^[✓⚠✗·] \S/u)).min(1),
+                }),
+              )
+              .min(1),
+            caption: z.string().min(1).optional(),
+            href: z.url().optional(),
+          })
+          .optional(),
         // The project page's own sections (products only).
         page: z
           .object({
@@ -72,11 +91,16 @@ const projects = defineCollection({
                   text: z.string().min(1),
                   // Index into images: this use's screenshot, shown beside it.
                   shot: z.number().int().min(0).optional(),
+                  // A phrase in the text that links out.
+                  link: z
+                    .object({ text: z.string().min(1), href: z.url() })
+                    .optional(),
                 }),
               )
               .min(1),
             privacy: z.string().min(1),
-            learned: z.string().min(1),
+            // Left out until it's written: the page then shows privacy alone.
+            learned: z.string().min(1).optional(),
           })
           .optional(),
         draft: z.boolean().default(false),

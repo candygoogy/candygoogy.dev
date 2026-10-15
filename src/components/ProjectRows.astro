@@ -2,6 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import { GITHUB } from "../data/icons";
 import Keep from "./Keep.astro";
+import { vtAttr } from "../lib/vt";
 
 // Everything made besides the products, in the hero index's order: side
 // projects and client sites share one list and one row shape.
@@ -13,13 +14,16 @@ const { projects } = Astro.props;
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 const kind = { side: "Side project", website: "Website", product: "Product" };
 
-// The row's one link: a live site wins; otherwise the source.
-const link = ({ data }: CollectionEntry<"projects">) =>
-  data.links.live
-    ? { href: data.links.live, live: true }
-    : data.links.source
-      ? { href: data.links.source, live: false }
-      : undefined;
+// The row's one link: a product's own page; else a live site; otherwise
+// the source.
+const link = ({ id, data }: CollectionEntry<"projects">) =>
+  data.kind === "product"
+    ? { href: `/${id}`, kind: "page" as const }
+    : data.links.live
+      ? { href: data.links.live, kind: "live" as const }
+      : data.links.source
+        ? { href: data.links.source, kind: "source" as const }
+        : undefined;
 
 // What I did (the role, or the license for my own code), then the stack.
 const credit = ({ data }: CollectionEntry<"projects">) =>
@@ -61,7 +65,15 @@ const credit = ({ data }: CollectionEntry<"projects">) =>
           style={last ? `--i: ${i}` : `--i: ${i}; --line-color: var(--line)`}
         >
           <div class="who">
-            <h3 class="name">{p.data.name}</h3>
+            <h3
+              {...(p.data.kind === "product" ? vtAttr(p.id) : {})}
+              class:list={[
+                "name",
+                { "vt-project-title": p.data.kind === "product" },
+              ]}
+            >
+              {p.data.name}
+            </h3>
             <p class="kind">
               <span>{kind[p.data.kind]}</span>
               <span>{p.data.date.getUTCFullYear()}</span>
@@ -73,7 +85,12 @@ const credit = ({ data }: CollectionEntry<"projects">) =>
             </p>
             <div class="meta">
               {go &&
-                (go.live ? (
+                (go.kind === "page" ? (
+                  <a class="go" href={go.href}>
+                    Read more
+                    <span class="visually-hidden"> about {p.data.name}</span>
+                  </a>
+                ) : go.kind === "live" ? (
                   <a class="go" href={go.href}>
                     {host(go.href)}
                     <svg

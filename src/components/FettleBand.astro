@@ -4,6 +4,9 @@ import { latestVersion } from "../lib/github";
 import Facts from "./Facts.astro";
 import Keep from "./Keep.astro";
 import Shot from "./Shot.astro";
+// Imported after the components: an import between them would change the
+// order of the page's styles.
+import { bandTitleId, vtAttr } from "../lib/vt";
 
 interface Props {
   project: CollectionEntry<"projects">;
@@ -18,20 +21,35 @@ const Sub = page ? "h2" : "h3";
 const { data } = project;
 const shot = data.images[0];
 const version = latestVersion(data.repo, data.version);
+// Without a screenshot the band is text only: the story sits further from
+// the lede, so the name and its line read as the header. Set here, not in
+// the styles below, so a band with a screenshot is untouched.
+const textOnly = shot
+  ? undefined
+  : "margin-top: clamp(var(--sp-8), 10vh, var(--sp-9))";
 ---
 
-<section id={project.id} class="band rv-band" aria-labelledby="band-title">
+<section
+  id={project.id}
+  class="band rv-band"
+  aria-labelledby={bandTitleId(project.id)}
+>
   <div class="band-head">
     <Heading
-      id="band-title"
+      id={bandTitleId(project.id)}
       class="title letters vt-project-title"
       aria-label={data.name}
+      {...vtAttr(project.id)}
     >
-      {[...data.name].map((ch, i) => (
-        <span class="l" aria-hidden="true" style={`--i: ${i}`}>
-          <span>{ch}</span>
-        </span>
-      ))}
+      {[...data.name].map((ch, i) =>
+        ch === " " ? (
+          " "
+        ) : (
+          <span class="l" aria-hidden="true" style={`--i: ${i}`}>
+            <span>{ch}</span>
+          </span>
+        ),
+      )}
     </Heading>
     <p class="lede rv" style="--d: 260ms">
       <Keep text={data.summary} />
@@ -41,6 +59,7 @@ const version = latestVersion(data.repo, data.version);
   {shot && (
     <figure
       class="stage rv vt-project-shot"
+      {...vtAttr(project.id)}
       style="--d: 380ms"
       data-tilt
       data-decode
@@ -57,7 +76,7 @@ const version = latestVersion(data.repo, data.version);
     </figure>
   )}
 
-  <div class="zig">
+  <div class="zig" style={textOnly}>
     <div class="story">
       {data.story && (
         <>

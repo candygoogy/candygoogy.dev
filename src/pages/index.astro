@@ -3,15 +3,17 @@ import About from "../components/About.astro";
 import Contact from "../components/Contact.astro";
 import FettleBand from "../components/FettleBand.astro";
 import Hero from "../components/Hero.astro";
+import ProjectNames from "../components/ProjectNames.astro";
 import ProjectRows from "../components/ProjectRows.astro";
 import Previews from "../components/Previews.astro";
-import { site } from "../data/site";
+import { featuredProject, site } from "../data/site";
 import Base from "../layouts/Base.astro";
-import { orderedProjects } from "../lib/projects";
+import { orderedProjects, ownPages } from "../lib/projects";
 
 const projects = await orderedProjects();
-const products = projects.filter((p) => p.data.kind === "product");
-const others = projects.filter((p) => p.data.kind !== "product");
+// The band is the featured product's alone; every other product is a row.
+const band = projects.find((p) => p.id === featuredProject);
+const others = projects.filter((p) => p.id !== featuredProject);
 
 // Structured data: who the site belongs to (the public handle only).
 const schema = {
@@ -24,10 +26,9 @@ const schema = {
 ---
 
 <Base title={site.name} description={site.description} intro schema={schema}>
+  <ProjectNames slot="head" projects={ownPages(projects)} />
   <Hero projects={projects} />
-  {products.map((p) => (
-    <FettleBand project={p} />
-  ))}
+  {band && <FettleBand project={band} />}
   <ProjectRows projects={others} />
   <About />
   <Contact />
