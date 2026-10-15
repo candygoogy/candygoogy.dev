@@ -84,11 +84,16 @@ const [, rest = lineAfter, lastPair = ""] =
     display: grid;
     grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
     gap: var(--gap-hero);
-    align-items: end;
+    align-items: start;
     padding-block: var(--space-hero-top) var(--space-hero-bottom);
   }
 
+  /* Beside the index, the headline's capitals start level with the
+     index's top rule: the line box sits 0.113em above the cap height
+     (the display face's ascent, descent and cap height at this line
+     height). */
   h1 {
+    margin-top: -0.113em;
     font-size: var(--fs-d-hero);
     line-height: var(--lh-display);
     letter-spacing: var(--ls-hero);
@@ -115,6 +120,10 @@ const [, rest = lineAfter, lastPair = ""] =
   @media (max-width: 53.75rem) {
     .hero {
       grid-template-columns: 1fr;
+    }
+
+    h1 {
+      margin-top: 0;
     }
   }
 
