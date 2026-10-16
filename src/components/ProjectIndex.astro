@@ -54,7 +54,8 @@ const href = (p: CollectionEntry<"projects">) =>
 <style>
   .index h2 {
     padding-top: var(--sp-3);
-    margin-bottom: var(--sp-1);
+    /* Room for the first row's focus ring, clear of the heading. */
+    margin-bottom: var(--sp-2);
     font: var(--fw-medium) var(--fs-sm) / 1.4 var(--ff-text);
     color: var(--soft);
   }

@@ -126,7 +126,10 @@ const [, rest = lineAfter, lastPair = ""] =
     text-wrap: pretty;
   }
 
-  @media (max-width: 53.75rem) {
+  /* The hero stacks earlier than the site's other two-column layouts
+     (53.75rem): below about 60.5rem the index's minimum width leaves the
+     headline too narrow a column, and it breaks into five lines. */
+  @media (max-width: 62.5rem) {
     .hero {
       grid-template-columns: 1fr;
     }
@@ -140,7 +143,7 @@ const [, rest = lineAfter, lastPair = ""] =
      the projects list right after it repeat its rows, so on screen
      it goes (the same breakpoint as above). Print keeps it as the
      receipt's index (print.css). */
-  @media screen and (max-width: 53.75rem) {
+  @media screen and (max-width: 62.5rem) {
     .hero > :global(.index) {
       display: none;
     }
