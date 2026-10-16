@@ -10,19 +10,25 @@
 //
 // The head script in Base.astro decides whether it runs (html.intro-on):
 // never without JS, never under reduced motion, never twice in a session.
-// Any click, key, wheel or touch skips to the page.
+// Any click, key, wheel or touch fast-forwards it: whatever is left plays
+// at twice the speed or more (450ms at most), so the
+// panel still lifts and the wordmark still lands in the header. If the page
+// scrolls under it, the flying wordmark moves with the header's, so it
+// lands wherever the header has gone (up and out, when it has left).
 import { site } from "../data/site";
 ---
 
 <div class="curtain" aria-hidden="true">
   <div class="panel"></div>
-  <p class="fly">
-    {[...site.name].map((ch) => (
-      <span class="l">
-        <span>{ch}</span>
-      </span>
-    ))}
-  </p>
+  <div class="ride">
+    <p class="fly">
+      {[...site.name].map((ch) => (
+        <span class="l">
+          <span>{ch}</span>
+        </span>
+      ))}
+    </p>
+  </div>
 </div>
 
 <script>
@@ -36,10 +42,39 @@ import { site } from "../data/site";
 
   if (curtain && root.classList.contains("intro-on")) {
     const panel = curtain.querySelector<HTMLElement>(".panel");
+    const ride = curtain.querySelector<HTMLElement>(".ride");
     const fly = curtain.querySelector<HTMLElement>(".fly");
     const brand = document.querySelector<HTMLElement>(".top .brand");
     const animations: Animation[] = [];
     let done = false;
+    let skipped = false;
+    // The last letter starts at 330ms and has visually landed by ~580ms
+    // (the curve is front-loaded), so the lift starts right after. The
+    // glide, the last thing moving, ends at end (lift + 40 + liftDur).
+    const t = { lift: 580, liftDur: 640, end: 1260 };
+    let liftTimer = 0;
+    let endTimer = 0;
+
+    // The flying wordmark rides with the header's: .ride is shifted by how
+    // far the header wordmark has moved since start() measured it. Wide,
+    // that's the scroll (the header is in the page); on phones the header
+    // stays put and slides away on its own 250ms transition after the
+    // scroll, so once the page scrolls this reads where it really is,
+    // once a frame, until the curtain goes (450ms at most, when the
+    // scroll came with a skip).
+    let brandTop = 0;
+    let riding = false;
+    const follow = () => {
+      if (done || !ride || !brand) return;
+      const dy = brand.getBoundingClientRect().top - brandTop;
+      ride.style.setProperty("--dy", `${dy}px`);
+      requestAnimationFrame(follow);
+    };
+    const onScroll = () => {
+      if (riding) return;
+      riding = true;
+      requestAnimationFrame(follow);
+    };
 
     const release = () => {
       if (!root.classList.contains("intro-hold")) return;
@@ -57,17 +92,32 @@ import { site } from "../data/site";
       for (const t of ["pointerdown", "keydown", "wheel", "touchstart"]) {
         removeEventListener(t, skip, true);
       }
+      removeEventListener("scroll", onScroll);
     };
 
+    // Plays the rest at 2x, or faster if 2x would take over 450ms. The
+    // animations all started together, so one clock gives where they are;
+    // the lift's timer is brought forward to match, so the page still
+    // rises with the lift, and the curtain goes when the last one ends.
+    const hurry = () => {
+      const at = Number(animations[0]?.currentTime ?? 0);
+      const rate = Math.max(2, (t.end - at) / 450);
+      for (const a of animations) a.updatePlaybackRate(rate);
+      window.clearTimeout(liftTimer);
+      window.clearTimeout(endTimer);
+      if (at < t.lift) {
+        liftTimer = window.setTimeout(release, (t.lift - at) / rate);
+      } else release();
+      // finish() cancels them all; nothing is left to wait for then.
+      Promise.all(animations.map((a) => a.finished)).then(finish, () => {});
+    };
+
+    // Before the intro has started (it waits briefly for the font), start()
+    // sees the flag and hurries from the beginning.
     function skip() {
-      if (done) return;
-      curtain?.animate([{ opacity: 1 }, { opacity: 0 }], {
-        duration: 150,
-        easing: OUT,
-        fill: "forwards",
-      });
-      release();
-      window.setTimeout(finish, 160);
+      if (done || skipped) return;
+      skipped = true;
+      if (animations.length) hurry();
     }
 
     const start = () => {
@@ -76,6 +126,10 @@ import { site } from "../data/site";
       const range = document.createRange();
       range.selectNodeContents(brand);
       const b = range.getBoundingClientRect();
+      // Measured where the page is now (a restored scroll included); the
+      // ride offsets from here.
+      brandTop = brand.getBoundingClientRect().top;
+      addEventListener("scroll", onScroll, { passive: true });
       const W = innerWidth;
       const H = innerHeight;
 
@@ -90,9 +144,6 @@ import { site } from "../data/site";
       fly.style.opacity = "1";
 
       const ink = getComputedStyle(root).getPropertyValue("--ink").trim();
-      // The last letter starts at 330ms and has visually landed by ~580ms
-      // (the curve is front-loaded), so the lift starts right after.
-      const t = { lift: 580, liftDur: 640 };
 
       // 1. Letters rise out of their clip, 30ms apart, fading up as they go.
       fly.querySelectorAll<HTMLElement>(".l > span").forEach((ch, i) => {
@@ -164,8 +215,9 @@ import { site } from "../data/site";
       // 5. The page rises as the panel starts to lift: the same reveals as
       //    a normal load (with their group delays halved while the intro
       //    is on, motion.css), overlapping the lift instead of following it.
-      window.setTimeout(release, t.lift);
-      window.setTimeout(finish, t.lift + t.liftDur + 60);
+      liftTimer = window.setTimeout(release, t.lift);
+      endTimer = window.setTimeout(finish, t.end + 20);
+      if (skipped) hurry();
     };
 
     for (const t of ["pointerdown", "keydown", "wheel", "touchstart"]) {
@@ -238,6 +290,15 @@ import { site } from "../data/site";
     position: absolute;
     inset: 0;
     background: var(--band);
+  }
+
+  /* Carries the wordmark with the header when the page scrolls under it
+     (--dy, set by the script), apart from the glide on .fly itself. */
+  .ride {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateY(var(--dy, 0px));
   }
 
   /* The header wordmark's exact type, placed by the script. */
