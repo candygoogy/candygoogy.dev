@@ -132,6 +132,25 @@
     grid-column: auto !important;
   }
 
+  /* The checks with their note beside the last one: on screen the list's
+     rows are the outer grid's (subgrid), as many as two or three across
+     need. One column needs a row per check, and a subgrid can't add any,
+     so the last checks and the note would pile into its final row. On
+     paper the list takes its own rows and the note follows it, as it does
+     when there's no room beside. */
+  .checks-grid {
+    display: block !important;
+  }
+
+  .checks-grid > .checks {
+    grid-template-rows: none !important;
+  }
+
+  .checks-grid > .note {
+    margin-top: var(--sp-6) !important;
+    padding-top: 0 !important;
+  }
+
   /* A row's address goes under its name. */
   #contact .row::after {
     grid-column: 2 / -1 !important;
@@ -382,8 +401,12 @@
     padding: 0 !important;
   }
 
-  /* Privacy's own rule would sit right on the section's dashed one. */
-  .pair > .rv-line::before {
+  /* A block's own drawn rule would sit right on the dashed one above it
+     (one solid, one dashed, a heavier line): the sections that get the
+     dashed rule, Privacy inside its section, and the footer. */
+  main > * + .rv-line::before,
+  .pair > .rv-line::before,
+  footer .inner.rv-line::before {
     display: none !important;
   }
 
