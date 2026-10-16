@@ -12,11 +12,12 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    // The Worker runs first only for "/" (the terminal card) and /api/*
-    // (the presence endpoint, which no asset matches: with a list, a path
-    // outside it never reaches the Worker). Every other request is served
-    // from the assets without it.
-    "run_worker_first": ["/", "/api/*"],
+    // The Worker runs first only for the pages with a terminal card ("/",
+    // /fettle, /idiff: CARDS in worker/index.ts) and /api/* (the presence
+    // endpoint, which no asset matches: with a list, a path outside it
+    // never reaches the Worker). Every other request is served from the
+    // assets without it.
+    "run_worker_first": ["/", "/fettle", "/idiff", "/api/*"],
   },
   // The apex only. www is a redirect owned by the zone, never a second
   // Custom Domain.

@@ -1,0 +1,30 @@
+{
+  "battery": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  },
+  "compose": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  },
+  "keyboard": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  },
+  "logscope": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  },
+  "mail": {
+    "connect": ["https://cloudflare-dns.com"],
+    "checked": "2026-10-16"
+  },
+  "photo": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  },
+  "subnet": {
+    "connect": ["'none'"],
+    "checked": "2026-10-16"
+  }
+}

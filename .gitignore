@@ -19,6 +19,9 @@ src/fonts/
 # Fresh GitHub data written by scripts/github-data.mjs at build time
 # (the committed fallback is src/data/github.snapshot.json).
 src/data/github.json
+# Likewise the experiments' security policies, from
+# scripts/experiments-csp.mjs (fallback: src/data/experiments-csp.snapshot.json).
+src/data/experiments-csp.json
 
 # The avatar from the GitHub profile and the icons made from it, at build
 # time (the committed fallbacks are src/assets/avatar.jpg and

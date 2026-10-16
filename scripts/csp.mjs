@@ -4,7 +4,8 @@
 // each page carries:
 //
 //  - each script written into the page (the theme, the navigations, the
-//    motion loader's start, Astro's small inlined modules) by its SHA-256;
+//    motion loader's start, Astro's small inlined modules, the speculation
+//    rules) by its SHA-256;
 //  - each <style> block (the page's CSS is inlined) by its SHA-256;
 //  - each style="" attribute (the few that are worked out per page, like a
 //    product page's subgrid rows; the reveal delays and stagger indexes are
@@ -38,6 +39,9 @@ const JS_URL =
 // Scripts the browser runs; data blocks (JSON-LD, the inert loader tag)
 // aren't run, so a policy never applies to them.
 export const RUNS = new Set(["", "module", "text/javascript"]);
+// Not run either, but Chromium checks inline speculation rules (Base.astro's
+// prefetch on hover) against script-src all the same: hashed like a script.
+const RULES = new Set(["speculationrules"]);
 const DATA = new Set(["application/ld+json", "text/motion-loader"]);
 // Whole attribute names only: "data-src=" isn't a src, "data-type=" isn't
 // a type.
@@ -64,7 +68,7 @@ export function policyFor(html) {
   for (const [, tagAttrs, code] of html.matchAll(SCRIPT)) {
     if (SRC.test(tagAttrs)) continue;
     const type = scriptType(tagAttrs);
-    if (RUNS.has(type)) scripts.add(hash(code));
+    if (RUNS.has(type) || RULES.has(type)) scripts.add(hash(code));
     // A type this file doesn't know might run (application/javascript
     // does) without a hash: fail rather than guess.
     else if (!DATA.has(type)) unknown ??= `a script of type "${type}"`;

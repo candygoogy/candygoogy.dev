@@ -6,9 +6,9 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
+    "dev": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
     "fonts": "node scripts/fonts.mjs",
-    "build": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro build",
+    "build": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro build",
     "preview": "wrangler dev",
     "lint": "eslint . && prettier --check .",
     "typecheck": "astro check && tsc -p worker",
@@ -16,7 +16,7 @@
     "test:e2e": "node --test \"tests/e2e/*.test.mjs\"",
     "format": "prettier --write .",
     "shots": "node scripts/shots.mjs",
-    "data": "node scripts/github-data.mjs && node scripts/avatar.mjs && node scripts/icons.mjs"
+    "data": "node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",

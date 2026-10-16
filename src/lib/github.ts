@@ -16,24 +16,52 @@ export interface Day {
   level: 0 | 1 | 2 | 3 | 4;
 }
 
+// A published release, for the feed (scripts/github-days.mjs, parseReleases).
+export interface Release {
+  tag: string;
+  name: string;
+  url: string;
+  published: string;
+}
+
 interface GithubData {
   fetchedAt: string;
   versions: Record<string, string>;
+  // Each product's last releases, newest first.
+  releases: Record<string, Release[]>;
   contributions: { source: string; days: Day[] } | null;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 
+const isRelease = (r: unknown): r is Release =>
+  isObject(r) &&
+  ["tag", "name", "url", "published"].every((k) => typeof r[k] === "string");
+
 // The parts the pages read must have the right shape, or the first page
 // that reads one throws ("versions": null). A wrong part is dropped with a
 // warning; the rest of the file is still used.
 function checked(data: Record<string, unknown>, file: string): GithubData {
-  let { versions, contributions } = data;
+  let { versions, releases, contributions } = data;
   if (!isObject(versions)) {
     console.warn(`github: WARNING ignoring versions in ${file}: not an object`);
     versions = {};
   }
+  // Older files have no releases; a list of the wrong shape is dropped.
+  releases = Object.fromEntries(
+    Object.entries(isObject(releases) ? releases : {}).filter(
+      ([repo, list]) => {
+        const ok = Array.isArray(list) && list.every(isRelease);
+        if (!ok) {
+          console.warn(
+            `github: WARNING ignoring ${repo}'s releases in ${file}: not a list of releases`,
+          );
+        }
+        return ok;
+      },
+    ),
+  );
   if (
     contributions !== null &&
     !(isObject(contributions) && Array.isArray(contributions["days"]))
@@ -43,7 +71,7 @@ function checked(data: Record<string, unknown>, file: string): GithubData {
     );
     contributions = null;
   }
-  return { ...data, versions, contributions } as GithubData;
+  return { ...data, versions, releases, contributions } as GithubData;
 }
 
 // A file that doesn't parse, or isn't an object, falls through to the next
@@ -52,6 +80,7 @@ function load(): GithubData {
   const empty: GithubData = {
     fetchedAt: "",
     versions: {},
+    releases: {},
     contributions: null,
   };
   for (const name of ["github.json", "github.snapshot.json"]) {

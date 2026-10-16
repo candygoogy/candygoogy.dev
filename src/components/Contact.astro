@@ -743,4 +743,14 @@ const words = contact.question.split(" ");
       padding: var(--sp-4);
     }
   }
+
+  /* Forced colors (Windows Contrast themes): the status dot's color is
+     the status, so it keeps it, with a ring in the text color so it
+     reads on any background. */
+  @media (forced-colors: active) {
+    .dot {
+      forced-color-adjust: none;
+      box-shadow: 0 0 0 var(--rule) CanvasText;
+    }
+  }
 </style>

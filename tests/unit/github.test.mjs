@@ -189,6 +189,7 @@ test("validDays: a missing or repeated day throws", () => {
 const OLD = {
   fetchedAt: "2026-10-01T05:17:00.000Z",
   versions: { "a/kept": "1.0.0", "a/removed": "2.0.0" },
+  releases: { "a/kept": [{ tag: "v1.0.0" }], "a/removed": [{ tag: "v2" }] },
   contributions: { source: "profile", days: [] },
 };
 const NOW = "2026-10-16T05:17:00.000Z";
@@ -196,37 +197,69 @@ const NOW = "2026-10-16T05:17:00.000Z";
 test("mergeData: a failed part keeps its old value, fetchedAt stays", () => {
   const data = mergeData(
     OLD,
-    { repos: ["a/kept"], versions: {}, contributions: null },
+    { repos: ["a/kept"], versions: {}, releases: {}, contributions: null },
     NOW,
   );
   assert.deepEqual(data, {
     fetchedAt: OLD.fetchedAt,
-    // A product no longer listed loses its version.
+    // A product no longer listed loses its version and releases.
     versions: { "a/kept": "1.0.0" },
+    releases: { "a/kept": OLD.releases["a/kept"] },
     contributions: OLD.contributions,
   });
 });
 
 test("mergeData: fetchedAt moves only when every part fetched", () => {
   const contributions = { source: "profile", days: [{ date: "x" }] };
+  const releases = { "a/kept": [{ tag: "v1.1.0" }] };
   const full = mergeData(
     OLD,
-    { repos: ["a/kept"], versions: { "a/kept": "1.1.0" }, contributions },
+    {
+      repos: ["a/kept"],
+      versions: { "a/kept": "1.1.0" },
+      releases,
+      contributions,
+    },
     NOW,
   );
   assert.deepEqual(full, {
     fetchedAt: NOW,
     versions: { "a/kept": "1.1.0" },
+    releases,
     contributions,
   });
-  // Without a project list, all old versions are kept and nothing is fresh.
+  // A release list that didn't fetch keeps its old one, and fetchedAt.
   const noList = mergeData(
     OLD,
-    { repos: null, versions: {}, contributions },
+    {
+      repos: ["a/kept"],
+      versions: { "a/kept": "1.1.0" },
+      releases: {},
+      contributions,
+    },
     NOW,
   );
   assert.equal(noList.fetchedAt, OLD.fetchedAt);
-  assert.deepEqual(noList.versions, OLD.versions);
+  assert.deepEqual(noList.releases, { "a/kept": OLD.releases["a/kept"] });
+  // Without a project list, all old versions are kept and nothing is fresh.
+  const noRepos = mergeData(
+    OLD,
+    { repos: null, versions: {}, releases: {}, contributions },
+    NOW,
+  );
+  assert.equal(noRepos.fetchedAt, OLD.fetchedAt);
+  assert.deepEqual(noRepos.versions, OLD.versions);
+  assert.deepEqual(noRepos.releases, OLD.releases);
+  // Data from before release lists keeps working.
+  const older = { ...OLD, releases: undefined };
+  assert.deepEqual(
+    mergeData(
+      older,
+      { repos: ["a/kept"], versions: {}, releases: {}, contributions: null },
+      NOW,
+    ).releases,
+    {},
+  );
 });
 
 // Kept days whose newest is the given date.

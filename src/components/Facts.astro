@@ -146,4 +146,12 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
     background: var(--live);
     vertical-align: 0.12em;
   }
+
+  /* Forced colors drop fills: the dot takes the text color. */
+  @media (forced-colors: active) {
+    .live::before,
+    .live::after {
+      background: CanvasText;
+    }
+  }
 </style>

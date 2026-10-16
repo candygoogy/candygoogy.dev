@@ -578,4 +578,66 @@ const weekly = weeks.map((week) => {
       display: block;
     }
   }
+
+  /* Forced colors (Windows Contrast themes) would paint every day the
+     page's color. A day's shade is its count, so the cells, the legend
+     and the strip's bars keep their scale, drawn in the system's colors:
+     the highlight mixed into the page, empty days edged in grey. */
+  @media (forced-colors: active) {
+    .heatmap {
+      --cell-0: Canvas;
+      --cell-1: color-mix(in srgb, Highlight 30%, Canvas);
+      --cell-2: color-mix(in srgb, Highlight 55%, Canvas);
+      --cell-3: color-mix(in srgb, Highlight 78%, Canvas);
+      --cell-4: Highlight;
+    }
+
+    .heatmap td > span,
+    .heatmap .key,
+    .heatmap .strip {
+      forced-color-adjust: none;
+    }
+
+    .heatmap td[role="gridcell"] > span,
+    .heatmap .key {
+      box-shadow: inset 0 0 0 var(--rule) GrayText;
+    }
+
+    .heatmap td.band[role="gridcell"] > span {
+      box-shadow:
+        inset 0 0 0 var(--rule) GrayText,
+        inset 0 0 0 99px color-mix(in srgb, CanvasText 14%, transparent);
+    }
+
+    .heatmap td.hot > span {
+      box-shadow: 0 0 0 2px CanvasText;
+    }
+
+    .heatmap .bar {
+      fill: GrayText;
+    }
+
+    .heatmap .bar.peak {
+      fill: CanvasText;
+    }
+
+    .heatmap .base {
+      stroke: GrayText;
+    }
+
+    .heatmap .marker {
+      stroke: CanvasText;
+    }
+
+    .heatmap .peak-date,
+    .heatmap .axis,
+    .heatmap .readout {
+      fill: CanvasText;
+      color: CanvasText;
+    }
+
+    .heatmap .tip {
+      border: var(--rule) solid CanvasText;
+    }
+  }
 </style>

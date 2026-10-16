@@ -768,4 +768,13 @@ const hops = [
       display: none;
     }
   }
+
+  /* Forced colors (Windows Contrast themes): a hop's dot is its state
+     (green working, grey checking, a red ring not found), so it keeps
+     its colors. */
+  @media (forced-colors: active) {
+    .dot {
+      forced-color-adjust: none;
+    }
+  }
 </style>

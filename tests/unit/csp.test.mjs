@@ -41,6 +41,19 @@ test("JSON-LD and the motion loader tag are neither hashed nor a problem", () =>
   assert.ok(!directive(policy, "script-src").includes("sha256-"));
 });
 
+test("speculation rules are hashed into script-src, in any case", () => {
+  const rules = '{"prefetch":[{"where":{"href_matches":"/*"}}]}';
+  const { policy, problem, count } = policyFor(
+    `<script type="speculationrules">${rules}</script>` +
+      `<script type="SpeculationRules">${rules} </script>`,
+  );
+  const scripts = directive(policy, "script-src");
+  assert.ok(scripts.includes(sha(rules)));
+  assert.ok(scripts.includes(sha(`${rules} `)));
+  assert.equal(problem, undefined);
+  assert.equal(count, 2);
+});
+
 test("a script of an unknown type is a problem", () => {
   const { problem } = policyFor(
     '<script type="application/javascript">x()</script>',

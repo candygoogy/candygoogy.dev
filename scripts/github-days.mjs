@@ -1,6 +1,6 @@
 // The pure parts of github-data.mjs: the frontmatter read, the contribution
-// calendar parse and check, the merge with the last good data and the stale
-// deploy check. Kept apart from github-data.mjs (which fetches as soon as it
+// calendar parse and check, the release list read, the merge with the last
+// good data and the stale deploy check. Kept apart from github-data.mjs (which fetches as soon as it
 // is imported) so the tests can load them on their own.
 
 const DAY = 86_400_000;
@@ -73,31 +73,73 @@ export function validDays(days) {
   return days;
 }
 
+// A repo's published releases, newest first, from the API's release list:
+// each one's tag, name, page and publish time (no notes: the feed shows
+// none). Drafts and pre-releases are left out, as releases/latest leaves
+// them out of the version the site shows. Throws on a reply of another
+// shape, so the last good list is kept.
+export function parseReleases(list, max = 10) {
+  if (!Array.isArray(list)) throw new Error("releases: not a list");
+  const releases = [];
+  for (const r of list) {
+    if (!r || typeof r !== "object") throw new Error("releases: not a release");
+    if (r.draft || r.prerelease) continue;
+    const { tag_name: tag, html_url: url, published_at: published } = r;
+    if (typeof tag !== "string" || !tag) throw new Error("releases: no tag");
+    if (typeof url !== "string" || !url.startsWith("https://github.com/"))
+      throw new Error(`releases: ${tag} has no GitHub page`);
+    if (typeof published !== "string" || Number.isNaN(Date.parse(published)))
+      throw new Error(`releases: ${tag} has no publish time`);
+    releases.push({
+      tag,
+      name: typeof r.name === "string" ? r.name : "",
+      url,
+      published,
+    });
+  }
+  return releases
+    .sort((a, b) => Date.parse(b.published) - Date.parse(a.published))
+    .slice(0, max);
+}
+
+// The old entries for repos still listed as products (so a removed
+// product's don't stay forever), then this run's. Without a list, all the
+// old ones are kept.
+function byRepo(old, fresh, repos) {
+  const kept = old ?? {};
+  return {
+    ...(repos
+      ? Object.fromEntries(
+          repos
+            .filter((repo) => Object.hasOwn(kept, repo))
+            .map((repo) => [repo, kept[repo]]),
+        )
+      : kept),
+    ...fresh,
+  };
+}
+
 // Merges this run's parts into the last good data. repos is null when the
-// project list couldn't be read, versions holds only the releases that
-// fetched, contributions is null when the calendar didn't.
-export function mergeData(old, { repos, versions, contributions }, now) {
-  const oldVersions = old.versions ?? {};
+// project list couldn't be read, versions and releases hold only the repos
+// whose latest release and release list fetched, contributions is null when
+// the calendar didn't.
+export function mergeData(
+  old,
+  { repos, versions, releases, contributions },
+  now,
+) {
   const complete =
     repos !== null &&
-    repos.every((repo) => Object.hasOwn(versions, repo)) &&
+    repos.every(
+      (repo) => Object.hasOwn(versions, repo) && Object.hasOwn(releases, repo),
+    ) &&
     contributions !== null;
   return {
     // Moves only when every part fetched, so it says how old the oldest part
     // of the data is.
     fetchedAt: complete ? now : (old.fetchedAt ?? ""),
-    // Old versions only for repos still listed as products, so a removed
-    // product's version doesn't stay forever. Without a list, all are kept.
-    versions: {
-      ...(repos
-        ? Object.fromEntries(
-            repos
-              .filter((repo) => Object.hasOwn(oldVersions, repo))
-              .map((repo) => [repo, oldVersions[repo]]),
-          )
-        : oldVersions),
-      ...versions,
-    },
+    versions: byRepo(old.versions, versions, repos),
+    releases: byRepo(old.releases, releases, repos),
     contributions: contributions ?? old.contributions ?? null,
   };
 }

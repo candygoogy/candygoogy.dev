@@ -4,6 +4,11 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
+# The feed (src/pages/feed.xml.ts) as Atom: by its extension alone it
+# would go out as plain XML.
+/feed.xml
+  Content-Type: application/atom+xml; charset=utf-8
+
 # Each page carries its own Content-Security-Policy in a <meta>, with the
 # hashes of its own scripts and styles (scripts/csp.mjs). This one adds
 # what a <meta> can't: no other site may frame these pages. Both apply.

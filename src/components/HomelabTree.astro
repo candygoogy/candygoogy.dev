@@ -426,4 +426,19 @@ const HOW = { poe: "PoE", wifi: "Wi-Fi" };
       display: none;
     }
   }
+
+  /* Forced colors (Windows Contrast themes) drop fills: the filled dots
+     and the packets take the text color; the wires and rings are borders
+     and keep theirs. */
+  @media (forced-colors: active) {
+    .dot,
+    .packets :global(i) {
+      background: CanvasText;
+    }
+
+    .hollow,
+    .dots .dot {
+      background: none;
+    }
+  }
 </style>

@@ -234,4 +234,12 @@ const shot = {
       transform: none;
     }
   }
+
+  /* Forced colors: Gaijin's white mark keeps its dark tile, or it would
+     vanish on a light theme. */
+  @media (forced-colors: active) {
+    .tile {
+      forced-color-adjust: none;
+    }
+  }
 </style>

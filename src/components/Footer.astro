@@ -164,4 +164,11 @@ const current = (href: string) => (path === href ? "page" : undefined);
       flex-direction: column;
     }
   }
+
+  /* Forced colors: the page you're on reads as text, as its ink does. */
+  @media (forced-colors: active) {
+    .inner a[aria-current="page"] {
+      color: CanvasText;
+    }
+  }
 </style>

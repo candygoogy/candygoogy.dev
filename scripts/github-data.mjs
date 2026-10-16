@@ -1,5 +1,6 @@
 // Fetches the public GitHub data the site shows, at build time:
 //  - the latest release tag of each product (public REST API);
+//  - each product's last 10 published releases, for the feed (/feed.xml);
 //  - candygoogy's public contribution calendar for the heatmap.
 //
 // Contributions come from the logged-out profile page, which shows exactly
@@ -22,6 +23,7 @@ import { join } from "node:path";
 import {
   mergeData,
   parseContributions,
+  parseReleases,
   productRepo,
   staleDeploy,
   validDays,
@@ -59,8 +61,9 @@ async function get(url, init = {}) {
   return res;
 }
 
-async function latestRelease(repo) {
-  const url = `https://api.github.com/repos/${repo}/releases/latest`;
+// A REST API path's JSON, with the token when there is one.
+async function api(path) {
+  const url = `https://api.github.com${path}`;
   const headers = { Accept: "application/vnd.github+json" };
   let res;
   try {
@@ -79,10 +82,17 @@ async function latestRelease(repo) {
     token = undefined;
     res = await get(url, { headers });
   }
-  const { tag_name: tag } = await res.json();
+  return res.json();
+}
+
+async function latestRelease(repo) {
+  const { tag_name: tag } = await api(`/repos/${repo}/releases/latest`);
   if (typeof tag !== "string" || !tag) throw new Error(`${repo}: no tag`);
   return tag.replace(/^v/, "");
 }
+
+const releaseList = async (repo) =>
+  parseReleases(await api(`/repos/${repo}/releases?per_page=10`));
 
 async function contributionsFromProfile() {
   const res = await get(`https://github.com/users/${USER}/contributions`);
@@ -119,7 +129,7 @@ async function previous() {
       warn(`ignoring unreadable ${file}: ${error}`);
     }
   }
-  return { fetchedAt: "", versions: {}, contributions: null };
+  return { fetchedAt: "", versions: {}, releases: {}, contributions: null };
 }
 
 // Written aside and renamed, so a cut-off write never leaves a broken file
@@ -139,12 +149,19 @@ try {
 }
 
 const versions = {};
+const releases = {};
 for (const repo of repos ?? []) {
   try {
     versions[repo] = await latestRelease(repo);
     console.log(`github: ${repo} latest release ${versions[repo]}`);
   } catch (error) {
     warn(`${repo} release kept as before: ${error}`);
+  }
+  try {
+    releases[repo] = await releaseList(repo);
+    console.log(`github: ${repo} ${releases[repo].length} releases listed`);
+  } catch (error) {
+    warn(`${repo} release list kept as before: ${error}`);
   }
 }
 
@@ -166,7 +183,7 @@ try {
 
 const data = mergeData(
   old,
-  { repos, versions, contributions },
+  { repos, versions, releases, contributions },
   new Date().toISOString(),
 );
 

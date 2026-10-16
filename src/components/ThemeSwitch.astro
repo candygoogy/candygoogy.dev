@@ -321,4 +321,43 @@ const options = [
       transition: none;
     }
   }
+
+  /* Forced colors (Windows Contrast themes) drop the track's and the
+     pill's fills, and draw a page-colored plate behind every label, over
+     the pill. Where the pill is is the setting, so the switch keeps its
+     own drawing, in system colors: a hairline track, and the pill and
+     its labels in the selected-item colors. */
+  @media (forced-colors: active) {
+    .themes {
+      forced-color-adjust: none;
+      background: Canvas;
+      outline: var(--rule) solid CanvasText;
+      outline-offset: calc(-1 * var(--rule));
+    }
+
+    button,
+    button:hover {
+      color: CanvasText;
+    }
+
+    button:focus-visible {
+      outline-color: CanvasText;
+    }
+
+    .pill {
+      background: Highlight;
+    }
+
+    .ink {
+      color: HighlightText;
+    }
+
+    .resolved {
+      background: CanvasText;
+    }
+
+    .ink .resolved {
+      background: HighlightText;
+    }
+  }
 </style>

@@ -525,4 +525,33 @@ const dates = (when: string): [string, string] => {
       grid-template-columns: 1fr;
     }
   }
+
+  /* Forced colors (Windows Contrast themes) drop fills and gradients: the
+     line, its ink and the filled dots take system colors, and the tails
+     keep their dots in a system color. Gaijin's white mark keeps its dark
+     tile, or it would vanish on a light theme. */
+  @media (forced-colors: active) {
+    .line {
+      background: GrayText;
+    }
+
+    .ink,
+    .dot > span {
+      background: CanvasText;
+    }
+
+    .tail {
+      forced-color-adjust: none;
+    }
+
+    .tail.down,
+    .flow {
+      background: radial-gradient(circle, GrayText 1.1px, transparent 1.6px)
+        center 0 / 3px 10px repeat-y;
+    }
+
+    .chip-gaijin {
+      forced-color-adjust: none;
+    }
+  }
 </style>

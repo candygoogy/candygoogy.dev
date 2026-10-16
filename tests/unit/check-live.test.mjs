@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checkLive, newestDay } from "../../scripts/check-live.mjs";
+import {
+  checkLive,
+  checkPolicies,
+  newestDay,
+} from "../../scripts/check-live.mjs";
 
 // Shaped like the built page and security.txt: a build at 2026-10-16
 // 05:20 UTC, with the heatmap ending that day: three days from
@@ -53,4 +57,36 @@ test("newestDay: counts on from the first day, and throws without one", () => {
     () => newestDay(HOME.replaceAll('role="gridcell"', 'role="none"')),
     /no heatmap days/,
   );
+});
+
+test("checkPolicies: expected policies pass in one line", () => {
+  const lines = checkPolicies([
+    { id: "photo", header: "default-src 'self'; connect-src 'none'" },
+    { id: "mail", header: "connect-src https://cloudflare-dns.com" },
+  ]);
+  assert.deepEqual(lines, [
+    { ok: true, text: "experiments' policies: photo none, mail dns" },
+  ]);
+});
+
+test("checkPolicies: a looser policy, no header or no answer fails", () => {
+  const lines = checkPolicies([
+    { id: "photo", header: "connect-src https://cloudflare-dns.com" },
+    { id: "subnet", header: null },
+    { id: "mail", error: new Error("HTTP 503") },
+    { id: "battery", header: "connect-src 'none'" },
+  ]);
+  assert.deepEqual(
+    lines.map((l) => l.ok),
+    [false, false, false, true],
+  );
+  assert.match(
+    lines[0].text,
+    /photo allows connect-src https:\/\/cloudflare-dns\.com, more than "none"/,
+  );
+  assert.match(lines[1].text, /subnet allows connect-src \*/);
+  assert.match(lines[2].text, /mail: couldn't check .*HTTP 503/);
+  assert.deepEqual(checkPolicies([]), [
+    { ok: false, text: "no experiments to check" },
+  ]);
 });

@@ -934,4 +934,17 @@ const featured = featuredProjects(await orderedProjects());
       opacity: 0;
     }
   }
+
+  /* Forced colors make every link one color: the page you're on reads as
+     text, as its ink does here, and the menu's filled stop keeps its
+     fill. */
+  @media (forced-colors: active) {
+    .nav a[aria-current] {
+      color: CanvasText;
+    }
+
+    .node > span {
+      background: CanvasText;
+    }
+  }
 </style>

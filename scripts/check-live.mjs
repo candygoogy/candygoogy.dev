@@ -3,11 +3,24 @@
 // errors reach only the Workers logs. This fails loudly instead when:
 //  - the live build is more than a day and a half old;
 //  - the heatmap's newest day is more than 3 days old, as when the build
-//    went through but kept old GitHub data.
+//    went through but kept old GitHub data;
+//  - an experiment's live security policy lets it connect to more than
+//    /experiments says (scripts/experiments-policy.mjs), or it can't be
+//    checked. The build only warns about that, so the daily rebuild still
+//    deploys; this is where it's loud.
 //   node scripts/check-live.mjs
 //
 // The parse and checks are exported for the tests; only running the file
 // directly fetches anything.
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import {
+  classify,
+  connectSources,
+  expected,
+  listedUrl,
+  looser,
+} from "./experiments-policy.mjs";
 
 const SITE = "https://candygoogy.dev";
 const HOUR = 60 * 60 * 1000;
@@ -98,6 +111,66 @@ export function checkLive(securityTxt, home, now) {
   return lines;
 }
 
+// One line per tool whose policy is looser than expected or that couldn't
+// be checked, and one for all the others. Each result is a tool's id with
+// its Content-Security-Policy header (null without one), or the error.
+export function checkPolicies(results) {
+  const lines = [];
+  const fine = [];
+  for (const result of results) {
+    const { id } = result;
+    if ("error" in result) {
+      lines.push({
+        ok: false,
+        text: `${id}: couldn't check its security policy: ${result.error}`,
+      });
+      continue;
+    }
+    const connect = connectSources(result.header);
+    const cls = classify(id, connect);
+    if (looser(id, cls)) {
+      lines.push({
+        ok: false,
+        text: `${id} allows connect-src ${connect.join(" ")}, more than "${expected(id)}": /experiments' lede drops what it says about the policies; fix the tool's policy, or the words for it`,
+      });
+    } else {
+      fine.push(`${id} ${cls}`);
+    }
+  }
+  if (!results.length) {
+    lines.push({ ok: false, text: "no experiments to check" });
+  } else if (fine.length) {
+    lines.push({ ok: true, text: `experiments' policies: ${fine.join(", ")}` });
+  }
+  return lines;
+}
+
+// Every experiment /experiments lists, with its live policy header.
+async function policies() {
+  const dir = join(import.meta.dirname, "..", "src", "content", "experiments");
+  const tools = [];
+  for (const file of (await readdir(dir)).sort()) {
+    if (!file.endsWith(".md")) continue;
+    const url = listedUrl(await readFile(join(dir, file), "utf8"));
+    if (url) tools.push({ id: file.slice(0, -3), url });
+  }
+  return Promise.all(
+    tools.map(async ({ id, url }) => {
+      try {
+        const res = await fetch(url, {
+          method: "HEAD",
+          headers: UA,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+        return { id, header: res.headers.get("content-security-policy") };
+      } catch (error) {
+        return { id, error };
+      }
+    }),
+  );
+}
+
 async function get(path) {
   const res = await fetch(`${SITE}${path}`, {
     headers: UA,
@@ -108,12 +181,8 @@ async function get(path) {
 }
 
 if (process.argv[1] === import.meta.filename) {
-  try {
-    const [securityTxt, home] = await Promise.all([
-      get("/.well-known/security.txt"),
-      get("/"),
-    ]);
-    for (const { ok, text } of checkLive(securityTxt, home, Date.now())) {
+  const report = (lines) => {
+    for (const { ok, text } of lines) {
       if (ok) {
         console.log(`check-live: ${text}`);
       } else {
@@ -121,8 +190,22 @@ if (process.argv[1] === import.meta.filename) {
         process.exitCode = 1;
       }
     }
+  };
+  // Each part on its own, so one that can't run doesn't hide the other.
+  try {
+    const [securityTxt, home] = await Promise.all([
+      get("/.well-known/security.txt"),
+      get("/"),
+    ]);
+    report(checkLive(securityTxt, home, Date.now()));
   } catch (error) {
     console.error(`check-live: FAIL couldn't fetch the site: ${error}`);
+    process.exitCode = 1;
+  }
+  try {
+    report(checkPolicies(await policies()));
+  } catch (error) {
+    console.error(`check-live: FAIL couldn't check the experiments: ${error}`);
     process.exitCode = 1;
   }
 }

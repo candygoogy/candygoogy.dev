@@ -1,33 +1,19 @@
 // The plain-text card for terminals (`curl candygoogy.dev`), written at
 // build time from the site's own data: every line already appears on the
 // site. The Worker serves it on "/" to curl, Wget, HTTPie and xh
-// (worker/index.ts). Under 80 columns, no colors, plain layout.
+// (worker/index.ts). The helpers and the width are in src/lib/card.ts.
 import type { APIRoute } from "astro";
 import { experiments } from "../data/experiments";
 import { hero, site } from "../data/site";
-import { builtOn, commit } from "../lib/build";
+import {
+  columns,
+  heading,
+  stamp,
+  textResponse,
+  title,
+  wrap,
+} from "../lib/card";
 import { orderedProjects } from "../lib/projects";
-
-const WIDTH = 72;
-
-// Greedy word wrap to WIDTH columns, with an optional indent for the
-// lines after the first.
-function wrap(text: string, indent = ""): string {
-  const lines: string[] = [];
-  let line = "";
-  for (const word of text.split(" ")) {
-    if (line && (line + " " + word).length > WIDTH) {
-      lines.push(line);
-      line = indent + word;
-    } else {
-      line = line ? `${line} ${word}` : word;
-    }
-  }
-  if (line) lines.push(line);
-  return lines.join("\n");
-}
-
-const heading = (text: string) => `${text}\n${"-".repeat(text.length)}`;
 
 export const GET: APIRoute = async () => {
   const projects = await orderedProjects();
@@ -50,29 +36,19 @@ export const GET: APIRoute = async () => {
     ["Discord", site.discord],
     ["Telegram", site.telegram],
   ];
-  const linkCol = Math.max(...links.map(([l]) => l.length)) + 3;
-
-  const stamp = commit
-    ? `Built ${builtOn.label} from ${commit.slice(0, 7)}`
-    : `Built ${builtOn.label}`;
 
   const body = [
-    `${site.name}\n${"=".repeat(site.name.length)}`,
+    title(site.name),
     wrap(hero.headline),
     wrap(hero.line),
     heading(hero.indexTitle),
     rows.join("\n"),
     heading(experiments.title),
-    `${wrap(experiments.lede)}\n${site.url}/experiments`,
+    `${wrap(experiments.description)}\n${site.url}/experiments`,
     heading("Contact"),
-    [
-      site.email,
-      ...links.map(([label, href]) => pad(label, linkCol) + href),
-    ].join("\n"),
-    stamp,
+    `${site.email}\n${columns(links)}`,
+    stamp(),
   ].join("\n\n");
 
-  return new Response(`\n${body}\n\n`, {
-    headers: { "Content-Type": "text/plain; charset=utf-8" },
-  });
+  return textResponse(body);
 };

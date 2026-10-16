@@ -1,8 +1,56 @@
 {
-  "fetchedAt": "2026-10-16T19:32:52.467Z",
+  "fetchedAt": "2026-10-16T21:27:41.111Z",
   "versions": {
     "fettle-page/fettle": "1.0.5",
     "fettle-page/idiff": "1.0.0"
+  },
+  "releases": {
+    "fettle-page/fettle": [
+      {
+        "tag": "v1.0.5",
+        "name": "Fettle 1.0.5",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.5",
+        "published": "2026-10-15T19:16:03Z"
+      },
+      {
+        "tag": "v1.0.4",
+        "name": "Fettle 1.0.4",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.4",
+        "published": "2026-10-13T03:37:46Z"
+      },
+      {
+        "tag": "v1.0.3",
+        "name": "Fettle 1.0.3",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.3",
+        "published": "2026-10-11T15:53:08Z"
+      },
+      {
+        "tag": "v1.0.2",
+        "name": "Fettle 1.0.2",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.2",
+        "published": "2026-10-11T12:46:41Z"
+      },
+      {
+        "tag": "v1.0.1",
+        "name": "Fettle 1.0.1",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.1",
+        "published": "2026-10-10T20:40:26Z"
+      },
+      {
+        "tag": "v1.0.0",
+        "name": "Fettle 1.0.0",
+        "url": "https://github.com/fettle-page/fettle/releases/tag/v1.0.0",
+        "published": "2026-10-10T17:13:16Z"
+      }
+    ],
+    "fettle-page/idiff": [
+      {
+        "tag": "v1.0.0",
+        "name": "Install diff 1.0.0",
+        "url": "https://github.com/fettle-page/idiff/releases/tag/v1.0.0",
+        "published": "2026-10-15T18:26:10Z"
+      }
+    ]
   },
   "contributions": {
     "source": "profile",
@@ -1854,7 +1902,7 @@
       },
       {
         "date": "2026-10-16",
-        "count": 19,
+        "count": 27,
         "level": 1
       }
     ]

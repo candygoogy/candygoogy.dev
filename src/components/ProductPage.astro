@@ -564,4 +564,12 @@ const rows = note
       grid-template-columns: 1fr;
     }
   }
+
+  /* Forced colors drop the button's fill: an edge in its text color
+     keeps it a button. */
+  @media (forced-colors: active) {
+    .get {
+      border: var(--rule) solid currentColor;
+    }
+  }
 </style>

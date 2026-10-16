@@ -58,20 +58,28 @@ async function presence(request: Request, ctx: ExecutionContext) {
   return response;
 }
 
-// "/" for terminals: `curl candygoogy.dev` (and Wget, HTTPie, xh) gets the
-// plain-text card built with the site (/card.txt); browsers get the page,
-// untouched. Both carry Vary: User-Agent, so caches keep them apart.
+// The pages with a plain-text card for terminals: `curl candygoogy.dev`
+// (and Wget, HTTPie, xh) gets /card.txt, and `curl candygoogy.dev/idiff`
+// the product's own card, all built with the site (src/lib/card.ts).
+// Browsers get the page, untouched. Both carry Vary: User-Agent, so caches
+// keep them apart. Each path here is also in run_worker_first
+// (wrangler.jsonc), or the assets would answer it without the Worker.
+const CARDS = new Map([
+  ["/", "/card.txt"],
+  ["/fettle", "/fettle.txt"],
+  ["/idiff", "/idiff.txt"],
+]);
 const TERMINAL = /^(curl|Wget|HTTPie|xh)\//i;
 const HELLO =
   "Hi. Curious how this works? The source is at github.com/candygoogy/candygoogy.dev";
 
-async function home(request: Request, env: Env) {
+async function page(request: Request, env: Env, cardPath: string) {
   const agent = request.headers.get("User-Agent") ?? "";
   const wantsText =
     TERMINAL.test(agent) &&
     (request.method === "GET" || request.method === "HEAD");
   if (wantsText) {
-    const card = await env.ASSETS.fetch(new URL("/card.txt", request.url));
+    const card = await env.ASSETS.fetch(new URL(cardPath, request.url));
     if (card.ok) {
       return new Response(request.method === "HEAD" ? null : card.body, {
         headers: {
@@ -96,16 +104,18 @@ async function home(request: Request, env: Env) {
 }
 
 export default {
-  // Matching static assets never reach the Worker, except "/", which runs
-  // the Worker first (run_worker_first in wrangler.jsonc) so terminals can
-  // get the plain-text card. Anything else goes back to the assets (which
-  // serve the 404 page).
+  // Matching static assets never reach the Worker, except the pages with
+  // a card ("/", /fettle, /idiff), which run the Worker first
+  // (run_worker_first in wrangler.jsonc) so terminals can get their
+  // plain-text card. Anything else goes back to the assets (which serve
+  // the 404 page).
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/presence") {
       return presence(request, ctx);
     }
-    if (pathname === "/") return home(request, env);
+    const card = CARDS.get(pathname);
+    if (card) return page(request, env, card);
     return env.ASSETS.fetch(request);
   },
 

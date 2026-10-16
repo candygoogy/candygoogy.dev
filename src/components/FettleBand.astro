@@ -245,4 +245,13 @@ const version = latestVersion(data.repo, data.version);
       grid-template-columns: 1fr;
     }
   }
+
+  /* Forced colors drop the band's fill and edge: a hairline in the text
+     color keeps it a band. */
+  @media (forced-colors: active) {
+    .band {
+      outline: var(--rule) solid CanvasText;
+      outline-offset: calc(-1 * var(--rule));
+    }
+  }
 </style>

@@ -202,6 +202,19 @@ a:not(
   mix-blend-mode: screen;
 }
 
+/* Forced colors (Windows Contrast themes) drop backgrounds, and with them
+   the links' drawn underline: links get a real one (color is never the
+   only cue). */
+@media (forced-colors: active) {
+  a:not(
+      :where(.brand, .skip, .shift, .seg, .row, .get, .mention, .org, nav a)
+    ):not(:where(.go, .address, .index a)) {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.25em;
+  }
+}
+
 /* A mention chip: a hairline pill holding a logo and a name, inline in
    running text, in the text's own color. It sits on the text's baseline
    and fits inside its line, so it never changes the line height. As a

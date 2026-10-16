@@ -58,6 +58,32 @@ const icon = (file: string) => {
   const hash = createHash("sha256").update(readFileSync(path)).digest("hex");
   return `/${file}?v=${hash.slice(0, 10)}`;
 };
+
+// Pages open at once: in Chromium, pointing at a link to another page here
+// (pressing it, on touch) fetches that page ahead, so the transition to it
+// doesn't wait on the network. Only the page's HTML is fetched, and nothing
+// on it runs until it's opened. Not the API, plain files, feeds and
+// pictures, or links marked nofollow or download. Hashed into each page's
+// script-src (scripts/csp.mjs), where Chromium checks it.
+const speculation = {
+  prefetch: [
+    {
+      where: {
+        and: [
+          { href_matches: "/*" },
+          { not: { href_matches: "/api/*" } },
+          { not: { href_matches: "/*.txt" } },
+          { not: { href_matches: "/*.xml" } },
+          { not: { href_matches: "/*.png" } },
+          { not: { href_matches: "/.well-known/*" } },
+          { not: { selector_matches: "[rel~=nofollow]" } },
+          { not: { selector_matches: "[download]" } },
+        ],
+      },
+      eagerness: "moderate",
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -87,6 +113,12 @@ const icon = (file: string) => {
     <link rel="icon" href={icon("favicon.ico")} sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href={icon("apple-touch-icon.png")} />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link
+      rel="alternate"
+      type="application/atom+xml"
+      title={site.name}
+      href="/feed.xml"
+    />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
@@ -313,6 +345,11 @@ const icon = (file: string) => {
         });
       })();
     </script>
+    <script
+      type="speculationrules"
+      is:inline
+      set:html={JSON.stringify(speculation)}
+    />
     <link rel="expect" href="#main" blocking="render" />
     <Font cssVariable="--font-display" preload />
     <Font cssVariable="--font-text" preload />
