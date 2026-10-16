@@ -17,6 +17,9 @@ export const site = {
 export const hero = {
   headline: "I keep computers running, and build the tools I wish existed.",
   line: "I’m an IT technician by day. On my own time I build software and websites, and Fettle is the one I’m proudest of.",
+  // Over the hero index, a shortlist of the featured projects.
+  featuredTitle: "A few things I’ve built",
+  // Over every project, in the terminal card (card.txt).
   indexTitle: "What I’ve built",
 };
 

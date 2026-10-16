@@ -1,6 +1,6 @@
 ---
-// The index of everything built: a heading and one row per project (name,
-// line, year), in the home page's hero.
+// The home page hero's index, a shortlist of the featured projects: a
+// heading and one row per project (its name, then its line).
 import type { CollectionEntry } from "astro:content";
 import { hero } from "../data/site";
 import { vtAttr } from "../lib/vt";
@@ -24,7 +24,7 @@ const href = (p: CollectionEntry<"projects">) =>
 
 <nav class="index" aria-labelledby={headingId}>
   <h2 id={headingId} class="rv rv-line" style={`--d: ${delay.title}ms`}>
-    {hero.indexTitle}
+    {hero.featuredTitle}
   </h2>
   <ol>
     {projects.map((p, i) => (
@@ -45,7 +45,6 @@ const href = (p: CollectionEntry<"projects">) =>
           <span class="blurb">
             <Keep text={p.data.blurb} />
           </span>
-          <span class="year">{p.data.date.getUTCFullYear()}</span>
         </a>
       </li>
     ))}
@@ -66,10 +65,9 @@ const href = (p: CollectionEntry<"projects">) =>
     list-style: none;
   }
 
+  /* The name over its line. */
   .index a {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: var(--sp-3);
     padding-block: var(--sp-4);
     background: none;
     color: var(--ink);
@@ -87,23 +85,10 @@ const href = (p: CollectionEntry<"projects">) =>
     color: var(--acc);
   }
 
-  /* The line runs under the year too, so it stays on one line in the
-     hero's narrower index (Hero.astro). */
   .blurb {
-    grid-column: 1 / -1;
     margin-top: var(--sp-1);
     font-size: var(--fs-meta);
     color: var(--soft);
     text-wrap: balance;
-  }
-
-  /* The year sits on the name's baseline. */
-  .year {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: baseline;
-    font-size: var(--fs-meta);
-    color: var(--soft);
-    font-variant-numeric: tabular-nums;
   }
 </style>

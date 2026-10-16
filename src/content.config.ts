@@ -12,6 +12,10 @@ const projects = defineCollection({
         name: z.string().min(1),
         // One short line for the hero index, under the name (only there).
         blurb: z.string().min(1).max(64),
+        // Listed in the hero index, a shortlist of one to four (Hero.astro).
+        // Every project keeps its row in the list below either way. Not
+        // the same as featuredProject, the one that gets the band.
+        featured: z.boolean().default(false),
         // One or two sentences: the band lede or the website row.
         summary: z.string().min(1).max(320),
         // "product" = candygoogy's own work (gets images and a band/page);

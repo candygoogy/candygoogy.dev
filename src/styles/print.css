@@ -143,29 +143,9 @@
     border: 0 !important;
   }
 
-  /* The index: the name, its line, then the year, in reading order. */
+  /* The index: the name, then its line, close together. */
   .index .shift {
-    display: flex !important;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 2mm;
     padding-block: 1.5mm !important;
-  }
-
-  .index .shift .blurb {
-    flex-basis: 100%;
-    order: 1;
-  }
-
-  /* The year at the end of the name's line, like a receipt's amount. */
-  .index .shift .name {
-    flex: 1;
-  }
-
-  .index .shift .year {
-    order: 0;
-    align-self: baseline !important;
-    padding: 0 !important;
   }
 
   .stage {

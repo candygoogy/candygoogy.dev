@@ -1,6 +1,7 @@
 ---
 name: Fettle
 blurb: Windows check-up, printed as a readable receipt
+featured: true
 summary: "A free, open-source check-up for Windows PCs. It reads what Windows already knows and prints it as a receipt: a plain-words verdict on every line, the next steps at the top, and the numbers underneath for anyone who wants them."
 kind: product
 status: live

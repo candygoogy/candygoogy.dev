@@ -9,6 +9,12 @@ interface Props {
 }
 
 const { projects } = Astro.props;
+// The index beside the headline is a shortlist, so it stays about as tall
+// as the headline and its line however many projects there are: the
+// featured ones, in the page's order. The projects list below has them all.
+const featured = projects.filter((p) => p.data.featured);
+if (featured.length < 1 || featured.length > 4)
+  throw new Error("one to four projects must be featured");
 // The headline is split into words so each word can rise out of its own
 // clip, in turn (motion.css). Screen readers get the sentence once, from
 // aria-label.
@@ -62,7 +68,7 @@ const [, rest = lineAfter, lastPair = ""] =
       <span class="nobr">{lastPair}</span>
     </p>
   </div>
-  <ProjectIndex projects={projects} headingId="index-title" />
+  <ProjectIndex projects={featured} headingId="index-title" />
 </section>
 
 <style>
@@ -131,7 +137,7 @@ const [, rest = lineAfter, lastPair = ""] =
   }
 
   /* In one column the index would be a full-width list, and the band and
-     the projects list right after it repeat it row for row, so on screen
+     the projects list right after it repeat its rows, so on screen
      it goes (the same breakpoint as above). Print keeps it as the
      receipt's index (print.css). */
   @media screen and (max-width: 53.75rem) {
