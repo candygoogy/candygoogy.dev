@@ -5,11 +5,13 @@
 // The image is checked (decodes, at least 64px, at most 2 MB), re-encoded
 // without metadata, and written to the gitignored src/assets/avatar.live.jpg,
 // with the original file's SHA-256 beside it (avatar.live.json) for the icon
-// crop (src/data/avatar.ts).
+// crop (src/data/avatar.ts). The meta also has the SHA-256 of the JPEG it
+// goes with, so scripts/icons.mjs can tell when the two don't match.
 //
-// This script never fails the build. On any error it keeps the last good
-// live file, or, without one, the site uses the committed
-// src/assets/avatar.jpg.
+// By default this script never fails the build. On any error it keeps the
+// last good live file, or, without one, the site uses the committed
+// src/assets/avatar.jpg. With DATA_STRICT=1 (the daily CI run) it exits with
+// code 1 after a warning.
 
 import { createHash } from "node:crypto";
 import { rename, writeFile } from "node:fs/promises";
@@ -43,10 +45,15 @@ try {
   }
 
   const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const jpegSha256 = createHash("sha256").update(data).digest("hex");
   // Written aside and renamed, so a cut-off write never leaves a broken
-  // image for the build to import.
+  // image for the build to import. The two renames aren't one step: if only
+  // the first lands, jpegSha256 shows icons.mjs the old meta.
   await writeFile(`${LIVE}.tmp`, data);
-  await writeFile(`${LIVE_META}.tmp`, JSON.stringify({ sha256 }) + "\n");
+  await writeFile(
+    `${LIVE_META}.tmp`,
+    JSON.stringify({ sha256, jpegSha256 }) + "\n",
+  );
   await rename(`${LIVE}.tmp`, LIVE);
   await rename(`${LIVE_META}.tmp`, LIVE_META);
   console.log(`avatar: ${info.width}×${info.height} from GitHub`);
@@ -54,4 +61,8 @@ try {
   console.warn(
     `avatar: WARNING kept the last good avatar (or the committed one): ${error}`,
   );
+  if (process.env.DATA_STRICT === "1") {
+    console.error("avatar: failing because DATA_STRICT=1");
+    process.exitCode = 1;
+  }
 }

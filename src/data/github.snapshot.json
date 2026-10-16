@@ -1,7 +1,8 @@
 {
-  "fetchedAt": "2026-10-11T13:31:40.261Z",
+  "fetchedAt": "2026-10-16T19:32:52.467Z",
   "versions": {
-    "fettle-page/fettle": "1.0.2"
+    "fettle-page/fettle": "1.0.5",
+    "fettle-page/idiff": "1.0.0"
   },
   "contributions": {
     "source": "profile",
@@ -1708,8 +1709,8 @@
       },
       {
         "date": "2026-09-17",
-        "count": 0,
-        "level": 0
+        "count": 4,
+        "level": 1
       },
       {
         "date": "2026-09-18",
@@ -1769,7 +1770,7 @@
       {
         "date": "2026-09-29",
         "count": 38,
-        "level": 2
+        "level": 1
       },
       {
         "date": "2026-09-30",
@@ -1828,6 +1829,31 @@
       },
       {
         "date": "2026-10-11",
+        "count": 137,
+        "level": 4
+      },
+      {
+        "date": "2026-10-12",
+        "count": 30,
+        "level": 1
+      },
+      {
+        "date": "2026-10-13",
+        "count": 11,
+        "level": 1
+      },
+      {
+        "date": "2026-10-14",
+        "count": 79,
+        "level": 2
+      },
+      {
+        "date": "2026-10-15",
+        "count": 163,
+        "level": 4
+      },
+      {
+        "date": "2026-10-16",
         "count": 19,
         "level": 1
       }

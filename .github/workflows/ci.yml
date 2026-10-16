@@ -4,18 +4,26 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Daily, so a build that breaks on its own (a font re-released upstream,
+  # an outside service down) shows up as a failed run and an email. These
+  # runs also check the build-time data strictly (DATA_STRICT on the data
+  # step): GitHub data, avatar or icons that fell back fail the run.
+  schedule:
+    - cron: "17 6 * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # Per event too, so a push never cancels the daily strict run (or the
+  # other way round).
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,4 +35,35 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run build
+      - run: npm test
+      # These three steps are package.json's build, split so that only the
+      # data scripts see the token, not every build script and dependency.
+      - run: npm run fonts
+      - run: npm run data
+        env:
+          # The data scripts warn and fall back on push and pull requests;
+          # only the scheduled run fails on a fallback.
+          DATA_STRICT: ${{ github.event_name == 'schedule' && '1' || '' }}
+          # Sent only to the GitHub REST API, for release lookups.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npx astro build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  # The daily rebuild deploys from a Worker cron, whose failures reach only
+  # the Workers logs, and the job above builds without deploying. This checks
+  # what is actually live, an hour after that rebuild, so a deploy that
+  # didn't happen (or went out with old data) fails a run and sends an email.
+  live:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      # Built-ins only: no npm ci.
+      - run: node scripts/check-live.mjs

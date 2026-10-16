@@ -26,7 +26,6 @@ src/data/github.json
 src/assets/avatar.live.*
 public/favicon.ico
 public/apple-touch-icon.png
-.fonts-cache/
 
 # Tooling output
 .lighthouseci/

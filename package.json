@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "dev": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
@@ -12,6 +12,8 @@
     "preview": "wrangler dev",
     "lint": "eslint . && prettier --check .",
     "typecheck": "astro check && tsc -p worker",
+    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test:e2e": "node --test \"tests/e2e/*.test.mjs\"",
     "format": "prettier --write .",
     "shots": "node scripts/shots.mjs",
     "data": "node scripts/github-data.mjs && node scripts/avatar.mjs && node scripts/icons.mjs"

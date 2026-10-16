@@ -4,14 +4,26 @@
 //   npm run dev   (in another terminal)
 //   node scripts/og.mjs http://localhost:4321
 
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium } from "playwright";
+import { frontmatter, frontmatterKey } from "./github-days.mjs";
 
 const base = process.argv[2] ?? "http://localhost:4321";
+// Every product gets a card, the way src/pages/[ogcard].astro makes one
+// (a production build fails without it, src/lib/projects.ts).
+const projects = join(import.meta.dirname, "..", "src", "content", "projects");
+const products = [];
+for (const file of (await readdir(projects)).sort()) {
+  if (!file.endsWith(".md")) continue;
+  const front = frontmatter(await readFile(join(projects, file), "utf8"));
+  if (frontmatterKey(front, "kind") === "product") {
+    products.push(file.slice(0, -".md".length));
+  }
+}
 const cards = {
   "og-card": "og.png",
-  "og-fettle": "og-fettle.png",
-  "og-idiff": "og-idiff.png",
+  ...Object.fromEntries(products.map((id) => [`og-${id}`, `og-${id}.png`])),
   "og-uses": "og-uses.png",
   "og-experiments": "og-experiments.png",
 };
