@@ -128,7 +128,10 @@
   display: inline-block;
 }
 
-/* Hairlines are drawn by a pseudo-element so they can scale. */
+/* Hairlines are drawn by a pseudo-element so they can scale. The line is
+   a border, not a filled box: borders snap to whole device pixels, so at
+   150% zoom it keeps one weight while it draws, after, and wherever it
+   lands (a 1px box is 1.5 device px, painted as 1 or 2). */
 .rv-line {
   position: relative;
 }
@@ -137,8 +140,8 @@
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: var(--rule);
-  background: var(--line-color, var(--ink));
+  height: 0;
+  border-top: var(--rule) solid var(--line-color, var(--ink));
   transform-origin: left center;
 }
 

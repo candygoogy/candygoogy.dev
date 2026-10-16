@@ -625,7 +625,8 @@ const words = contact.question.split(" ");
 
   /* Directory rows: the whole row is the link. The divider above each
      group is drawn on the content inset, not across the rows' hover
-     padding. */
+     padding, as a border so it snaps to the same weight as the page's
+     hairlines. */
   .rows {
     position: relative;
     display: grid;
@@ -645,8 +646,8 @@ const words = contact.question.split(" ");
     top: 0;
     left: var(--inset);
     right: var(--inset);
-    height: var(--rule);
-    background: var(--card-rule);
+    height: 0;
+    border-top: var(--rule) solid var(--card-rule);
   }
 
   .row {

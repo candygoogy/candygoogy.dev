@@ -423,15 +423,17 @@ const hops = [
   }
 
   /* The link to the next hop: from beside this icon to beside the next
-     one, at the icons' centre line. */
+     one, at the icons' centre line. A border, like the arrowhead, so it
+     snaps to whole device pixels and keeps one weight as it draws. */
   .hop:not(:last-child)::after {
     content: "";
     position: absolute;
     top: calc(var(--g) / 2);
     left: calc(50% + var(--g) / 2 + 6px);
     width: calc(100% - var(--g) - 12px);
-    height: var(--rule);
-    background: var(--soft);
+    height: 0;
+    border: 0 solid var(--soft);
+    border-top-width: var(--rule);
     transform-origin: left center;
   }
 
@@ -735,8 +737,9 @@ const hops = [
     .hop:not(:last-child)::after {
       top: calc(var(--g) + 6px);
       left: calc(var(--g) / 2);
-      width: var(--rule);
+      width: 0;
       height: calc(100% - var(--g) - 12px + var(--sp-5));
+      border-width: 0 0 0 var(--rule);
       transform-origin: center top;
     }
 
