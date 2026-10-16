@@ -48,11 +48,13 @@ async function presence(request: Request, ctx: ExecutionContext) {
   const response = new Response(JSON.stringify({ status }), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": status ? "public, max-age=30" : "no-store",
+      // A failed lookup is kept briefly too, so a Lanyard outage costs one
+      // slow fetch every 15 seconds, not one per visitor.
+      "Cache-Control": `public, max-age=${status ? 30 : 15}`,
       "X-Content-Type-Options": "nosniff",
     },
   });
-  if (status) ctx.waitUntil(cache.put(key, response.clone()));
+  ctx.waitUntil(cache.put(key, response.clone()));
   return response;
 }
 
@@ -112,7 +114,11 @@ export default {
       console.warn("scheduled: DEPLOY_HOOK_URL is not set, skipping rebuild");
       return;
     }
-    const res = await fetch(env.DEPLOY_HOOK_URL, { method: "POST" });
+    // A hook that never answers fails the run instead of hanging it.
+    const res = await fetch(env.DEPLOY_HOOK_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) {
       throw new Error(`scheduled: deploy hook returned HTTP ${res.status}`);
     }

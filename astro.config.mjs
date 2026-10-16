@@ -1,9 +1,8 @@
 // @ts-check
+import { fileURLToPath } from "node:url";
 import sitemap from "@astrojs/sitemap";
 import { defineConfig, fontProviders } from "astro/config";
-import csp from "./scripts/csp.mjs";
-import inlineScripts from "./scripts/inline-scripts.mjs";
-import motionLoader from "./scripts/motion-loader.mjs";
+import pages from "./scripts/pages.mjs";
 import thirdPartyLicenses from "./scripts/third-party-licenses.mjs";
 
 export default defineConfig({
@@ -11,25 +10,29 @@ export default defineConfig({
   output: "static",
   trailingSlash: "never",
   devToolbar: { enabled: false },
-  // motionLoader: the page's motion starts after the page has first
-  // painted, so drawing the page never waits for it (scripts/motion-loader.mjs).
-  // inlineScripts: the scripts written into every page ship minified
-  // (scripts/inline-scripts.mjs).
+  // pages: every step that rewrites the built pages, in one pass over them
+  // (scripts/pages.mjs): the page's motion starts after the page has first
+  // painted, so drawing the page never waits for it; the scripts written
+  // into every page ship minified; each page keeps only the motion lookup
+  // rules it uses; and, last, so no step changes a page after it, each
+  // page's Content-Security-Policy, from the page as it ships.
   // thirdPartyLicenses: the notices for third-party code in the pages, as
   // /third-party-licenses.txt (scripts/third-party-licenses.mjs).
-  // csp: each page's Content-Security-Policy, from the page as it ships
-  // (scripts/csp.mjs). Last, so no step changes a page after it.
-  integrations: [
-    sitemap(),
-    motionLoader(),
-    inlineScripts(),
-    thirdPartyLicenses(),
-    csp(),
-  ],
+  integrations: [sitemap(), pages(), thirdPartyLicenses()],
   build: {
     format: "file",
     // The CSS is small: inlining it removes render-blocking requests.
     inlineStylesheets: "always",
+  },
+  vite: {
+    // The project root as an absolute path, for the build-time files read
+    // in src/lib (declared in src/env.d.ts). import.meta.url there points
+    // into the bundle, and the working directory isn't always the root.
+    define: {
+      __PROJECT_ROOT__: JSON.stringify(
+        fileURLToPath(new URL(".", import.meta.url)),
+      ),
+    },
   },
   // The official, unmodified WOFF2 files fetched by `npm run fonts` (see
   // scripts/fonts.mjs). Astro serves them from our domain and generates
