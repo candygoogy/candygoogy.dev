@@ -11,8 +11,8 @@
 //   .rv-line     a hairline draws from the left (a row that also rises
 //                draws once it's on its way)
 //   .line-title  its words rise out of their clips in turn
-//   --i          order within a group (when the whole group arrives at once)
-//   --d          extra delay for a whole group
+//   data-i       order within a group (when the whole group arrives at once)
+//   data-d       extra delay for a whole group, in ms (as --d, motion.css)
 //
 // The Fettle band opens as one overlapping sequence: the panel, its
 // wordmark letter by letter, the lede, then the screenshot unrolling. The
@@ -193,9 +193,9 @@ function blocks(batch: HTMLElement[]) {
       : group;
     const indexed =
       group.length === siblings.length &&
-      group.every((el) => el.style.getPropertyValue("--i") !== "");
+      group.every((el) => el.dataset.i !== undefined);
     group.forEach((el, n) => {
-      const i = indexed ? Number(el.style.getPropertyValue("--i")) || 0 : n;
+      const i = indexed ? Number(el.dataset.i) || 0 : n;
       const delay = groupDelay(el) + i * STAGGER_MS;
       if (el.hasAttribute("data-decode")) {
         void decoded(el).then(() => reveal(el, delay));

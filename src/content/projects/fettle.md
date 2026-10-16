@@ -6,7 +6,7 @@ summary: "A free, open-source check-up for Windows PCs. It reads what Windows al
 kind: product
 status: live
 date: 2026-10-10
-version: 1.0.3
+version: 1.0.5
 repo: fettle-page/fettle
 license: MIT
 runsOn: Windows 10 and 11 (64-bit)

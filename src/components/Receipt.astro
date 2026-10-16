@@ -35,14 +35,14 @@ const line = (raw: string) => ({
 });
 ---
 
-<figure class="receipt rv-line" style="--line-color: var(--line)">
+<figure class="receipt rv-line" data-line="line">
   <div class="head rv">
     <h3>{title}</h3>
     {how && <p class="how">{how}</p>}
   </div>
   <div class="groups">
     {groups.map((g, i) => (
-      <div class="group rv" style={`--i: ${i + 1}`}>
+      <div class="group rv" data-i={i + 1}>
         <p class="label" id={`receipt-group-${i}`}>
           {g.label}
         </p>
@@ -55,7 +55,7 @@ const line = (raw: string) => ({
     ))}
   </div>
   {caption && (
-    <figcaption class="rv" style={`--i: ${groups.length + 1}`}>
+    <figcaption class="rv" data-i={groups.length + 1}>
       {href ? (
         <a class="tap" href={href}>
           {caption}

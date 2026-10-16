@@ -1,5 +1,7 @@
 ---
 import { site } from "../data/site";
+import { featuredProjects, orderedProjects } from "../lib/projects";
+import ProjectIndex from "./ProjectIndex.astro";
 import ThemeSwitch from "./ThemeSwitch.astro";
 
 interface Props {
@@ -21,26 +23,22 @@ const nav = [
   { href: `${prefix}#about`, label: "About" },
   { href: `${prefix}#contact`, label: "Contact" },
 ];
+const current = (item: (typeof nav)[number]) =>
+  path === item.href ? "page" : section === item.label ? "true" : undefined;
+// The menu shows the hero's index on every page (on phones the hero
+// doesn't).
+const featured = featuredProjects(await orderedProjects());
 ---
 
 <header id="top" class="top wrap">
   <a class="brand" href="/">
     {site.name}
   </a>
-  <nav aria-label="Main">
+  <nav class="nav" aria-label="Main">
     <ul>
       {nav.map((item) => (
         <li>
-          <a
-            href={item.href}
-            aria-current={
-              path === item.href
-                ? "page"
-                : section === item.label
-                  ? "true"
-                  : undefined
-            }
-          >
+          <a href={item.href} aria-current={current(item)}>
             {item.label}
           </a>
         </li>
@@ -50,7 +48,375 @@ const nav = [
   <div class="tools">
     <ThemeSwitch />
   </div>
+  <button
+    type="button"
+    class="toggle"
+    aria-expanded="false"
+    aria-controls="menu"
+    aria-haspopup="dialog"
+    data-menu-open
+  >
+    <span class="swap">
+      <span>Menu</span>
+    </span>
+  </button>
+
+  <!-- Where the full row doesn't fit, the menu: the page gives way to the
+       site's route, drawn in the timeline's line and dots (About.astro),
+       one stop per destination, the one you're at filled. Its top row is
+       the header's, with Close where Menu was; under it, the hero's index
+       of featured projects, where there's room for it. -->
+  <dialog id="menu" class="menu" aria-label="Menu" tabindex="-1" data-menu>
+    <div class="top wrap">
+      <a class="brand" href="/">
+        {site.name}
+      </a>
+      <button type="button" class="toggle" data-menu-close>
+        <span class="swap">
+          <span aria-hidden="true">Menu</span>
+          <span>Close</span>
+        </span>
+      </button>
+    </div>
+    <div class="shortlist wrap" data-menu-index>
+      <ProjectIndex
+        projects={featured}
+        headingId="menu-index-title"
+        variant="menu"
+      />
+    </div>
+    <nav class="route wrap" aria-label="Pages">
+      <ul>
+        {nav.map((item) => (
+          <li>
+            <a href={item.href} aria-current={current(item)}>
+              <span class="node" aria-hidden="true">
+                <span></span>
+              </span>
+              <span class="label">
+                <span>{item.label}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <div class="end wrap">
+      <ThemeSwitch />
+    </div>
+  </dialog>
 </header>
+
+<script>
+  // The menu (below 47.5rem, where the full row doesn't fit). It opens as
+  // a modal dialog: the page behind can't be reached or scrolled. Close,
+  // Esc, a link or a wider window closes it, and focus goes back to Menu
+  // (or, wider, to what's in its place).
+  const root = document.documentElement;
+  const button = document.querySelector<HTMLButtonElement>("[data-menu-open]");
+  const menu = document.querySelector<HTMLDialogElement>("[data-menu]");
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  // Where the header is one row (the wordmark and Menu) and stays with you.
+  const narrow = matchMedia("(max-width: 47.5rem)");
+  // What runs once it's closed (a jump to a section), instead of focusing
+  // Menu again.
+  let then: (() => void) | undefined;
+
+  // On the home page the stops are its sections: the one you're reading
+  // is the last whose top has passed the middle of the window (Projects
+  // from the Fettle band, the first project, down); at the very top,
+  // none; at the very bottom, Contact.
+  const mark = () => {
+    if (!menu) return;
+    const end = innerHeight + scrollY >= root.scrollHeight - 2;
+    let here: Element | undefined;
+    for (const a of menu.querySelectorAll<HTMLAnchorElement>(
+      '.route a[href^="#"]',
+    )) {
+      a.removeAttribute("aria-current");
+      const id = a.hash.slice(1);
+      const top =
+        id === "projects" ? document.querySelector(".band") : undefined;
+      const el = top ?? document.getElementById(id);
+      if (el && (el.getBoundingClientRect().top <= innerHeight / 2 || end)) {
+        here = a;
+      }
+    }
+    here?.setAttribute("aria-current", "true");
+  };
+
+  // The featured index takes what room there is above the route, with the
+  // switch still at the bottom of the screen: each project's name and
+  // line; or, shorter, the names alone; or the names with the route's
+  // rows a little closer. Where even that doesn't fit, it goes, rather
+  // than squeeze or push the switch down. Read from layout boxes, so the
+  // entrance's transforms don't count. Those are whole pixels, each
+  // rounded on its own: at a scaling like 150% a switch that fits can
+  // read a pixel past the bottom, so a pixel over still fits. Transitions
+  // are off while it measures: under reduced motion every change is a
+  // 1ms transition, and a box would still read its old size.
+  const index = menu?.querySelector<HTMLElement>("[data-menu-index]");
+  const end = menu?.querySelector<HTMLElement>(".end");
+  const fits = () =>
+    !!menu &&
+    !!end &&
+    end.offsetTop + end.offsetHeight <= menu.clientHeight + 1;
+  const fit = () => {
+    if (!menu || !index) return;
+    menu.classList.add("fitting");
+    index.hidden = false;
+    let step = "";
+    for (const s of ["full", "names", "close"]) {
+      menu.dataset.fit = step = s;
+      if (fits()) break;
+      step = "";
+    }
+    if (!step) {
+      index.hidden = true;
+      delete menu.dataset.fit;
+    }
+    menu.classList.remove("fitting");
+  };
+
+  // Quicker than it opens: the menu fades away over the page (its top row
+  // over the header's own, so the wordmark stays put), then closes.
+  // If the fade never reports its end (a hidden tab), it closes anyway;
+  // that wait is dropped once it's closed, so it can't close the menu
+  // opened again straight after.
+  let fallback = 0;
+  const shut = (after?: () => void) => {
+    if (!menu?.open || menu.classList.contains("closing")) return;
+    then = after;
+    if (calm.matches) return menu.close();
+    menu.classList.add("closing");
+    fallback = window.setTimeout(() => menu.open && menu.close(), 400);
+  };
+
+  if (button && menu && typeof menu.showModal === "function") {
+    // The page gutter is 5vw, and a kept scrollbar room changes what vw
+    // measures: the menu keeps the header's gutter as it is now.
+    const gutter = () =>
+      menu.style.setProperty(
+        "--gutter",
+        getComputedStyle(button.parentElement ?? root).paddingLeft,
+      );
+
+    button.addEventListener("click", (event) => {
+      mark();
+      gutter();
+      root.classList.toggle("menu-bar", innerWidth > root.clientWidth);
+      root.classList.add("menu-on");
+      menu.showModal();
+      fit();
+      button.setAttribute("aria-expanded", "true");
+      // Opened from the keyboard, focus goes to Close (where Menu was);
+      // from a tap or a click, to the menu itself, so no ring shows.
+      const close = menu.querySelector<HTMLElement>("[data-menu-close]");
+      (event.detail === 0 && close ? close : menu).focus({
+        preventScroll: true,
+      });
+    });
+
+    menu.addEventListener("animationend", (event) => {
+      if (event.target === menu && menu.open) menu.close();
+    });
+
+    menu.addEventListener("close", () => {
+      clearTimeout(fallback);
+      menu.classList.remove("closing");
+      root.classList.remove("menu-on", "menu-bar");
+      button.setAttribute("aria-expanded", "false");
+      const after = then;
+      then = undefined;
+      // The header is at the top of the page: focusing it mustn't scroll.
+      button.focus({ preventScroll: true });
+      after?.();
+    });
+
+    // Esc fades it like Close does.
+    menu.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      shut();
+    });
+
+    menu.addEventListener("click", (event) => {
+      const target = event.target as Element;
+      if (target.closest("[data-menu-close]")) return shut();
+      // A section of this page: the menu closes, then the page jumps
+      // there, the way the header's links do (the link is followed again
+      // once the menu is closed). Other pages are simply navigated to.
+      const link = target.closest<HTMLAnchorElement>('a[href^="#"]');
+      if (
+        !link ||
+        !menu.open ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      shut(() => {
+        // The header slides away on the way down, so the section lands
+        // with just the usual room above it (base.css), not the header's
+        // too, until the jump is over.
+        root.classList.add("menu-jump");
+        const land = () => {
+          clearTimeout(late);
+          removeEventListener("scrollend", land);
+          root.classList.remove("menu-jump");
+        };
+        const late = setTimeout(land, 1500);
+        addEventListener("scrollend", land);
+        link.click();
+      });
+    });
+
+    // Wide enough for the full row again (a tablet turned): no menu. Menu
+    // is hidden there, so focus in the menu goes to what's in its place:
+    // the row's own link for one of the route's, otherwise the wordmark.
+    narrow.addEventListener("change", (event) => {
+      if (event.matches || !menu.open) return;
+      const row = button.parentElement;
+      const active = document.activeElement;
+      const route = [...menu.querySelectorAll(".route a")];
+      const i = active ? route.indexOf(active) : -1;
+      const to = menu.contains(active)
+        ? (row?.querySelectorAll<HTMLElement>(".nav a")[i] ??
+          row?.querySelector<HTMLElement>(".brand"))
+        : undefined;
+      then ??= () => to?.focus({ preventScroll: true });
+      menu.close();
+    });
+
+    // A window resized with the menu open (a phone turned): its top row
+    // keeps the header's gutter, and the index comes or goes.
+    addEventListener("resize", () => {
+      if (!menu.open) return;
+      gutter();
+      fit();
+    });
+
+    // Leaving the page with it open: a page coming back from the
+    // back/forward cache shows the page, not the menu.
+    addEventListener("pagehide", () => {
+      if (menu.open) menu.close();
+    });
+  }
+
+  // Below 47.5rem the header stays with you: scrolling down slides it up
+  // out of view, scrolling up brings it back, and at the top it sits in
+  // its place (CSS, header.top). One passive scroll listener, read once a
+  // frame. A jump to a section (a link to it, or arriving at one) keeps it
+  // away until the page has settled, so it never lands over the heading.
+  // Wider, it's in the page's flow and none of this runs.
+  const header = button?.closest<HTMLElement>("header");
+  if (header) {
+    // What focus or a jump scrolls to stops clear of the header (base.css):
+    // its height as laid out, kept current as it changes (the font
+    // arriving, text zoom). Set before the page is first drawn, so a link
+    // to a section lands where it would have.
+    new ResizeObserver(() => {
+      if (narrow.matches) {
+        root.style.setProperty(
+          "--header-h",
+          `${header.getBoundingClientRect().height}px`,
+        );
+      }
+    }).observe(header);
+    // Scrolled this far in one direction before it moves.
+    const STEP = 10;
+    let last = 0;
+    let dir = 0;
+    let travel = 0;
+    let frame = 0;
+    let jumping = 0;
+    const away = (on: boolean) => header.classList.toggle("away", on);
+    // Where the page is, ignoring iOS's rubber-band past either end.
+    const at = () =>
+      Math.min(Math.max(scrollY, 0), root.scrollHeight - innerHeight);
+    const tick = () => {
+      frame = 0;
+      const y = at();
+      const d = y - last;
+      last = y;
+      if (jumping || !narrow.matches || root.classList.contains("menu-on")) {
+        return;
+      }
+      if (y <= header.offsetHeight) {
+        away(false);
+        return;
+      }
+      if (!d) return;
+      if (Math.sign(d) !== dir) {
+        dir = Math.sign(d);
+        travel = 0;
+      }
+      travel += Math.abs(d);
+      if (travel >= STEP) away(dir > 0);
+    };
+    const settle = () => {
+      jumping = 0;
+      last = at();
+      dir = 0;
+      travel = 0;
+      away(narrow.matches && last > header.offsetHeight);
+      header.classList.remove("still");
+    };
+    const jump = () => {
+      clearTimeout(jumping);
+      jumping = window.setTimeout(settle, 250);
+    };
+    // Arriving (a reload, a link to a section, the page restoring its
+    // place): in place at once, no slide, once the page stops moving.
+    header.classList.add("still");
+    jump();
+    addEventListener(
+      "scroll",
+      () => {
+        if (!narrow.matches) return;
+        if (jumping) jump();
+        frame ||= requestAnimationFrame(tick);
+      },
+      { passive: true },
+    );
+    document.addEventListener(
+      "click",
+      (event) => {
+        // Only a plain click scrolls this page: one that opens a new tab
+        // or window leaves it, and the header, where they are.
+        if (
+          !narrow.matches ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+        const a = (event.target as Element).closest?.("a");
+        if (a?.hash && a.pathname === location.pathname) {
+          jump();
+          away(true);
+        }
+      },
+      true,
+    );
+    // A keyboard user reaching Menu or the wordmark sees them.
+    header.addEventListener("focusin", () => away(false));
+    // Across the width either way, nothing carries over: no jump waiting
+    // to settle, and the header in its place. Narrower again, it moves
+    // from wherever the page is now.
+    narrow.addEventListener("change", () => {
+      clearTimeout(jumping);
+      settle();
+      away(false);
+    });
+  }
+</script>
 
 <style>
   .top {
@@ -79,7 +445,7 @@ const nav = [
     translate: 0 -50%;
   }
 
-  ul {
+  .nav ul {
     --nav-gap: var(--sp-5);
     display: flex;
     gap: var(--nav-gap);
@@ -90,7 +456,7 @@ const nav = [
 
   /* Nav links rest without an underline; on hover it draws in from the
      left, the same 1px line every other link uses. */
-  nav a {
+  .nav a {
     position: relative;
     color: var(--soft);
     background-size: 0 1px;
@@ -104,7 +470,7 @@ const nav = [
 
   /* A 44px-tall touch target over each link, meeting its neighbours
      halfway across the gap. */
-  nav a::after {
+  .nav a::after {
     content: "";
     position: absolute;
     inset: -12px calc(var(--nav-gap) / -2);
@@ -112,19 +478,19 @@ const nav = [
 
   /* The last one has no neighbour on its right: its target ends with it,
      so it never reaches past the page's edge (as with wider spacing). */
-  nav li:last-child a::after {
+  .nav li:last-child a::after {
     right: 0;
   }
 
   @media (hover: hover) and (pointer: fine) {
-    nav a:hover {
+    .nav a:hover {
       color: var(--ink);
       background-size: 100% 1px;
       background-position: 0 100%;
     }
   }
 
-  nav a[aria-current] {
+  .nav a[aria-current] {
     color: var(--ink);
   }
 
@@ -134,10 +500,96 @@ const nav = [
     gap: var(--sp-4);
   }
 
+  /* Menu (Close in the menu's own top row): a word in the nav's type. */
+  .toggle {
+    display: none;
+    position: relative;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--soft);
+    font: var(--fw-medium) var(--fs-meta) / var(--lh-body) var(--ff-text);
+    cursor: pointer;
+    transition: color var(--dur-ui) var(--ease-out);
+  }
+
+  /* A 44px tall touch target around the word. */
+  .toggle::after {
+    content: "";
+    position: absolute;
+    inset: -10px -12px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .toggle:hover {
+      color: var(--ink);
+    }
+  }
+
+  /* The words share one place, right-aligned, each in its own clip:
+     opening, Menu rises out and Close rises in where it was. */
+  .swap {
+    display: inline-grid;
+    justify-items: end;
+    clip-path: inset(-0.08em -0.1em -0.22em -0.1em);
+    transition: scale 120ms var(--ease-ui);
+  }
+
+  .swap > span {
+    grid-area: 1 / 1;
+  }
+
+  .toggle:active .swap {
+    scale: 0.97;
+  }
+
+  .menu .swap > span:first-child {
+    transform: translateY(-110%);
+  }
+
+  /* Without JavaScript there's no menu: the nav stays (on two rows on
+     phones). With it, below 47.5rem, where the wordmark, the nav and the
+     switch no longer fit on one line (they need about 750px), the header
+     is one row: the wordmark and Menu. */
+  @media (max-width: 47.5rem) {
+    :global(.js) .top > :is(.nav, .tools) {
+      display: none;
+    }
+
+    :global(.js) .toggle {
+      display: block;
+    }
+  }
+
+  /* Below 47.5rem the header stays at the top of the window, in the page's
+     own colour (no line or shadow: over the dark band it still reads as
+     the page). Scrolling down slides it up out of view (.away, quicker,
+     like every exit); scrolling up brings it back. It moves only by
+     transform, so nothing below it shifts. */
+  @media (max-width: 47.5rem) {
+    :global(.js) header.top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--bg);
+      transition: transform var(--dur-move) var(--ease-out);
+    }
+
+    :global(.js) header.top.away {
+      transform: translateY(-100%);
+      transition-duration: 250ms;
+      transition-timing-function: var(--ease-in-out);
+    }
+
+    :global(.js) header.top.still {
+      transition: none;
+    }
+  }
+
   /* Phones: two rows. The wordmark and the theme switch share the first,
      the nav takes the second. */
   @media (max-width: 32.5rem) {
-    nav {
+    .nav {
       order: 3;
       flex-basis: 100%;
     }
@@ -146,8 +598,340 @@ const nav = [
   /* The narrowest phones: a tighter gap keeps the four links on one line
      inside the page edges. */
   @media (max-width: 22.5rem) {
-    ul {
+    .nav ul {
       --nav-gap: var(--sp-3);
+    }
+  }
+
+  /* The menu covers the page in the page's own colour, so opening it
+     reads as the page changing. Its top row sits exactly over the
+     header's. */
+  .menu {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--ink);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .menu:focus-visible {
+    outline: none;
+  }
+
+  /* A column, so the theme switch can sit at the bottom. */
+  .menu[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Rows keep the page width (auto side margins would shrink them). */
+  .menu > .wrap {
+    width: 100%;
+  }
+
+  .menu::backdrop {
+    background: none;
+  }
+
+  /* The page behind stays where it is (iOS Safari included). Where the
+     page has a scrollbar that takes room (desktop Windows), the room is
+     kept, so the menu's top row stays level with the header's and the
+     page doesn't shift as it closes. */
+  :global(html.menu-on) {
+    overflow: hidden;
+  }
+
+  :global(html.menu-on.menu-bar) {
+    scrollbar-gutter: stable;
+  }
+
+  /* The hero's index of featured projects (ProjectIndex.astro), under
+     the top row, on the page gutter under the wordmark, as the switch is.
+     The step in stays the route's names' alone, and the rows get the
+     whole width, so each project's line stays on one line on a 375px
+     phone. The route's own padding keeps it clear of the first stop. */
+  .shortlist {
+    padding-top: var(--sp-2);
+  }
+
+  .shortlist[hidden] {
+    display: none;
+  }
+
+  /* While the menu measures what fits (the script), nothing transitions. */
+  .menu.fitting,
+  .menu.fitting :global(*) {
+    transition: none !important;
+  }
+
+  /* Shorter: the names alone, each row the height of a touch target. The
+     lines leave the accessibility tree too; the links keep the names. */
+  .menu:is([data-fit="names"], [data-fit="close"])
+    .shortlist
+    :global(.index a) {
+    min-height: 44px;
+    padding-block: 0;
+    align-content: center;
+  }
+
+  .menu:is([data-fit="names"], [data-fit="close"]) .shortlist :global(.blurb) {
+    display: none;
+  }
+
+  /* Shorter still: the route's rows a little closer (the names keep their
+     size), and less room between the index and the route. */
+  .menu[data-fit="close"] .route {
+    padding-top: var(--sp-5);
+  }
+
+  .menu[data-fit="close"] .route ul {
+    --row: 1.25em;
+  }
+
+  /* The route: one line through a node per destination, in the career
+     timeline's line and rings, drawn to the names' scale. It sits low,
+     with the switch, where a thumb reaches: the open page colour is
+     above it, under the top row. */
+  .route {
+    margin-top: auto;
+    padding-block: var(--sp-7);
+  }
+
+  /* Each stop is a row one and a half times its name's size. The nodes
+     sit on the page edge, under the wordmark: half the names' cap
+     height (0.67em) across, ringed like the line, 2px, and centred on the
+     capitals' middle, 0.07em above the row's (Cabinet Grotesk at this
+     line height). The names start one step in. */
+  .route ul {
+    --row: 1.5em;
+    --dot: 0.34em;
+    --weight: 2px;
+    --mid: calc(var(--row) / 2 - 0.07em);
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font: var(--fw-bold) var(--fs-d-hero) / var(--lh-display) var(--ff-display);
+    letter-spacing: var(--ls-section);
+  }
+
+  /* The line, from the first node to the last. A border, so it keeps one
+     weight at any scaling. */
+  .route ul::before {
+    content: "";
+    position: absolute;
+    top: var(--mid);
+    bottom: calc(var(--row) - var(--mid));
+    left: calc(var(--dot) / 2 - var(--weight) / 2);
+    border-left: var(--weight) solid var(--ink);
+    transform-origin: top;
+  }
+
+  .route a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--row);
+    padding-left: var(--sp-6);
+    color: var(--ink);
+    background: none;
+  }
+
+  .node {
+    position: absolute;
+    z-index: 1;
+    top: calc(var(--mid) - var(--dot) / 2);
+    left: 0;
+    width: var(--dot);
+    height: var(--dot);
+    border: var(--weight) solid var(--soft);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+
+  .node > span {
+    position: absolute;
+    inset: calc(-1 * var(--weight));
+    border-radius: 50%;
+    background: var(--ink);
+    transform: scale(0);
+  }
+
+  .route [aria-current] .node > span {
+    transform: none;
+  }
+
+  .label {
+    display: inline-block;
+    clip-path: inset(-0.08em -0.1em -0.22em -0.1em);
+  }
+
+  /* Skewed from its left end, so the rising word never tips up into
+     view before it's due. */
+  .label > span {
+    display: inline-block;
+    transform-origin: left;
+    transition:
+      transform var(--dur-ui) var(--ease-out),
+      scale 120ms var(--ease-ui);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .route a:hover .label > span {
+      transform: translateX(6px);
+    }
+  }
+
+  .route a:active .label > span {
+    scale: 0.97;
+  }
+
+  /* The theme switch, gutter to gutter like the top row, at the bottom
+     of the screen where a thumb reaches it (clear of the home indicator).
+     On a short screen it follows the route, never over it. */
+  .end {
+    padding-bottom: calc(var(--sp-7) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .end > :global(*) {
+    width: 100%;
+  }
+
+  /* Opening: the index comes first, its heading then its rows rising in
+     turn, as rows do on the page. Then the line draws down from the first
+     stop, and each stop's ring lands and its name rises out of its clip
+     as the line reaches it (the line's curve passes the stops about 50ms
+     apart); the filled node fills after its ring; the switch comes last.
+     Without the index, the route starts at once. Closing is one quick
+     fade. Under reduced motion it simply appears and goes. */
+  .menu {
+    --lead: 160ms;
+  }
+
+  .shortlist[hidden] ~ * {
+    --lead: 0ms;
+  }
+
+  .shortlist :global(li) {
+    --rise: calc(80ms + var(--i) * 80ms);
+  }
+
+  .route li:nth-child(2) {
+    --at: 50ms;
+  }
+
+  .route li:nth-child(3) {
+    --at: 105ms;
+  }
+
+  .route li:nth-child(4) {
+    --at: 195ms;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .menu[open] .swap > span:first-child {
+      animation: menu-swap-out var(--dur-move) var(--ease-out);
+    }
+
+    .menu[open] .swap > span:last-child {
+      animation: menu-swap-in var(--dur-move) var(--ease-out);
+    }
+
+    .menu[open] .shortlist :global(:is(h2, li)) {
+      animation: menu-up 900ms var(--ease-out) var(--rise, 0ms) backwards;
+    }
+
+    .menu[open] .route ul::before {
+      animation: menu-draw 240ms var(--ease-sine) var(--lead) backwards;
+    }
+
+    .menu[open] .node {
+      animation: menu-land 650ms var(--ease-spring)
+        calc(var(--lead) + var(--at, 0ms)) backwards;
+    }
+
+    .menu[open] [aria-current] .node > span {
+      animation: menu-fill 650ms var(--ease-spring)
+        calc(var(--lead) + var(--at, 0ms) + 150ms) backwards;
+    }
+
+    .menu[open] .label > span {
+      animation: menu-rise 1s var(--ease-out) calc(var(--lead) + var(--at, 0ms))
+        backwards;
+    }
+
+    .menu[open] .end {
+      animation: menu-up 900ms var(--ease-out) calc(var(--lead) + 320ms)
+        backwards;
+    }
+
+    .menu.closing {
+      pointer-events: none;
+      animation: menu-out var(--dur-ui) var(--ease-in-out) forwards;
+    }
+  }
+
+  @keyframes menu-swap-out {
+    from {
+      transform: none;
+    }
+  }
+
+  @keyframes menu-swap-in {
+    from {
+      transform: translateY(110%);
+    }
+  }
+
+  @keyframes menu-draw {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  /* Rings this size don't grow from nothing: they pop from 0.6, as the
+     timeline's dots fill. */
+  @keyframes menu-land {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  @keyframes menu-fill {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+
+  /* From 130%, as the band's letters do: the clip keeps room below for
+     descenders (Projects, Experiments), and 110% would leave the tops of
+     the capitals showing in it. */
+  @keyframes menu-rise {
+    from {
+      transform: translateY(130%) skewY(4deg);
+    }
+  }
+
+  @keyframes menu-up {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+  }
+
+  @keyframes menu-out {
+    to {
+      opacity: 0;
     }
   }
 </style>

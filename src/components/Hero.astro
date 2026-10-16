@@ -2,6 +2,7 @@
 import type { CollectionEntry } from "astro:content";
 import fettleIcon from "../assets/logos/fettle-app-icon-small.svg";
 import { hero } from "../data/site";
+import { featuredProjects } from "../lib/projects";
 import ProjectIndex from "./ProjectIndex.astro";
 
 interface Props {
@@ -9,12 +10,8 @@ interface Props {
 }
 
 const { projects } = Astro.props;
-// The index beside the headline is a shortlist, so it stays about as tall
-// as the headline and its line however many projects there are: the
-// featured ones, in the page's order. The projects list below has them all.
-const featured = projects.filter((p) => p.data.featured);
-if (featured.length < 1 || featured.length > 4)
-  throw new Error("one to four projects must be featured");
+// The index beside the headline: the featured projects.
+const featured = featuredProjects(projects);
 // The headline is split into words so each word can rise out of its own
 // clip, in turn (motion.css). Screen readers get the sentence once, from
 // aria-label.
@@ -42,14 +39,14 @@ const [, rest = lineAfter, lastPair = ""] =
     <h1 id="hero-title" class="hero-title" aria-label={hero.headline}>
       {words.map((word, i) => (
         <>
-          <span class="w" aria-hidden="true" style={`--w: ${i}`}>
+          <span class="w" aria-hidden="true" data-w={i}>
             <span>{word}</span>
           </span>
           {i < words.length - 1 && " "}
         </>
       ))}
     </h1>
-    <p class="rv" style="--d: 420ms">
+    <p class="rv" data-d="420">
       {lead}
       <span class="nobr">
         {beforeChip}

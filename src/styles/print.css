@@ -315,6 +315,8 @@
      header: /fettle's own .top block is a section like the rest.) */
   header.top {
     display: block !important;
+    position: static !important;
+    transform: none !important;
     padding: 0 0 3mm !important;
     border-bottom: 1px dashed #000;
     margin-bottom: 4mm;
@@ -322,6 +324,7 @@
 
   header.top nav,
   header.top .tools,
+  header.top .toggle,
   .skip,
   .curtain,
   .previews,

@@ -2,6 +2,6 @@
 // src/content/experiments/).
 export const experiments = {
   title: "Experiments",
-  lede: "Small tools that run in your browser. Nothing you drop into them is uploaded.",
+  lede: "Small tools that run in your browser. Files you drop into them never leave it.",
   credit: "Open source, MIT.",
 };

@@ -86,13 +86,13 @@ const words = contact.question.split(" ");
         </>
       ))}
     </p>
-    <p class="lead rv" style="--d: 360ms">
+    <p class="lead rv" data-d="360">
       {contact.lead}
     </p>
     <!-- One outline pill, two controls: the mailto link and Copy. The
          reveal is on the wrapper, so the pill's own transitions keep
          their timing. -->
-    <div class="mail rv" style="--d: 460ms">
+    <div class="mail rv" data-d="460">
       <div class="pill">
         <a class="seg address" href={`mailto:${site.email}`}>
           <span class="fill" aria-hidden="true"></span>
@@ -148,7 +148,7 @@ const words = contact.question.split(" ");
     </div>
   </div>
 
-  <div class="card rv" style="--d: 200ms">
+  <div class="card rv" data-d="200">
     <div class="who">
       <Picture
         class="avatar"
@@ -180,7 +180,7 @@ const words = contact.question.split(" ");
     {groups.map((group, g) => (
       <ul class="rows">
         {group.map((l, i) => (
-          <li class="rv" style={`--d: 320ms; --i: ${g * 2 + i}`}>
+          <li class="rv" data-d="320" data-i={g * 2 + i}>
             <a class="row" href={l.href}>
               <svg
                 viewBox={l.box ?? "0 0 24 24"}

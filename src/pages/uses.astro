@@ -27,12 +27,12 @@ const devices = uses.sections
           <span>{uses.title}</span>
         </span>
       </h1>
-      <p class="lede rv" style="--d: 200ms">
+      <p class="lede rv" data-d="200">
         {uses.lede}
       </p>
     </div>
     <nav class="toc" aria-labelledby="toc-title">
-      <h2 id="toc-title" class="rv rv-line" style="--d: 300ms">
+      <h2 id="toc-title" class="rv rv-line" data-d="300">
         On this page
       </h2>
       <ol>
@@ -42,7 +42,9 @@ const devices = uses.sections
               "rv",
               { "rv-line at-bottom": i < uses.sections.length - 1 },
             ]}
-            style={`--d: 360ms; --i: ${i}; --line-color: var(--line)`}
+            data-d="360"
+            data-i={i}
+            data-line="line"
           >
             <a class="shift" href={`#${s.id}`}>
               <span class="name">{s.title}</span>
@@ -62,7 +64,7 @@ const devices = uses.sections
     <section
       id={s.id}
       class="group rv-line"
-      style="--line-color: var(--ink)"
+      data-line="ink"
       aria-labelledby={`${s.id}-title`}
     >
       <h2 id={`${s.id}-title`}>
@@ -82,7 +84,8 @@ const devices = uses.sections
                   "rv",
                   { "rv-line at-bottom": i < s.rows.length - 1 },
                 ]}
-                style={`--i: ${i}; --line-color: var(--line)`}
+                data-i={i}
+                data-line="line"
               >
                 <dt>{r.label}</dt>
                 <span class="leader" aria-hidden="true">

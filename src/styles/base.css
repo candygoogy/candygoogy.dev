@@ -14,6 +14,25 @@ html {
   text-size-adjust: 100%;
 }
 
+/* Below 47.5rem the header stays at the top of the window (Header.astro),
+   so what focus or a jump scrolls to stops clear of it: its height plus
+   the usual room. The header measures itself (--header-h); until it has,
+   its height is worked out from its padding and Menu's line. */
+@media (max-width: 47.5rem) {
+  html.js {
+    scroll-padding-top: calc(
+      var(--header-h, 2 * var(--sp-5) + var(--fs-meta) * var(--lh-body)) +
+        var(--sp-5)
+    );
+  }
+
+  /* A jump to a section from the menu: the header is away, so the usual
+     room alone. */
+  html.js.menu-jump {
+    scroll-padding-top: var(--sp-5);
+  }
+}
+
 body {
   margin: 0;
   font-family: var(--ff-text);

@@ -64,7 +64,21 @@ const beside = [
   checks % 3 === 1 && "beside-3",
   checks % 2 === 1 && "beside-2",
 ].filter(Boolean);
-const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks / 2)}`;
+// The grid's row count comes from data attributes mapped in the styles
+// below, not a style="" (it would cost the page a hash in its CSP, see
+// motion.css). They're mapped for up to 12 checks.
+const note = page.checksNote && beside.length > 0;
+if (note && checks > 12) {
+  throw new Error(
+    `projects/${project.id}.md has ${checks} checks; the note beside the last one is mapped for up to 12. Map more rows ([data-rows-3], [data-rows-2]) in ProductPage.astro.`,
+  );
+}
+const rows = note
+  ? {
+      "data-rows-3": Math.ceil(checks / 3),
+      "data-rows-2": Math.ceil(checks / 2),
+    }
+  : {};
 ---
 
 <Base
@@ -90,13 +104,10 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
         <span>What it checks</span>
       </span>
     </h2>
-    <div
-      class:list={["checks-grid", page.checksNote && beside]}
-      style={page.checksNote && beside.length ? rows : undefined}
-    >
+    <div class:list={["checks-grid", page.checksNote && beside]} {...rows}>
       <ul class="checks">
         {page.checks.map((c, i) => (
-          <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
+          <li class="rv rv-line" data-i={i} data-line="line">
             <h3>{c.name}</h3>
             <p>{c.text}</p>
           </li>
@@ -117,10 +128,10 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
       {shown.map((u) => {
         const shot = data.images[u.shot ?? 0];
         return (
-          <li class="use rv-line" style="--line-color: var(--line)">
+          <li class="use rv-line" data-line="line">
             <p class="rv">{u.text}</p>
             {shot && (
-              <figure class="rv" style="--d: 120ms" data-tilt>
+              <figure class="rv" data-d="120" data-tilt>
                 <div class="tilt">
                   <Shot
                     src={shot.light}
@@ -138,7 +149,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
     </ul>
     <ul class="more">
       {plain.map((u, i) => (
-        <li class="rv rv-line" style={`--i: ${i}; --line-color: var(--line)`}>
+        <li class="rv rv-line" data-i={i} data-line="line">
           {u.link ? (
             <>
               {parts(u.text, u.link.text)[0]}
@@ -169,7 +180,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
       ))}
     </div>
     {page.learned && (
-      <div class="rv rv-line" style="--i: 1">
+      <div class="rv rv-line" data-i="1">
         <h2>What I learned</h2>
         {page.learned.split("\n\n").map((para) => (
           <p>{para}</p>
@@ -186,7 +197,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
     <p class="statement rv">
       <Keep text={`${data.summary.split(". ")[0]}.`} />
     </p>
-    <div class="actions rv" style="--d: 160ms">
+    <div class="actions rv" data-d="160">
       {get && (
         <a class="get" href={get}>
           Get {data.name}
@@ -198,7 +209,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
         </a>
       )}
     </div>
-    <ul class="facts rv" style="--d: 240ms">
+    <ul class="facts rv" data-d="240">
       {version && <li>Version {version}</li>}
       {data.runsOn && (
         <li>
@@ -207,7 +218,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
       )}
       {data.license && <li>Free and open source, {data.license}</li>}
     </ul>
-    <p class="back rv" style="--d: 300ms">
+    <p class="back rv" data-d="300">
       <a class="tap" href="/#projects">
         Back to all projects
       </a>
@@ -270,9 +281,41 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
   /* The note beside the last check: the list's rows become the outer
      grid's (subgrid), and the note takes the free cells of the last one,
      its text level with the checks' names. Without subgrid it stays
-     under the list. */
+     under the list. The row counts come from data-rows-3 and data-rows-2,
+     mapped here for up to 12 checks (the build throws past that). */
+  [data-rows-3="1"] {
+    --rows-3: 1;
+  }
+  [data-rows-3="2"] {
+    --rows-3: 2;
+  }
+  [data-rows-3="3"] {
+    --rows-3: 3;
+  }
+  [data-rows-3="4"] {
+    --rows-3: 4;
+  }
+  [data-rows-2="1"] {
+    --rows-2: 1;
+  }
+  [data-rows-2="2"] {
+    --rows-2: 2;
+  }
+  [data-rows-2="3"] {
+    --rows-2: 3;
+  }
+  [data-rows-2="4"] {
+    --rows-2: 4;
+  }
+  [data-rows-2="5"] {
+    --rows-2: 5;
+  }
+  [data-rows-2="6"] {
+    --rows-2: 6;
+  }
+
   @supports (grid-template-rows: subgrid) {
-    @media (min-width: 53.76rem) {
+    @media (width > 53.75rem) {
       .beside-3 {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -294,7 +337,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
       }
     }
 
-    @media (min-width: 32.51rem) and (max-width: 53.75rem) {
+    @media (32.5rem < width <= 53.75rem) {
       .beside-2 {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -495,7 +538,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
     font-size: var(--fs-meta);
   }
 
-  @media (max-width: 53.75rem) {
+  @media (width <= 53.75rem) {
     .checks {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -516,7 +559,7 @@ const rows = `--rows-3: ${Math.ceil(checks / 3)}; --rows-2: ${Math.ceil(checks /
     }
   }
 
-  @media (max-width: 32.5rem) {
+  @media (width <= 32.5rem) {
     .checks {
       grid-template-columns: 1fr;
     }

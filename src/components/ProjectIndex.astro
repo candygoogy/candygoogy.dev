@@ -1,6 +1,7 @@
 ---
 // The home page hero's index, a shortlist of the featured projects: a
-// heading and one row per project (its name, then its line).
+// heading and one row per project (its name, then its line). The menu
+// (Header.astro) shows the same index, on every page.
 import type { CollectionEntry } from "astro:content";
 import { hero } from "../data/site";
 import { vtAttr } from "../lib/vt";
@@ -10,29 +11,52 @@ interface Props {
   projects: CollectionEntry<"projects">[];
   // The heading's id (unique per page).
   headingId: string;
-  // Reveal delays for the heading and the first row (the rows stagger).
+  // Reveal delays for the heading and the first row (the rows stagger), in
+  // ms: each must be one of the data-d values motion.css maps to --d.
   delay?: { title: number; rows: number };
+  // In the menu, the rows are closer together, with no rules above or
+  // below the list, and the menu plays their entrance as it opens.
+  variant?: "hero" | "menu";
 }
 
-const { projects, headingId, delay = { title: 520, rows: 600 } } = Astro.props;
+const {
+  projects,
+  headingId,
+  delay = { title: 520, rows: 600 },
+  variant = "hero",
+} = Astro.props;
+const menu = variant === "menu";
 
 // Products open their page; everything else jumps to its own row in the
-// projects list, on the same page.
+// projects list, on the home page. The link to the page you're on is
+// marked as such.
+const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+const prefix = path === "/" ? "" : "/";
 const href = (p: CollectionEntry<"projects">) =>
-  p.data.kind === "product" ? `/${p.id}` : `#${p.id}`;
+  p.data.kind === "product" ? `/${p.id}` : `${prefix}#${p.id}`;
 ---
 
-<nav class="index" aria-labelledby={headingId}>
-  <h2 id={headingId} class="rv rv-line" style={`--d: ${delay.title}ms`}>
+<nav class:list={["index", { "in-menu": menu }]} aria-labelledby={headingId}>
+  <h2
+    id={headingId}
+    class={menu ? undefined : "rv rv-line"}
+    data-d={menu ? undefined : delay.title}
+  >
     {hero.featuredTitle}
   </h2>
   <ol>
     {projects.map((p, i) => (
       <li
-        class="rv rv-line at-bottom"
-        style={`--d: ${delay.rows}ms; --i: ${i}; --line-color: var(--line)`}
+        class={menu ? undefined : "rv rv-line at-bottom"}
+        data-d={menu ? undefined : delay.rows}
+        data-i={i}
+        data-line={menu ? undefined : "line"}
       >
-        <a class="shift" href={href(p)}>
+        <a
+          class="shift"
+          href={href(p)}
+          aria-current={href(p) === path ? "page" : undefined}
+        >
           <span
             {...(p.data.kind === "product" ? vtAttr(p.id) : {})}
             class:list={[
@@ -92,5 +116,20 @@ const href = (p: CollectionEntry<"projects">) =>
     font-size: var(--fs-meta);
     color: var(--soft);
     text-wrap: balance;
+  }
+
+  /* In the menu: the heading opens the list without a rule, and the rows
+     are closer, with a rule between them only (the list doesn't end on
+     one). Each row is still well over 44px tall. */
+  .index.in-menu h2 {
+    padding-top: 0;
+  }
+
+  .index.in-menu a {
+    padding-block: var(--sp-2);
+  }
+
+  .index.in-menu li + li {
+    border-top: var(--rule) solid var(--line);
   }
 </style>

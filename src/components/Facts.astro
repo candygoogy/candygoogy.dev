@@ -16,54 +16,54 @@ const status = {
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 ---
 
-<dl class="facts rv-line" style="--line-color: var(--band-line)">
-  <dt class="rv" style="--i: 0">
+<dl class="facts rv-line" data-line="band-line">
+  <dt class="rv" data-i="0">
     Status
   </dt>
-  <dd class="rv" style="--i: 0">
+  <dd class="rv" data-i="0">
     <span class:list={[{ live: data.status === "live" }]}>{status}</span>
     {version && `, version ${version}`}
   </dd>
-  <dt class="rv" style="--i: 1">
+  <dt class="rv" data-i="1">
     Built with
   </dt>
-  <dd class="rv" style="--i: 1">
+  <dd class="rv" data-i="1">
     {data.stack.join(", ")}
   </dd>
   {data.runsOn && (
     <>
-      <dt class="rv" style="--i: 2">
+      <dt class="rv" data-i="2">
         Runs on
       </dt>
-      <dd class="rv" style="--i: 2">
+      <dd class="rv" data-i="2">
         <Keep text={data.runsOn} />
       </dd>
     </>
   )}
   {data.command && (
     <>
-      <dt class="rv" style="--i: 3">
+      <dt class="rv" data-i="3">
         Command
       </dt>
-      <dd class="rv" style="--i: 3">
+      <dd class="rv" data-i="3">
         {data.command}
       </dd>
     </>
   )}
   {data.license && (
     <>
-      <dt class="rv" style="--i: 3">
+      <dt class="rv" data-i="4">
         License
       </dt>
-      <dd class="rv" style="--i: 3">
+      <dd class="rv" data-i="4">
         {data.license}
       </dd>
     </>
   )}
-  <dt class="rv" style="--i: 4">
+  <dt class="rv" data-i="5">
     Links
   </dt>
-  <dd class="links rv" style="--i: 4">
+  <dd class="links rv" data-i="5">
     {data.links.live && <a href={data.links.live}>{host(data.links.live)}</a>}
     {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
   </dd>

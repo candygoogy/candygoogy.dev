@@ -44,7 +44,7 @@ const dates = (when: string): [string, string] => {
 <Section id="about" title="About">
   <div class="intro">
     <p class="lead rv">{about.background}</p>
-    <p class="lead rv" style="--i: 1">
+    <p class="lead rv" data-i="1">
       {about.away}
     </p>
   </div>
@@ -70,7 +70,7 @@ const dates = (when: string): [string, string] => {
             </p>
           )}
           <div class="body">
-            <h3 class="rv" style="--i: 1">
+            <h3 class="rv" data-i="1">
               {g.org ? (
                 <a
                   class="org"
@@ -98,7 +98,7 @@ const dates = (when: string): [string, string] => {
                 return (
                   <li
                     class:list={["role", "rv", { current: item.current }]}
-                    style={`--i: ${i + 2}`}
+                    data-i={i + 2}
                   >
                     <span class="dot" aria-hidden="true">
                       <span></span>
@@ -135,7 +135,7 @@ const dates = (when: string): [string, string] => {
   </h3>
   <dl class="skills">
     {skills.map((s, i) => (
-      <div class="rv" style={`--i: ${i + 1}`}>
+      <div class="rv" data-i={i + 1}>
         <dt>{s.group}</dt>
         {/* Lines break between skills, never inside one ("Claude Code"). */}
         <dd>

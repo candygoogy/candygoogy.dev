@@ -24,7 +24,6 @@ const options = [
       <span class="face">
         <span class="name">{o.label}</span>
         {o.value === "auto" && <span class="resolved" />}
-        <span class:list={["icon", `icon-${o.value}`]} aria-hidden="true" />
       </span>
       {o.value === "auto" && <span class="visually-hidden" data-resolved />}
     </button>
@@ -33,7 +32,6 @@ const options = [
     {options.map((o) => (
       <span class="face" data-label={o.label}>
         {o.value === "auto" && <span class="resolved" />}
-        <span class:list={["icon", `icon-${o.value}`]} />
       </span>
     ))}
   </div>
@@ -61,6 +59,27 @@ const options = [
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   // The wipe starts while the pill is still landing.
   const SLIDE = 120;
+  // There can be two (the header, and the menu on narrow screens): a
+  // theme put on by one is shown by both.
+  const syncs: (() => void)[] = [];
+
+  const apply = (value: string) => {
+    if (value === "auto") {
+      delete root.dataset.theme;
+      meta?.setAttribute("content", "light dark");
+    } else {
+      root.dataset.theme = value;
+      meta?.setAttribute("content", value);
+    }
+    barColor(value);
+    try {
+      if (value === "auto") localStorage.removeItem("theme");
+      else localStorage.setItem("theme", value);
+    } catch {
+      // Storage blocked: the choice lasts for this page only.
+    }
+    for (const s of syncs) s();
+  };
 
   for (const group of document.querySelectorAll<HTMLElement>(
     "[data-theme-switch]",
@@ -80,24 +99,6 @@ const options = [
       }
       if (resolved)
         resolved.textContent = dark.matches ? " (dark)" : " (light)";
-    };
-
-    const apply = (value: string) => {
-      if (value === "auto") {
-        delete root.dataset.theme;
-        meta?.setAttribute("content", "light dark");
-      } else {
-        root.dataset.theme = value;
-        meta?.setAttribute("content", value);
-      }
-      barColor(value);
-      try {
-        if (value === "auto") localStorage.removeItem("theme");
-        else localStorage.setItem("theme", value);
-      } catch {
-        // Storage blocked: the choice lasts for this page only.
-      }
-      sync();
     };
 
     // Would the page actually look different? (Auto and the theme it
@@ -150,33 +151,35 @@ const options = [
       }, SLIDE);
     });
 
-    // A page restored from the back/forward cache comes back with the
-    // theme it was left with; one chosen on another page since is put on
-    // at once, before it's seen: no wipe, no colour fades, and the pill
-    // already in place.
-    addEventListener("pageshow", (event) => {
-      if (!event.persisted) return;
-      let saved: string | null;
-      try {
-        saved = localStorage.getItem("theme");
-      } catch {
-        return;
-      }
-      const value = saved === "light" || saved === "dark" ? saved : "auto";
-      if (value === (root.dataset.theme ?? "auto")) return;
-      root.classList.add("theme-switching", "theme-restore");
-      apply(value);
-      void root.offsetWidth; // The new state is in place with transitions off.
-      requestAnimationFrame(() =>
-        root.classList.remove("theme-switching", "theme-restore"),
-      );
-    });
     dark.addEventListener("change", sync);
+    syncs.push(sync);
     sync();
     requestAnimationFrame(() => {
       group.dataset.ready = "";
     });
   }
+
+  // A page restored from the back/forward cache comes back with the theme
+  // it was left with; one chosen on another page since is put on at once,
+  // before it's seen: no wipe, no colour fades, and the pill already in
+  // place. One listener: apply() updates every switch.
+  addEventListener("pageshow", (event) => {
+    if (!event.persisted) return;
+    let saved: string | null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch {
+      return;
+    }
+    const value = saved === "light" || saved === "dark" ? saved : "auto";
+    if (value === (root.dataset.theme ?? "auto")) return;
+    root.classList.add("theme-switching", "theme-restore");
+    apply(value);
+    void root.offsetWidth; // The new state is in place with transitions off.
+    requestAnimationFrame(() =>
+      root.classList.remove("theme-switching", "theme-restore"),
+    );
+  });
 </script>
 
 <style>
@@ -309,57 +312,6 @@ const options = [
   @media (prefers-color-scheme: dark) {
     .resolved {
       mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13 9.6A5.5 5.5 0 1 1 6.4 3a4.3 4.3 0 0 0 6.6 6.6Z' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E");
-    }
-  }
-
-  /* The icons-only form (the narrowest phones) and its three marks: a
-     half-filled circle for Auto, a sun, a moon. */
-  .icon {
-    display: none;
-    width: 14px;
-    height: 14px;
-    background: currentColor;
-    mask: center / contain no-repeat;
-  }
-
-  .icon-auto {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='5.75' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cpath d='M8 2.25a5.75 5.75 0 0 1 0 11.5Z' fill='black'/%3E%3C/svg%3E");
-  }
-
-  .icon-light {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='3' fill='black' stroke='none'/%3E%3Cpath d='M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1'/%3E%3C/svg%3E");
-  }
-
-  .icon-dark {
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13 9.6A5.5 5.5 0 1 1 6.4 3a4.3 4.3 0 0 0 6.6 6.6Z' fill='none' stroke='black' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E");
-  }
-
-  /* At 384px and below the switch shows icons only, so the wordmark and
-     the switch share one row. The names stay as the buttons' accessible
-     names. */
-  @media (max-width: 24rem) {
-    button,
-    .ink .face {
-      padding: 0 var(--sp-2);
-      min-width: 2.75rem;
-    }
-
-    .icon {
-      display: block;
-    }
-
-    .resolved,
-    .ink .face::before {
-      display: none;
-    }
-
-    .name {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
     }
   }
 

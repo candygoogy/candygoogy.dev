@@ -31,21 +31,21 @@ const hops = [
     <div class="lost">
       <p class="code" aria-hidden="true">
         {[..."404"].map((ch, i) => (
-          <span class="l" style={`--i: ${i}`}>
+          <span class="l" data-i={i}>
             <span>{ch}</span>
           </span>
         ))}
       </p>
       <h1 id="nf-title">
-        <span class="rv-mask" style="--d: 260ms">
+        <span class="rv-mask" data-d="260">
           <span>Page not found</span>
         </span>
       </h1>
-      <p class="lede rv" style="--d: 380ms">
+      <p class="lede rv" data-d="380">
         There’s nothing at this address. It may have moved, or the link has a
         typo.
       </p>
-      <p class="back rv" style="--d: 500ms">
+      <p class="back rv" data-d="500">
         <a href="/">Back to candygoogy.dev</a>
       </p>
     </div>

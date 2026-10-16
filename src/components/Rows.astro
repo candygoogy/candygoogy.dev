@@ -14,8 +14,8 @@ export interface Row {
   kind?: string;
   year: number;
   summary: string;
-  // The row's link: a page on this site (its address), a live site (its
-  // domain and ↗) or its source.
+  // The row's link: a page on this site (its address and →), a live site
+  // (its domain and ↗) or its source.
   link?:
     | { kind: "page"; href: string; label: string }
     | { kind: "live"; href: string; label: string }
@@ -74,12 +74,16 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     {rows.map((row, i) => {
       const go = row.link;
       const last = i === rows.length - 1;
+      // A page link's name goes on past its address. Kept in one
+      // expression with the label, so no space lands before the comma.
+      const about = `, about ${row.name}`;
       return (
         <li
           id={row.id}
           class:list={["row", "rv", { "rv-line at-bottom": !last }]}
           data-arrive
-          style={last ? `--i: ${i}` : `--i: ${i}; --line-color: var(--line)`}
+          data-i={i}
+          data-line={last ? undefined : "line"}
         >
           <div class="who">
             {level === 2 ? (
@@ -105,7 +109,16 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
               {go &&
                 (go.kind === "page" ? (
                   <a class="go" href={go.href}>
-                    {go.label}
+                    {[go.label, <span class="visually-hidden">{about}</span>]}
+                    <svg
+                      class="arr next"
+                      viewBox="0 0 16 16"
+                      width="14"
+                      height="14"
+                      aria-hidden="true"
+                    >
+                      <path d="M3.5 8h9M8.5 4l4 4-4 4" />
+                    </svg>
                   </a>
                 ) : go.kind === "live" ? (
                   <a class="go" href={go.href}>
@@ -339,6 +352,10 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
 
     .row:hover .arr {
       transform: translate(2px, -2px);
+    }
+
+    .row:hover .next {
+      transform: translateX(2px);
     }
 
     .row:hover .mark {

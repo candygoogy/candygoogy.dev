@@ -68,7 +68,10 @@
   --gutter: clamp(1.25rem, 5vw, 4.5rem);
   --gap-hero: clamp(2.5rem, 7vw, 7.5rem);
   --space-section: clamp(5rem, 13vh, 9.5rem);
-  --space-hero-top: clamp(4.5rem, 14vh, 10.5rem);
+  /* The space over a page's headline follows the window's height, but no
+     more than its width allows: on a tall, narrow window (a phone) the
+     headline is small, and height alone left it far below the header. */
+  --space-hero-top: clamp(3rem, min(14vh, 12vw), 10.5rem);
   --space-hero-bottom: clamp(4rem, 10vh, 7.5rem);
   --space-band: clamp(4rem, 10vh, 7.5rem);
 

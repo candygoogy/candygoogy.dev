@@ -26,7 +26,8 @@ const projects = defineCollection({
         date: z.coerce.date(),
         stack: z.array(z.string().min(1)).min(1),
         role: z.string().min(1).optional(),
-        // Fallback only: the build reads the latest release tag when it can.
+        // The site shows the higher of this and the latest published release,
+        // so bump it only once the release is published.
         version: z.string().min(1).optional(),
         // owner/repo on GitHub, for the latest release tag.
         repo: z
@@ -124,6 +125,19 @@ const projects = defineCollection({
       .refine((p) => p.kind !== "product" || p.story !== undefined, {
         message: "Products need a story (why, hard, promise).",
         path: ["story"],
+      })
+      // A use's shot is checked here, where the images are in view: past
+      // the last one, the page would drop its screenshot without a word.
+      .superRefine((p, ctx) => {
+        p.page?.uses.forEach((u, i) => {
+          if (u.shot !== undefined && u.shot >= p.images.length) {
+            ctx.addIssue({
+              code: "custom",
+              message: `shot ${u.shot} is past the images: there are ${p.images.length}, numbered from 0.`,
+              path: ["page", "uses", i, "shot"],
+            });
+          }
+        });
       }),
 });
 

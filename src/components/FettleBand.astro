@@ -42,13 +42,13 @@ const version = latestVersion(data.repo, data.version);
         ch === " " ? (
           " "
         ) : (
-          <span class="l" aria-hidden="true" style={`--i: ${i}`}>
+          <span class="l" aria-hidden="true" data-i={i}>
             <span>{ch}</span>
           </span>
         ),
       )}
     </Heading>
-    <p class="lede rv" style="--d: 260ms">
+    <p class="lede rv" data-d="260">
       <Keep text={data.summary} />
     </p>
   </div>
@@ -57,7 +57,7 @@ const version = latestVersion(data.repo, data.version);
     <figure
       class="stage rv vt-project-shot"
       {...vtAttr(project.id)}
-      style="--d: 380ms"
+      data-d="380"
       data-tilt
       data-decode
     >
@@ -77,28 +77,28 @@ const version = latestVersion(data.repo, data.version);
     <div class="story">
       {data.story && (
         <>
-          <Sub class="sub rv" style="--i: 0">
+          <Sub class="sub rv" data-i="0">
             Why
           </Sub>
-          <p class="rv" style="--i: 1">
+          <p class="rv" data-i="1">
             {data.story.why}
           </p>
-          <Sub class="sub rv" style="--i: 2">
+          <Sub class="sub rv" data-i="2">
             What was hard
           </Sub>
-          <p class="rv" style="--i: 3">
+          <p class="rv" data-i="3">
             {data.story.hard}
           </p>
-          <Sub class="sub rv" style="--i: 4">
+          <Sub class="sub rv" data-i="4">
             What it won’t do
           </Sub>
-          <p class="rv" style="--i: 5">
+          <p class="rv" data-i="5">
             {data.story.promise}
           </p>
         </>
       )}
       {!page && (
-        <p class="more rv" style="--i: 6">
+        <p class="more rv" data-i="6">
           <a class="tap" href={`/${project.id}`}>
             What {data.name} checks, and how it handles privacy
           </a>

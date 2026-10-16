@@ -3,11 +3,13 @@
 // applied before first paint.
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Font } from "astro:assets";
 import Curtain from "../components/Curtain.astro";
 import Footer from "../components/Footer.astro";
 import Header from "../components/Header.astro";
 import { hero, site } from "../data/site";
+import { root } from "../lib/github";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import "../styles/motion.css";
@@ -51,7 +53,7 @@ const ogImage = new URL(ogPath, Astro.site);
 // (scripts/icons.mjs). Browsers keep favicons for a long time, so the URL
 // carries a hash of the file: a new avatar gets a new URL.
 const icon = (file: string) => {
-  const path = `public/${file}`;
+  const path = join(root, "public", file);
   if (!existsSync(path)) return `/${file}`;
   const hash = createHash("sha256").update(readFileSync(path)).digest("hex");
   return `/${file}?v=${hash.slice(0, 10)}`;
