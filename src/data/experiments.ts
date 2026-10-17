@@ -10,8 +10,11 @@ export const experiments = {
   // and mail's DNS lookup or none); just the first sentence when one
   // doesn't, or wasn't checked.
   lede: (day?: string) => (day ? `${intro} ${policy} Checked ${day}.` : intro),
-  // The page's description, its card's alt text and the terminal card:
-  // static, without a date.
-  description: `${intro} ${policy}`,
+  // The page's description and the terminal card: like the lede, the
+  // policy sentence only when the check holds, but without a date.
+  description: (day?: string) => (day ? `${intro} ${policy}` : intro),
+  // The social card (public/og-experiments.png) is a committed image that
+  // can't follow the check, so it and its alt text make no claim.
+  intro,
   credit: "Open source, MIT.",
 };

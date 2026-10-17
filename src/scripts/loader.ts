@@ -33,6 +33,10 @@ matchMedia("(prefers-reduced-motion: reduce)").addEventListener(
   { once: true },
 );
 
+// iOS Safari only applies :active (every press: a row's in Rows.astro, the
+// contact and 404 buttons) when the page listens for touches.
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 // For the curious, once per page.
 console.info(
   "Hi. Curious how this works? The source is at github.com/candygoogy/candygoogy.dev",

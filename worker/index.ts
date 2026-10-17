@@ -81,6 +81,8 @@ async function page(request: Request, env: Env, cardPath: string) {
   if (wantsText) {
     const card = await env.ASSETS.fetch(new URL(cardPath, request.url));
     if (card.ok) {
+      // A HEAD sends no body: the card's own is let go, not left open.
+      if (request.method === "HEAD") await card.body?.cancel();
       return new Response(request.method === "HEAD" ? null : card.body, {
         headers: {
           "Content-Type": "text/plain; charset=utf-8",

@@ -30,7 +30,7 @@ A small, static site with one job: show what I've made, starting with [Fettle](h
 
 - **Site:** [Astro](https://astro.build), static output. A small theme script runs before the first paint, so the page never flashes the wrong theme; the rest of the interactive parts are small TypeScript scripts that load after it.
 - **Hosting:** Cloudflare Workers static assets, on the apex domain only.
-- **Deploys:** Workers Builds, from this repo's `main` branch.
+- **Deploys:** Workers Builds, from this repo's `main` branch, only once lint, typecheck and the unit tests pass (`npm run build:deploy`).
 - **Type:** Cabinet Grotesk and Satoshi, from [Fontshare](https://www.fontshare.com).
 - **Discord status:** a small Worker route (`/api/presence`) asks [Lanyard](https://github.com/Phineas/lanyard) server-side and returns only online, idle, do not disturb or offline. Visitors' browsers only ever talk to candygoogy.dev.
 - **Checks:** ESLint, Prettier and `astro check` on every push, in [CI](.github/workflows/ci.yml).
@@ -47,14 +47,15 @@ wrangler.jsonc        Cloudflare config (no account details)
 
 ## Develop
 
-Requires Node 22.12 or newer.
+Requires Node 22.18 or newer (Workers Builds and CI use the version in `.node-version`).
 
 ```sh
 npm ci
 npm run dev        # fetch fonts, then the Astro dev server
 npm run lint       # ESLint + Prettier check (never rewrites files)
-npm run typecheck  # astro check
+npm run typecheck  # astro check, then tsc on the Worker
 npm run build      # fetch fonts, then static output in dist/
+npm run build:deploy  # lint, typecheck and unit tests, then build (Workers Builds runs this)
 npm run preview    # serve dist/ locally with Wrangler, as on Cloudflare
 ```
 

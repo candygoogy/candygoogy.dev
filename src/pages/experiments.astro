@@ -2,23 +2,18 @@
 // Experiments: small tools that run in the browser, each on its own
 // subdomain, as text rows like the projects list. Each row links to the
 // tool (the whole row) and to its source.
-import { getCollection } from "astro:content";
 import Rows, { type Row } from "../components/Rows.astro";
 import Base from "../layouts/Base.astro";
 import { experiments as words } from "../data/experiments";
-import { policyChecked } from "../lib/experiments-csp";
+import { listedExperiments, policyChecked } from "../lib/experiments-csp";
 
-const entries = (
-  await getCollection(
-    "experiments",
-    ({ data }) => !data.draft && data.status !== "retired",
-  )
-).sort((a, b) => a.id.localeCompare(b.id));
+const entries = await listedExperiments();
 // The lede says every tool but mail is blocked from connecting anywhere, as
 // of the oldest check, only when each one's security policy says so (and
 // mail's allows its DNS lookup at most). One string, so no whitespace is
-// lost around it.
-const lede = words.lede(policyChecked(entries.map(({ id }) => id)));
+// lost around it. The description follows the same check.
+const checked = policyChecked(entries.map(({ id }) => id));
+const lede = words.lede(checked);
 const rows: Row[] = entries.map(({ id, data }) => ({
   id,
   name: data.name,
@@ -33,9 +28,9 @@ const rows: Row[] = entries.map(({ id, data }) => ({
 
 <Base
   title={`${words.title} – candygoogy`}
-  description={words.description}
+  description={words.description(checked)}
   ogImage="/og-experiments.png"
-  ogAlt={`${words.title}: ${words.description}`}
+  ogAlt={`${words.title}: ${words.intro}`}
 >
   <div class="head">
     <h1 id="experiments-title">

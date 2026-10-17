@@ -12,14 +12,14 @@
 //
 // The parse and checks are exported for the tests; only running the file
 // directly fetches anything.
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
 import {
+  allows,
   classify,
-  connectSources,
+  EXPECTED,
   expected,
-  listedUrl,
+  livePolicies,
   looser,
+  policyOf,
 } from "./experiments-policy.mjs";
 
 const SITE = "https://candygoogy.dev";
@@ -126,15 +126,25 @@ export function checkPolicies(results) {
       });
       continue;
     }
-    const connect = connectSources(result.header);
-    const cls = classify(id, connect);
+    const policy = policyOf(result.header);
+    const cls = classify(id, policy.connect, policy.elsewhere);
     if (looser(id, cls)) {
       lines.push({
         ok: false,
-        text: `${id} allows connect-src ${connect.join(" ")}, more than "${expected(id)}": /experiments' lede drops what it says about the policies; fix the tool's policy, or the words for it`,
+        text: `${id} allows ${allows(policy)}, more than "${expected(id)}": /experiments' lede drops what it says about the policies; fix the tool's policy, or the words for it`,
       });
     } else {
       fine.push(`${id} ${cls}`);
+    }
+  }
+  // The lede names these tools, so it drops its policy sentences when one
+  // isn't listed: retired, a draft, or gone.
+  for (const id of Object.keys(EXPECTED)) {
+    if (results.length && !results.some((r) => r.id === id)) {
+      lines.push({
+        ok: false,
+        text: `${id} isn't listed on /experiments, but the lede names it, so it drops what it says about the policies; update its words (src/data/experiments.ts) and EXPECTED (scripts/experiments-policy.mjs)`,
+      });
     }
   }
   if (!results.length) {
@@ -143,32 +153,6 @@ export function checkPolicies(results) {
     lines.push({ ok: true, text: `experiments' policies: ${fine.join(", ")}` });
   }
   return lines;
-}
-
-// Every experiment /experiments lists, with its live policy header.
-async function policies() {
-  const dir = join(import.meta.dirname, "..", "src", "content", "experiments");
-  const tools = [];
-  for (const file of (await readdir(dir)).sort()) {
-    if (!file.endsWith(".md")) continue;
-    const url = listedUrl(await readFile(join(dir, file), "utf8"));
-    if (url) tools.push({ id: file.slice(0, -3), url });
-  }
-  return Promise.all(
-    tools.map(async ({ id, url }) => {
-      try {
-        const res = await fetch(url, {
-          method: "HEAD",
-          headers: UA,
-          signal: AbortSignal.timeout(15_000),
-        });
-        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-        return { id, header: res.headers.get("content-security-policy") };
-      } catch (error) {
-        return { id, error };
-      }
-    }),
-  );
 }
 
 async function get(path) {
@@ -203,7 +187,7 @@ if (process.argv[1] === import.meta.filename) {
     process.exitCode = 1;
   }
   try {
-    report(checkPolicies(await policies()));
+    report(checkPolicies(await livePolicies()));
   } catch (error) {
     console.error(`check-live: FAIL couldn't check the experiments: ${error}`);
     process.exitCode = 1;

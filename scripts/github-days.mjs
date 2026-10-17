@@ -19,12 +19,17 @@ export function frontmatterKey(front, name) {
   ).exec(front)?.[1];
 }
 
+// A top-level frontmatter key read as a YAML 1.2 boolean, as the site's
+// content schema reads it: true for true, True or TRUE.
+export const frontmatterFlag = (front, name) =>
+  /^(?:true|True|TRUE)$/.test(frontmatterKey(front, name) ?? "");
+
 // A project file's repo if it is a product and not a draft (the site leaves
 // drafts out too), else undefined.
 export function productRepo(text) {
   const front = frontmatter(text);
   if (frontmatterKey(front, "kind") !== "product") return undefined;
-  if (frontmatterKey(front, "draft") === "true") return undefined;
+  if (frontmatterFlag(front, "draft")) return undefined;
   return frontmatterKey(front, "repo");
 }
 

@@ -6,7 +6,8 @@ import { site } from "../data/site";
 // from git, then from the latest commit on main on GitHub (deploy-hook
 // builds carry no commit of their own). Without any of them the stamp shows
 // just the date; the build never fails over it. One log line says which
-// source was used, or why none worked.
+// source was used, or why none worked. A commit read from git, in a tree
+// with uncommitted changes, is marked dirty: the build isn't that commit.
 
 const now = new Date();
 
@@ -25,6 +26,8 @@ export const builtOn = {
 const SHA = /^[0-9a-f]{40}$/i;
 // "https://github.com/owner/repo" -> "owner/repo"
 const REPO = new URL(site.source).pathname.slice(1);
+
+let fromGit = false;
 
 const firstLine = (error: unknown) =>
   String(
@@ -46,7 +49,10 @@ async function commitSha(): Promise<string | undefined> {
     })
       .toString()
       .trim();
-    if (SHA.test(sha)) return found(sha, "git", misses);
+    if (SHA.test(sha)) {
+      fromGit = true;
+      return found(sha, "git", misses);
+    }
     misses.push(`git gave "${sha}"`);
   } catch (error) {
     misses.push(`git: ${firstLine(error)}`);
@@ -84,3 +90,24 @@ function found(sha: string, source: string, misses: string[]) {
 }
 
 export const commit = await commitSha();
+
+function uncommitted(): boolean {
+  try {
+    return (
+      execSync("git status --porcelain", {
+        stdio: ["ignore", "pipe", "pipe"],
+      })
+        .toString()
+        .trim() !== ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const dirty = fromGit && uncommitted();
+if (dirty) console.log("build stamp: uncommitted changes, marked dirty");
+
+// The commit as the stamp shows it: "1a2b3c4", or "1a2b3c4-dirty".
+export const shortCommit =
+  commit && `${commit.slice(0, 7)}${dirty ? "-dirty" : ""}`;

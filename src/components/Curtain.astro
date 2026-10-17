@@ -75,6 +75,12 @@ import { site } from "../data/site";
       riding = true;
       requestAnimationFrame(follow);
     };
+    // A scroll while the intro waits for the font: on phones the header
+    // may still be sliding when start() measures it, so the ride follows
+    // from the start instead of waiting for a scroll that may not come.
+    let scrolledEarly = false;
+    const early = () => (scrolledEarly = true);
+    addEventListener("scroll", early, { passive: true, once: true });
 
     const release = () => {
       if (!root.classList.contains("intro-hold")) return;
@@ -93,14 +99,20 @@ import { site } from "../data/site";
         removeEventListener(t, skip, true);
       }
       removeEventListener("scroll", onScroll);
+      removeEventListener("scroll", early);
     };
 
     // Plays the rest at 2x, or faster if 2x would take over 450ms. The
-    // animations all started together, so one clock gives where they are;
-    // the lift's timer is brought forward to match, so the page still
-    // rises with the lift, and the curtain goes when the last one ends.
+    // animations all started together, so one clock gives where they are:
+    // the one that ends last, whose time runs for the whole intro (one that
+    // has ended stops at its end). The lift's timer is brought forward to
+    // match, so the page still rises with the lift, and the curtain goes
+    // when the last one ends.
+    const endOf = (a: Animation) =>
+      Number(a.effect?.getComputedTiming().endTime ?? 0);
     const hurry = () => {
-      const at = Number(animations[0]?.currentTime ?? 0);
+      const clock = animations.reduce((a, b) => (endOf(b) > endOf(a) ? b : a));
+      const at = Number(clock.currentTime ?? 0);
       const rate = Math.max(2, (t.end - at) / 450);
       for (const a of animations) a.updatePlaybackRate(rate);
       window.clearTimeout(liftTimer);
@@ -108,8 +120,10 @@ import { site } from "../data/site";
       if (at < t.lift) {
         liftTimer = window.setTimeout(release, (t.lift - at) / rate);
       } else release();
-      // finish() cancels them all; nothing is left to wait for then.
+      // finish() cancels them all; nothing is left to wait for then. The
+      // timer is the fallback if a finished promise never settles.
       Promise.all(animations.map((a) => a.finished)).then(finish, () => {});
+      endTimer = window.setTimeout(finish, (t.end - at) / rate + 100);
     };
 
     // Before the intro has started (it waits briefly for the font), start()
@@ -130,6 +144,8 @@ import { site } from "../data/site";
       // ride offsets from here.
       brandTop = brand.getBoundingClientRect().top;
       addEventListener("scroll", onScroll, { passive: true });
+      removeEventListener("scroll", early);
+      if (scrolledEarly) onScroll();
       const W = innerWidth;
       const H = innerHeight;
 

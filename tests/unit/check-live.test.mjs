@@ -59,10 +59,14 @@ test("newestDay: counts on from the first day, and throws without one", () => {
   );
 });
 
+// The tools' live header (2026-10-17), with connect-src as given.
+const live = (connect) =>
+  `default-src 'self'; connect-src ${connect}; img-src 'self' blob: data:; style-src 'self'; script-src 'self'; font-src 'self'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`;
+
 test("checkPolicies: expected policies pass in one line", () => {
   const lines = checkPolicies([
-    { id: "photo", header: "default-src 'self'; connect-src 'none'" },
-    { id: "mail", header: "connect-src https://cloudflare-dns.com" },
+    { id: "photo", header: live("'none'") },
+    { id: "mail", header: live("https://cloudflare-dns.com") },
   ]);
   assert.deepEqual(lines, [
     { ok: true, text: "experiments' policies: photo none, mail dns" },
@@ -71,14 +75,18 @@ test("checkPolicies: expected policies pass in one line", () => {
 
 test("checkPolicies: a looser policy, no header or no answer fails", () => {
   const lines = checkPolicies([
-    { id: "photo", header: "connect-src https://cloudflare-dns.com" },
+    { id: "photo", header: live("https://cloudflare-dns.com") },
     { id: "subnet", header: null },
     { id: "mail", error: new Error("HTTP 503") },
-    { id: "battery", header: "connect-src 'none'" },
+    { id: "battery", header: live("'none'") },
+    {
+      id: "logscope",
+      header: live("'none'").replace("img-src", "img-src https:"),
+    },
   ]);
   assert.deepEqual(
     lines.map((l) => l.ok),
-    [false, false, false, true],
+    [false, false, false, false, true],
   );
   assert.match(
     lines[0].text,
@@ -86,7 +94,20 @@ test("checkPolicies: a looser policy, no header or no answer fails", () => {
   );
   assert.match(lines[1].text, /subnet allows connect-src \*/);
   assert.match(lines[2].text, /mail: couldn't check .*HTTP 503/);
+  assert.match(
+    lines[3].text,
+    /logscope allows .*img-src https:.*more than "none"/,
+  );
   assert.deepEqual(checkPolicies([]), [
     { ok: false, text: "no experiments to check" },
   ]);
+});
+
+test("checkPolicies: mail no longer listed fails, since the lede names it", () => {
+  const lines = checkPolicies([{ id: "photo", header: live("'none'") }]);
+  assert.deepEqual(
+    lines.map((l) => l.ok),
+    [false, true],
+  );
+  assert.match(lines[0].text, /^mail isn't listed on \/experiments/);
 });

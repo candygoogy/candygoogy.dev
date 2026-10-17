@@ -63,7 +63,15 @@ test("/ for curl is the plain-text card", async () => {
 });
 
 test("HEAD / for curl is the card's headers with no body", async () => {
-  const ASSETS = assets({ "/card.txt": () => new Response("the card\n") });
+  // The card's own body is cancelled, not left open for the runtime.
+  let cancelled = false;
+  const body = new ReadableStream({
+    start: (c) => c.enqueue(new TextEncoder().encode("the card\n")),
+    cancel: () => {
+      cancelled = true;
+    },
+  });
+  const ASSETS = assets({ "/card.txt": () => new Response(body) });
   const res = await worker.fetch(
     new Request("https://candygoogy.dev/", {
       method: "HEAD",
@@ -74,6 +82,7 @@ test("HEAD / for curl is the card's headers with no body", async () => {
   );
   assert.equal(res.status, 200);
   assert.equal(res.body, null);
+  assert.ok(cancelled);
   assert.match(res.headers.get("Content-Type"), /^text\/plain/);
   assert.equal(res.headers.get("Vary"), "User-Agent");
   assert.equal(

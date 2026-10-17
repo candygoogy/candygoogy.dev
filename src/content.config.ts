@@ -2,6 +2,11 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+// Every address in the content is a public https link: these go into the
+// pages, the feed and the terminal cards, so a mistyped javascript: or data:
+// (or a plain http:) fails the build rather than ships.
+const link = () => z.url({ protocol: /^https$/ });
+
 // One Markdown file per project. Adding a project means adding one file (and,
 // for products, one image folder). The build fails on a missing or bad field.
 const projects = defineCollection({
@@ -47,8 +52,8 @@ const projects = defineCollection({
           })
           .optional(),
         links: z.object({
-          live: z.url().optional(),
-          source: z.url().optional(),
+          live: link().optional(),
+          source: link().optional(),
         }),
         // Screenshots in light and dark; the page shows the one that matches
         // the theme.
@@ -81,7 +86,7 @@ const projects = defineCollection({
               )
               .min(1),
             caption: z.string().min(1).optional(),
-            href: z.url().optional(),
+            href: link().optional(),
           })
           .optional(),
         // The project page's own sections (products only).
@@ -102,7 +107,7 @@ const projects = defineCollection({
                     shot: z.number().int().min(0).optional(),
                     // A phrase in the text that links out, as written there.
                     link: z
-                      .object({ text: z.string().min(1), href: z.url() })
+                      .object({ text: z.string().min(1), href: link() })
                       .optional(),
                   })
                   .refine((u) => !u.link || u.text.includes(u.link.text), {
@@ -149,9 +154,9 @@ const experiments = defineCollection({
     name: z.string().min(1),
     blurb: z.string().min(1).max(64),
     summary: z.string().min(1).max(320),
-    url: z.url(),
+    url: link(),
     // Its folder on GitHub.
-    source: z.url(),
+    source: link(),
     date: z.coerce.date(),
     status: z.enum(["live", "retired"]),
     stack: z.array(z.string().min(1)).min(1),

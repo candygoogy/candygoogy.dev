@@ -42,7 +42,7 @@ const page = project
     : Astro.params.ogcard === "og-experiments"
       ? {
           name: experiments.title,
-          line: experiments.description,
+          line: experiments.intro,
           url: "candygoogy.dev/experiments",
         }
       : undefined;

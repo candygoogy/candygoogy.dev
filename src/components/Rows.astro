@@ -277,6 +277,9 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     color: var(--ink);
     text-decoration: none;
     transition: color var(--dur-ui) var(--ease-ui);
+    /* The press is the row's own tint (below), not the browser's grey box
+       over the stretched link. */
+    -webkit-tap-highlight-color: transparent;
   }
 
   .go svg {
@@ -328,7 +331,25 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     opacity: 1;
   }
 
+  /* A press (touch has no hover) shows the tint, so the tap is felt before
+     the page changes; on release it fades at the hover's pace. It waits
+     80ms first: iOS applies :active as soon as a finger lands, and a
+     scroll that starts on a row has taken over by then, so the rows don't
+     flash under a swipe. Source on /experiments sits outside the row link,
+     so pressing it leaves the row as it is. */
+  .row:has(.go:active)::after {
+    opacity: 1;
+    transition-duration: var(--dur-fast);
+    transition-delay: 80ms;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
+    /* The arrow lifts on a press as on hover. */
+    .row:has(.go:active) .arr {
+      transform: translate(2px, -2px);
+      transition-delay: 80ms;
+    }
+
     .row:global(.arrived)::after {
       animation: row-arrive 2.4s var(--ease-out) 350ms;
     }

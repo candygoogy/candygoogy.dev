@@ -10,7 +10,11 @@ import {
   staleDeploy,
   validDays,
 } from "../../scripts/github-days.mjs";
-import { higherVersion, latestVersion } from "../../src/lib/github.ts";
+import {
+  higherVersion,
+  isRelease,
+  latestVersion,
+} from "../../src/lib/github.ts";
 
 test("higherVersion compares dotted versions as numbers", () => {
   assert.equal(higherVersion("1.0.3", "1.0.2"), "1.0.3");
@@ -51,6 +55,18 @@ test("higherVersion: a missing side loses", () => {
   assert.equal(higherVersion(undefined, "1.0.0"), "1.0.0");
   assert.equal(higherVersion("1.0.0", undefined), "1.0.0");
   assert.equal(higherVersion(undefined, undefined), undefined);
+});
+
+test("isRelease: a release whose date doesn't parse is dropped", () => {
+  const release = {
+    tag: "v1.0.0",
+    name: "1.0.0",
+    url: "https://github.com/a/b/releases/tag/v1.0.0",
+    published: "2026-10-16T22:00:00Z",
+  };
+  assert.ok(isRelease(release));
+  assert.ok(!isRelease({ ...release, published: "" }));
+  assert.ok(!isRelease({ ...release, published: "soon" }));
 });
 
 test("latestVersion: a newer frontmatter version beats the fetched one", () => {
@@ -304,4 +320,14 @@ test("staleDeploy: recent days, a fetch or a local build passes", () => {
     }),
     false,
   );
+});
+
+test("productRepo reads draft as YAML does: True and TRUE are drafts too", () => {
+  for (const draft of ["True", "TRUE"]) {
+    assert.equal(
+      productRepo(`---\nkind: product\nrepo: a/b\ndraft: ${draft}\n---`),
+      undefined,
+      draft,
+    );
+  }
 });

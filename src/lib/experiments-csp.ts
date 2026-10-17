@@ -1,3 +1,4 @@
+import { getCollection } from "astro:content";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { oldestCheck } from "../../scripts/experiments-policy.mjs";
@@ -9,14 +10,20 @@ import { root } from "./github";
 
 interface Check {
   connect: string[];
+  // Missing from checks made before it was read: the tool counts as
+  // unchecked until the next build (scripts/experiments-policy.mjs).
+  elsewhere?: string[];
   checked: string;
 }
+
+const strings = (v: unknown) =>
+  Array.isArray(v) && v.every((s) => typeof s === "string");
 
 const valid = (v: unknown): v is Check =>
   !!v &&
   typeof v === "object" &&
-  Array.isArray((v as Check).connect) &&
-  (v as Check).connect.every((s) => typeof s === "string") &&
+  strings((v as Check).connect) &&
+  ((v as Check).elsewhere === undefined || strings((v as Check).elsewhere)) &&
   typeof (v as Check).checked === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test((v as Check).checked);
 
@@ -79,3 +86,12 @@ export function policyChecked(ids: string[]): string | undefined {
   }
   return checked && label(checked);
 }
+
+/** The experiments /experiments lists (not drafts, not retired), by id. */
+export const listedExperiments = async () =>
+  (
+    await getCollection(
+      "experiments",
+      ({ data }) => !data.draft && data.status !== "retired",
+    )
+  ).sort((a, b) => a.id.localeCompare(b.id));

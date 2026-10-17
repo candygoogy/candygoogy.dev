@@ -1,8 +1,9 @@
-// Checks what each experiment's live security policy lets it connect to, at
-// build time, for the lede on /experiments: a HEAD request to each listed
-// tool, its Content-Security-Policy's connect-src read and written to
-// src/data/experiments-csp.json as
-// { [id]: { connect: [sources], checked: "YYYY-MM-DD" } }.
+// Checks what each experiment's live security policy lets it connect to and
+// load from, at build time, for the lede on /experiments: a HEAD request to
+// each listed tool (livePolicies), its Content-Security-Policy read and
+// written to src/data/experiments-csp.json as
+// { [id]: { connect: [sources], elsewhere: [what else gets out],
+//   checked: "YYYY-MM-DD" } }.
 //
 // No token: the tools are public pages. It never fails the build. A tool
 // that doesn't answer keeps its last good check (from the last run's file,
@@ -16,26 +17,19 @@
 //   node scripts/experiments-csp.mjs [--snapshot]
 
 import { existsSync } from "node:fs";
-import { readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  allows,
   classify,
-  connectSources,
-  listedUrl,
+  livePolicies,
   mergeChecks,
+  policyOf,
 } from "./experiments-policy.mjs";
 
-const EXPERIMENTS = join(
-  import.meta.dirname,
-  "..",
-  "src",
-  "content",
-  "experiments",
-);
 const DATA = join(import.meta.dirname, "..", "src", "data");
 const OUT = join(DATA, "experiments-csp.json");
 const SNAPSHOT = join(DATA, "experiments-csp.snapshot.json");
-const UA = { "User-Agent": "candygoogy.dev-build" };
 const STRICT = process.env.DATA_STRICT === "1";
 
 let warnings = 0;
@@ -60,34 +54,12 @@ async function previous() {
   return {};
 }
 
-// The listed tools, by id (the file's name, as the content loader names
-// them) and address.
-async function listed() {
-  const tools = [];
-  for (const file of (await readdir(EXPERIMENTS)).sort()) {
-    if (!file.endsWith(".md")) continue;
-    const url = listedUrl(await readFile(join(EXPERIMENTS, file), "utf8"));
-    if (url) tools.push({ id: file.slice(0, -3), url });
-  }
-  return tools;
-}
-
-async function policy(url) {
-  const res = await fetch(url, {
-    method: "HEAD",
-    headers: UA,
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
-  return res.headers.get("content-security-policy");
-}
-
 // Each list of sources on one line where it fits, as Prettier writes it
 // (the snapshot is committed). Written aside and renamed, so a cut-off
 // write never leaves a broken file.
 async function writeJson(file, data) {
   const text = JSON.stringify(data, null, 2).replace(
-    /^( *"connect": )\[\n([^\]]*)\n *\]/gm,
+    /^( *"(?:connect|elsewhere)": )\[\n([^\]]*)\n *\]/gm,
     (whole, key, items) => {
       const line = `${key}[${items
         .trim()
@@ -104,32 +76,31 @@ try {
   const old = await previous();
   let tools = null;
   try {
-    tools = await listed();
+    tools = await livePolicies();
   } catch (error) {
     warn(`checks kept as before, no experiment list: ${error}`);
   }
   const results = {};
-  await Promise.all(
-    (tools ?? []).map(async ({ id, url }) => {
-      try {
-        const connect = connectSources(await policy(url));
-        results[id] = { connect };
-        const cls = classify(id, connect);
-        if (cls === "unknown") {
-          warn(
-            `${id} allows connect-src ${connect.join(" ")}: the lede leaves the policies out until that's put into words`,
-          );
-        } else {
-          console.log(`experiments-csp: ${id} ${cls}`);
-        }
-      } catch (error) {
-        results[id] = { error };
-        warn(
-          `${id} kept ${Object.hasOwn(old, id) ? `its check of ${old[id].checked}` : "no check (the lede leaves the policies out)"}: ${error}`,
-        );
-      }
-    }),
-  );
+  for (const tool of tools ?? []) {
+    const { id } = tool;
+    if ("error" in tool) {
+      results[id] = { error: tool.error };
+      warn(
+        `${id} kept ${Object.hasOwn(old, id) ? `its check of ${old[id].checked}` : "no check (the lede leaves the policies out)"}: ${tool.error}`,
+      );
+      continue;
+    }
+    const policy = policyOf(tool.header);
+    results[id] = policy;
+    const cls = classify(id, policy.connect, policy.elsewhere);
+    if (cls === "unknown") {
+      warn(
+        `${id} allows ${allows(policy)}: the lede leaves the policies out until that's put into words`,
+      );
+    } else {
+      console.log(`experiments-csp: ${id} ${cls}`);
+    }
+  }
   const data = mergeChecks(
     old,
     tools && tools.map((t) => t.id),

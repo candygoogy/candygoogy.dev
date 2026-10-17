@@ -215,10 +215,6 @@ export default function init(root: HTMLElement) {
     });
   }
 
-  // iOS Safari only applies :active (the press) when the page listens
-  // for touches.
-  document.addEventListener("touchstart", () => {}, { passive: true });
-
   // Copy. On copying, "Copy" leaves upward out of its cell while "Copied"
   // rises in from below, settling from a slight lean; the copy icon gives
   // way and a check draws in with a small spring. Two seconds later it goes

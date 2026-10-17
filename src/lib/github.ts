@@ -35,9 +35,12 @@ interface GithubData {
 const isObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 
-const isRelease = (r: unknown): r is Release =>
+// The feed writes each release's date, so one that doesn't parse is a
+// wrong part too.
+export const isRelease = (r: unknown): r is Release =>
   isObject(r) &&
-  ["tag", "name", "url", "published"].every((k) => typeof r[k] === "string");
+  ["tag", "name", "url", "published"].every((k) => typeof r[k] === "string") &&
+  !Number.isNaN(Date.parse(r["published"] as string));
 
 // The parts the pages read must have the right shape, or the first page
 // that reads one throws ("versions": null). A wrong part is dropped with a

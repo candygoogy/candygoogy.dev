@@ -4,7 +4,7 @@
 // HTTPie and xh (worker/index.ts). At most 72 columns, no colors, plain
 // layout.
 import type { CollectionEntry } from "astro:content";
-import { builtOn, commit } from "./build";
+import { builtOn, shortCommit } from "./build";
 import { release } from "./projects";
 
 export const WIDTH = 72;
@@ -42,8 +42,8 @@ export function columns(rows: [string, string][]): string {
 // The footer stamp's words: when this build was made, and from which
 // commit.
 export const stamp = () =>
-  commit
-    ? `Built ${builtOn.label} from ${commit.slice(0, 7)}`
+  shortCommit
+    ? `Built ${builtOn.label} from ${shortCommit}`
     : `Built ${builtOn.label}`;
 
 export const textResponse = (body: string) =>

@@ -1,6 +1,6 @@
 ---
 import { site } from "../data/site";
-import { builtOn, commit } from "../lib/build";
+import { builtOn, commit, dirty, shortCommit } from "../lib/build";
 
 // The page's own link is marked current, as in the header nav.
 const path = Astro.url.pathname.replace(/\.html$/, "");
@@ -21,9 +21,9 @@ const current = (href: string) => (path === href ? "page" : undefined);
             {" from "}
             <a
               href={`${site.source}/commit/${commit}`}
-              aria-label={`commit ${commit.slice(0, 7)}`}
+              aria-label={`commit ${commit.slice(0, 7)}${dirty ? ", with uncommitted changes" : ""}`}
             >
-              {commit.slice(0, 7)}
+              {shortCommit}
             </a>
           </>
         )}

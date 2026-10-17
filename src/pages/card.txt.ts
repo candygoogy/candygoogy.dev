@@ -5,6 +5,7 @@
 import type { APIRoute } from "astro";
 import { experiments } from "../data/experiments";
 import { hero, site } from "../data/site";
+import { listedExperiments, policyChecked } from "../lib/experiments-csp";
 import {
   columns,
   heading,
@@ -17,6 +18,8 @@ import { orderedProjects } from "../lib/projects";
 
 export const GET: APIRoute = async () => {
   const projects = await orderedProjects();
+  // The policy sentence only when the check holds, as on /experiments.
+  const checked = policyChecked((await listedExperiments()).map((e) => e.id));
   const col = Math.max(...projects.map((p) => p.data.name.length)) + 3;
   const pad = (s: string, n: number) =>
     s + " ".repeat(Math.max(n - s.length, 1));
@@ -25,8 +28,10 @@ export const GET: APIRoute = async () => {
       ? `${site.url}/${p.id}`
       : (p.data.links.live ?? p.data.links.source ?? "");
 
+  // Each blurb wraps under itself, past the name column, within the width
+  // (wrap adds the space after the name, hence col - 1).
   const rows = projects.flatMap((p) => [
-    pad(p.data.name, col) + p.data.blurb,
+    wrap(p.data.blurb, " ".repeat(col), pad(p.data.name, col - 1)),
     " ".repeat(col) + url(p),
   ]);
 
@@ -44,7 +49,7 @@ export const GET: APIRoute = async () => {
     heading(hero.indexTitle),
     rows.join("\n"),
     heading(experiments.title),
-    `${wrap(experiments.description)}\n${site.url}/experiments`,
+    `${wrap(experiments.description(checked))}\n${site.url}/experiments`,
     heading("Contact"),
     `${site.email}\n${columns(links)}`,
     stamp(),

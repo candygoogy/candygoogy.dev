@@ -366,9 +366,6 @@ export default function init(trace: HTMLElement) {
     };
     button.addEventListener("focus", shown);
     button.addEventListener("pointerdown", shown);
-    // iOS Safari only shows :active (the press) when the page listens
-    // for touches.
-    document.addEventListener("touchstart", () => {}, { passive: true });
 
     // Each press plays the same restart from the start; a press while
     // one is still running is ignored.
