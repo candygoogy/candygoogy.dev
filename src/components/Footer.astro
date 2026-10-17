@@ -35,7 +35,6 @@ const current = (href: string) => (path === href ? "page" : undefined);
     <a href="/uses" aria-current={current("/uses")}>
       Uses
     </a>
-    <a href={site.source}>Site source on GitHub</a>
     <a href="#top">Back to top</a>
     <!-- Paper only (print.css). -->
     <p class="printed">
@@ -49,8 +48,8 @@ const current = (href: string) => (path === href ? "page" : undefined);
     margin-top: var(--sp-8);
   }
 
-  /* Grouped by kind: the two notes on the left, the two links on the
-     right, one gap throughout, on one baseline. */
+  /* Grouped by kind: the notes on the left, the links on the right, one
+     gap throughout, on one baseline. */
   .inner {
     display: flex;
     flex-wrap: wrap;
@@ -123,45 +122,21 @@ const current = (href: string) => (path === href ? "page" : undefined);
     margin: 0;
   }
 
-  /* Phones: the two links first, then the two notes, as two aligned
-     columns; on the narrowest, one column in that order. */
+  /* Phones: the links first, on one row (wrapping at the rows' gap where
+     they don't fit), then the notes under them, one per line, all on the
+     page's left edge. */
   @media (max-width: 32.5rem) {
     footer {
       margin-top: var(--sp-7);
-    }
-
-    .inner {
-      display: grid;
-      grid-template-columns: auto auto;
-      justify-content: start;
-      justify-items: start;
-      gap: var(--sp-5) var(--sp-6);
     }
 
     .inner > a {
       order: -1;
     }
 
-    /* The notes start their own row after the links, side by side
-       while they fit (each wraps to its own line when it doesn't, as with
-       wider letter spacing), with the stamp last on its own line. */
-    .notes {
-      grid-column: 1 / -1;
-      gap: var(--sp-3) var(--sp-6);
-    }
-
-    .stamp {
-      flex-basis: 100%;
-    }
-  }
-
-  @media (max-width: 22.5rem) {
-    .inner {
-      grid-template-columns: auto;
-    }
-
     .notes {
       flex-direction: column;
+      align-items: start;
     }
   }
 

@@ -251,3 +251,48 @@ test(
     assert.deepEqual(problems, [], "the page reported problems");
   },
 );
+
+test(
+  "the footer links the source once, and on a phone its links come first",
+  OPTIONS,
+  async () => {
+    const { context, page, problems } = await open("/", {
+      viewport: { width: 390, height: 844 },
+    });
+    try {
+      const r = await page.evaluate(() => {
+        const footer = document.querySelector("footer");
+        const links = [...footer.querySelectorAll(".inner > a")];
+        const tops = links.map((a) => a.getBoundingClientRect().top);
+        const notes = [...footer.querySelectorAll(".notes > span")].map(
+          (span) => span.getBoundingClientRect(),
+        );
+        return {
+          // The repo is linked from the build stamp's commit and from
+          // /colophon, not again on its own.
+          source: links.some((a) => /source/i.test(a.textContent)),
+          oneRow: tops.every((top) => Math.abs(top - tops[0]) < 1),
+          above:
+            Math.max(...links.map((a) => a.getBoundingClientRect().bottom)) <=
+            notes[0].top,
+          // One note per line, all on one left edge.
+          stacked: notes.every(
+            (n, i) =>
+              i === 0 ||
+              (n.top >= notes[i - 1].bottom &&
+                Math.abs(n.left - notes[0].left) < 1),
+          ),
+        };
+      });
+      assert.deepEqual(r, {
+        source: false,
+        oneRow: true,
+        above: true,
+        stacked: true,
+      });
+    } finally {
+      await context.close();
+    }
+    assert.deepEqual(problems, [], "the page reported problems");
+  },
+);

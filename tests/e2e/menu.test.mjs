@@ -381,3 +381,30 @@ test(
     assert.equal(r.away, false, "the header was marked away on a wide page");
   },
 );
+
+test(
+  "the open menu reaches the route before the project index",
+  OPTIONS,
+  async (t) => {
+    const page = await phone(t);
+    await page.locator("[data-menu-open]").focus();
+    await page.keyboard.press("Enter");
+    await menuOpened(page);
+    // From Close (where a keyboard open puts focus), the next stop is the
+    // route's first; the index's links come after the route's last.
+    await page.keyboard.press("Tab");
+    const r = await page.evaluate(() => {
+      const menu = document.querySelector("[data-menu]");
+      const route = menu.querySelector(".route");
+      const index = menu.querySelector("[data-menu-index]");
+      return {
+        first: route.querySelector("a") === document.activeElement,
+        before: !!(
+          route.compareDocumentPosition(index) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+        ),
+      };
+    });
+    assert.deepEqual(r, { first: true, before: true });
+  },
+);

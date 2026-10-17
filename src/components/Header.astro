@@ -64,8 +64,10 @@ const featured = featuredProjects(await orderedProjects());
   <!-- Where the full row doesn't fit, the menu: the page gives way to the
        site's route, drawn in the timeline's line and dots (About.astro),
        one stop per destination, the one you're at filled. Its top row is
-       the header's, with Close where Menu was; under it, the hero's index
-       of featured projects, where there's room for it. -->
+       the header's, with Close where Menu was; the route comes right under
+       it (what the menu is opened for, and first in tab order), then the
+       hero's index of featured projects, where there's room for it, and
+       the theme switch last. -->
   <dialog id="menu" class="menu" aria-label="Menu" tabindex="-1" data-menu>
     <div class="top wrap">
       <a class="brand" href="/">
@@ -77,13 +79,6 @@ const featured = featuredProjects(await orderedProjects());
           <span>Close</span>
         </span>
       </button>
-    </div>
-    <div class="shortlist wrap" data-menu-index>
-      <ProjectIndex
-        projects={featured}
-        headingId="menu-index-title"
-        variant="menu"
-      />
     </div>
     <nav class="route wrap" aria-label="Pages">
       <ul>
@@ -101,6 +96,13 @@ const featured = featuredProjects(await orderedProjects());
         ))}
       </ul>
     </nav>
+    <div class="shortlist wrap" data-menu-index>
+      <ProjectIndex
+        projects={featured}
+        headingId="menu-index-title"
+        variant="menu"
+      />
+    </div>
     <div class="end wrap">
       <ThemeSwitch />
     </div>
@@ -145,7 +147,7 @@ const featured = featuredProjects(await orderedProjects());
     here?.setAttribute("aria-current", "true");
   };
 
-  // The featured index takes what room there is above the route, with the
+  // The featured index takes what room there is under the route, with the
   // switch still at the bottom of the screen: each project's name and
   // line; or, shorter, the names alone; or the names with the route's
   // rows a little closer. Where even that doesn't fit, it goes, rather
@@ -654,12 +656,13 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* The hero's index of featured projects (ProjectIndex.astro), under
-     the top row, on the page gutter under the wordmark, as the switch is.
+     the route, on the page gutter under the wordmark, as the switch is.
      The step in stays the route's names' alone, and the rows get the
      whole width, so each project's line stays on one line on a 375px
-     phone. The route's own padding keeps it clear of the first stop. */
+     phone. The route's own padding keeps it clear of the last stop; its
+     own keeps the switch clear of its last row. */
   .shortlist {
-    padding-top: var(--sp-2);
+    padding-bottom: var(--sp-7);
   }
 
   .shortlist[hidden] {
@@ -687,9 +690,9 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* Shorter still: the route's rows a little closer (the names keep their
-     size), and less room between the index and the route. */
+     size), and less room between the route and the index. */
   .menu[data-fit="close"] .route {
-    padding-top: var(--sp-5);
+    padding-bottom: var(--sp-5);
   }
 
   .menu[data-fit="close"] .route ul {
@@ -697,12 +700,11 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* The route: one line through a node per destination, in the career
-     timeline's line and rings, drawn to the names' scale. It sits low,
-     with the switch, where a thumb reaches: the open page colour is
-     above it, under the top row. */
+     timeline's line and rings, drawn to the names' scale. It comes first,
+     right under the top row: the main sections are what the menu is
+     opened for. */
   .route {
-    margin-top: auto;
-    padding-block: var(--sp-7);
+    padding-block: var(--sp-5) var(--sp-7);
   }
 
   /* Each stop is a row one and a half times its name's size. The nodes
@@ -795,9 +797,11 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* The theme switch, gutter to gutter like the top row, at the bottom
-     of the screen where a thumb reaches it (clear of the home indicator).
-     On a short screen it follows the route, never over it. */
+     of the screen where a thumb reaches it (clear of the home indicator):
+     the open page colour is above it. On a short screen it follows the
+     index (or the route), never over it. */
   .end {
+    margin-top: auto;
     padding-bottom: calc(var(--sp-7) + env(safe-area-inset-bottom, 0px));
   }
 
@@ -805,23 +809,32 @@ const featured = featuredProjects(await orderedProjects());
     width: 100%;
   }
 
-  /* Opening: the index comes first, its heading then its rows rising in
-     turn, as rows do on the page. Then the line draws down from the first
+  /* Opening: the route comes first. The line draws down from the first
      stop, and each stop's ring lands and its name rises out of its clip
      as the line reaches it (the line's curve passes the stops about 50ms
-     apart); the filled node fills after its ring; the switch comes last.
-     Without the index, the route starts at once. Closing is one quick
-     fade. Under reduced motion it simply appears and goes. */
+     apart); the filled node fills after its ring. The index follows,
+     160ms in, its heading then its rows rising in turn, as rows do on the
+     page; the switch comes last, 160ms after the index's last row (after
+     the route alone, without the index). Closing is one quick fade.
+     Under reduced motion it simply appears and goes. */
   .menu {
     --lead: 160ms;
   }
 
-  .shortlist[hidden] ~ * {
-    --lead: 0ms;
+  .shortlist {
+    --rise: var(--lead);
   }
 
   .shortlist :global(li) {
-    --rise: calc(80ms + var(--i) * 80ms);
+    --rise: calc(var(--lead) + 80ms + var(--i) * 80ms);
+  }
+
+  .end {
+    --end: calc(var(--lead) + 480ms);
+  }
+
+  .shortlist[hidden] ~ .end {
+    --end: 320ms;
   }
 
   .route li:nth-child(2) {
@@ -850,27 +863,24 @@ const featured = featuredProjects(await orderedProjects());
     }
 
     .menu[open] .route ul::before {
-      animation: menu-draw 240ms var(--ease-sine) var(--lead) backwards;
+      animation: menu-draw 240ms var(--ease-sine) backwards;
     }
 
     .menu[open] .node {
-      animation: menu-land 650ms var(--ease-spring)
-        calc(var(--lead) + var(--at, 0ms)) backwards;
+      animation: menu-land 650ms var(--ease-spring) var(--at, 0ms) backwards;
     }
 
     .menu[open] [aria-current] .node > span {
-      animation: menu-fill 650ms var(--ease-spring)
-        calc(var(--lead) + var(--at, 0ms) + 150ms) backwards;
+      animation: menu-fill 650ms var(--ease-spring) calc(var(--at, 0ms) + 150ms)
+        backwards;
     }
 
     .menu[open] .label > span {
-      animation: menu-rise 1s var(--ease-out) calc(var(--lead) + var(--at, 0ms))
-        backwards;
+      animation: menu-rise 1s var(--ease-out) var(--at, 0ms) backwards;
     }
 
     .menu[open] .end {
-      animation: menu-up 900ms var(--ease-out) calc(var(--lead) + 320ms)
-        backwards;
+      animation: menu-up 900ms var(--ease-out) var(--end) backwards;
     }
 
     .menu.closing {

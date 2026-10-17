@@ -391,6 +391,17 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
       padding-block: var(--sp-6);
     }
 
+    /* Under the list's heading, the first row's own top space is all the
+       room there is, a step less than above the heading, so the heading
+       reads with its list rather than with the line above it. */
+    h2 {
+      margin-bottom: 0;
+    }
+
+    h2 + .rows > .row:first-child {
+      padding-top: var(--sp-5);
+    }
+
     .meta {
       flex-direction: column;
       align-items: flex-start;

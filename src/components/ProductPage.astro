@@ -563,6 +563,12 @@ const rows = note
     .checks {
       grid-template-columns: 1fr;
     }
+
+    /* Phones: the facts one per line on the left edge, as the footer's
+       notes are, rather than wrapping into a ragged second column. */
+    .facts {
+      flex-direction: column;
+    }
   }
 
   /* Forced colors drop the button's fill: an edge in its text color
