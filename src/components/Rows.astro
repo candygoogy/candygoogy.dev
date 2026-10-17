@@ -391,15 +391,12 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
       padding-block: var(--sp-6);
     }
 
-    /* Under the list's heading, the first row's own top space is all the
-       room there is, a step less than above the heading, so the heading
-       reads with its list rather than with the line above it. */
+    /* Under the list's heading, half the full gap (8px plus the first
+       row's own 32px, not 48 plus 32), so the heading reads with its list
+       rather than with the line above it, without running into the first
+       name. */
     h2 {
-      margin-bottom: 0;
-    }
-
-    h2 + .rows > .row:first-child {
-      padding-top: var(--sp-5);
+      margin-bottom: var(--sp-2);
     }
 
     .meta {
