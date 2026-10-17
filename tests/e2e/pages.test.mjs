@@ -296,3 +296,49 @@ test(
     assert.deepEqual(problems, [], "the page reported problems");
   },
 );
+
+test(
+  "/fettle: each fact has a dotted leader on a wide screen, none on a phone",
+  OPTIONS,
+  async () => {
+    const leaders = async (width) => {
+      const { context, page, problems } = await open("/fettle", {
+        viewport: { width, height: 900 },
+      });
+      try {
+        const rows = await page.evaluate(() =>
+          [...document.querySelectorAll("dl.facts > div")].map((row) => {
+            const dt = row.querySelector("dt");
+            const dd = row.querySelector("dd");
+            const lead = getComputedStyle(dt, "::after");
+            return {
+              shown:
+                lead.display !== "none" &&
+                lead.borderBottomStyle === "dotted" &&
+                parseFloat(lead.width) >= 20,
+              // The value under its label, not beside it.
+              below:
+                dd.getBoundingClientRect().top >=
+                dt.getBoundingClientRect().bottom - 1,
+            };
+          }),
+        );
+        assert.ok(rows.length >= 3, "the facts are there");
+        return rows;
+      } finally {
+        await context.close();
+        assert.deepEqual(problems, [], "the page reported problems");
+      }
+    };
+    const wide = await leaders(1440);
+    assert.ok(
+      wide.every((r) => r.shown && !r.below),
+      "1440: a leader beside every value",
+    );
+    const phone = await leaders(390);
+    assert.ok(
+      phone.every((r) => !r.shown && r.below),
+      "390: no leaders, each value under its label",
+    );
+  },
+);

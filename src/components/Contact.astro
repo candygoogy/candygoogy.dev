@@ -221,7 +221,7 @@ const words = contact.question.split(" ");
   /* A step below the hero headline, so the page keeps one biggest line. */
   .statement {
     max-width: 18ch;
-    font: var(--fw-bold) clamp(2rem, 1rem + 2.6vw, 3.5rem) / 1.04
+    font: var(--fw-d-bold) clamp(2rem, 1rem + 2.6vw, 3.5rem) / 1.04
       var(--ff-display);
     letter-spacing: var(--ls-hero);
     color: var(--ink);
@@ -230,16 +230,16 @@ const words = contact.question.split(" ");
 
   .statement .w {
     display: inline-block;
-    clip-path: inset(-0.06em -0.08em -0.14em -0.08em);
+    clip-path: inset(-0.06em -0.08em -0.06em -0.08em);
   }
 
   .statement .w > span {
     display: inline-block;
   }
 
-  /* The answer reads in ink, sized to break after "myself,". */
+  /* The answer reads in ink, sized to break after "reply,". */
   .lead {
-    max-width: 26.5em;
+    max-width: 20em;
     margin-top: var(--sp-5);
     font-size: var(--fs-lede);
     color: var(--ink);
@@ -527,7 +527,7 @@ const words = contact.question.split(" ");
   }
 
   .name {
-    font: var(--fw-heavy) var(--fs-d-sm) / 1.1 var(--ff-display);
+    font: var(--fw-semibold) var(--fs-d-sm) / 1.1 var(--ff-text);
     letter-spacing: var(--ls-d-sm);
   }
 

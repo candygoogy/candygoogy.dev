@@ -14,11 +14,11 @@ html {
   text-size-adjust: 100%;
 }
 
-/* Below 47.5rem the header stays at the top of the window (Header.astro),
+/* Below 49.5rem the header stays at the top of the window (Header.astro),
    so what focus or a jump scrolls to stops clear of it: its height plus
    the usual room. The header measures itself (--header-h); until it has,
    its height is worked out from its padding and Menu's line. */
-@media (max-width: 47.5rem) {
+@media (max-width: 49.5rem) {
   html.js {
     scroll-padding-top: calc(
       var(--header-h, 2 * var(--sp-5) + var(--fs-meta) * var(--lh-body)) +
@@ -50,7 +50,7 @@ h3,
 h4 {
   margin: 0;
   font-family: var(--ff-display);
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-d-bold);
   line-height: var(--lh-tight);
   text-wrap: balance;
 }
@@ -258,6 +258,43 @@ a:not(
   --focus: var(--band-acc);
   --mark-mix: 18%;
   color-scheme: dark;
+}
+
+/* Dotted leaders in a label-and-value list (dl.leaders), as on a receipt
+   or a contents page: each label (dt) runs into a quiet dotted line, up
+   to its value, on the first line's baseline. The same dots as the /uses
+   sheets and the homelab tree: a hairline dotted border under a box set
+   in the body face at the label's size, lifted 0.3em. The list lays out
+   its rows so a label's box reaches its value; --leader colours the dots
+   (the page's chip hairline by default). Phones put the label above its
+   value, with no leader. The zero-width space gives the box a baseline;
+   screen readers get nothing. */
+.leaders dt {
+  display: flex;
+  align-items: baseline;
+}
+
+.leaders dt::after {
+  content: "\200b";
+  content: "\200b" / "";
+  flex: 1 0 var(--sp-5);
+  margin-inline: var(--sp-3);
+  overflow: hidden;
+  font-family: var(--ff-text);
+  font-weight: var(--fw-regular);
+  line-height: 1;
+  border-bottom: var(--rule) dotted var(--leader, var(--chip-line));
+  transform: translateY(-0.3em);
+}
+
+@media (max-width: 32.5rem) {
+  .leaders dt {
+    display: block;
+  }
+
+  .leaders dt::after {
+    display: none;
+  }
 }
 
 /* Page width and side padding. */

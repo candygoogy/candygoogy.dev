@@ -16,78 +16,95 @@ const status = {
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 ---
 
-<dl class="facts rv-line" data-line="band-line">
-  <dt class="rv" data-i="0">
-    Status
-  </dt>
-  <dd class="rv" data-i="0">
-    <span class:list={[{ live: data.status === "live" }]}>{status}</span>
-    {version && `, version ${version}`}
-  </dd>
-  <dt class="rv" data-i="1">
-    Built with
-  </dt>
-  <dd class="rv" data-i="1">
-    {data.stack.join(", ")}
-  </dd>
+<dl class="facts leaders rv-line" data-line="band-line">
+  <div>
+    <dt class="rv" data-i="0">
+      Status
+    </dt>
+    <dd class="rv" data-i="0">
+      <span class:list={[{ live: data.status === "live" }]}>{status}</span>
+      {version && `, version ${version}`}
+    </dd>
+  </div>
+  <div>
+    <dt class="rv" data-i="1">
+      Built with
+    </dt>
+    <dd class="rv" data-i="1">
+      {data.stack.join(", ")}
+    </dd>
+  </div>
   {data.runsOn && (
-    <>
+    <div>
       <dt class="rv" data-i="2">
         Runs on
       </dt>
       <dd class="rv" data-i="2">
         <Keep text={data.runsOn} />
       </dd>
-    </>
+    </div>
   )}
   {data.command && (
-    <>
+    <div>
       <dt class="rv" data-i="3">
         Command
       </dt>
       <dd class="rv" data-i="3">
         {data.command}
       </dd>
-    </>
+    </div>
   )}
   {data.license && (
-    <>
+    <div>
       <dt class="rv" data-i="4">
         License
       </dt>
       <dd class="rv" data-i="4">
         {data.license}
       </dd>
-    </>
+    </div>
   )}
-  <dt class="rv" data-i="5">
-    Links
-  </dt>
-  <dd class="links rv" data-i="5">
-    {data.links.live && <a href={data.links.live}>{host(data.links.live)}</a>}
-    {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
-  </dd>
+  <div>
+    <dt class="rv" data-i="5">
+      Links
+    </dt>
+    <dd class="links rv" data-i="5">
+      {data.links.live && <a href={data.links.live}>{host(data.links.live)}</a>}
+      {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
+    </dd>
+  </div>
 </dl>
 
 <style>
+  /* One line per fact, as on a receipt: the label, a dotted leader
+     (base.css) and the value at the right edge. A long value wraps
+     under itself, the leader on its first line only. */
   .facts {
+    --leader: var(--band-line);
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--sp-3) var(--sp-5);
+    gap: var(--sp-3);
     align-content: start;
     margin: 0;
     padding-top: var(--sp-4);
   }
 
+  .facts > div {
+    display: flex;
+    align-items: baseline;
+  }
+
   dt {
+    flex: 1 0 auto;
     font-size: var(--fs-meta);
     color: var(--band-soft);
   }
 
   dd {
+    min-width: 0;
     margin: 0;
     font-weight: var(--fw-medium);
     font-variant-numeric: tabular-nums;
+    text-align: right;
   }
 
   /* The dot and its word stay together. */
@@ -100,6 +117,7 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
   .links {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: var(--sp-4) var(--sp-5);
   }
 
@@ -145,6 +163,23 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
     border-radius: 50%;
     background: var(--live);
     vertical-align: 0.12em;
+  }
+
+  /* Phones: each value under its label, on the left, with no leader. */
+  @media (max-width: 32.5rem) {
+    .facts > div {
+      flex-direction: column;
+      align-items: start;
+      gap: var(--sp-1);
+    }
+
+    dd {
+      text-align: left;
+    }
+
+    .links {
+      justify-content: flex-start;
+    }
   }
 
   /* Forced colors drop fills: the dot takes the text color. */

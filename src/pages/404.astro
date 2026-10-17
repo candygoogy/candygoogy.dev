@@ -124,7 +124,7 @@ const hops = [
         </ol>
         <p class="egg-line" aria-live="polite" data-egg-line></p>
       </div>
-      <dl class="meta">
+      <dl class="meta leaders">
         <div>
           <dt>Status</dt>
           <dd>404</dd>
@@ -170,19 +170,25 @@ const hops = [
   /* The decorative "404": the display face at its heaviest. Each digit
      rises out of its own clip, like the intro's wordmark. */
   /* Trimmed to the cap height and the baseline (where supported), so the
-     panel beside it starts level with the digits' tops. */
+     panel beside it starts level with the digits' tops. The figures stand
+     0.022em taller than the face's cap-height metric, the trim's edge:
+     the top margin brings their tops level with the panel's. */
   .code {
-    margin: 0 0 var(--sp-6);
+    margin: 0.022em 0 var(--sp-6);
     text-box: trim-both cap alphabetic;
-    font: var(--fw-heavy) clamp(6rem, 2.5rem + 15vw, 14rem) / 0.82
+    font: var(--fw-d-heavy) clamp(6rem, 2.5rem + 15vw, 14rem) / 0.82
       var(--ff-display);
     letter-spacing: var(--ls-band);
     color: var(--ink);
   }
 
+  /* The figures reach about 0.06em above each digit's box at this line
+     height. They sit on the baseline, well inside the box's bottom, so
+     the clip ends there: any lower and the tops would show before the
+     rise. */
   .l {
     display: inline-block;
-    clip-path: inset(-0.05em -0.06em -0.2em -0.06em);
+    clip-path: inset(-0.1em -0.06em 0 -0.06em);
   }
 
   .l > span {
@@ -462,7 +468,7 @@ const hops = [
 
   .label {
     margin-top: var(--sp-1);
-    font: var(--fw-bold) var(--label) / 1.25 var(--ff-display);
+    font: var(--fw-d-bold) var(--label) / 1.25 var(--ff-display);
     letter-spacing: var(--ls-d-sm);
     color: var(--ink);
   }
@@ -649,10 +655,12 @@ const hops = [
   }
 
   /* The footer's pairs: real values only (the status; with JS the path),
-     labels soft, values ink. */
+     labels soft, values ink, a dotted leader (base.css) between them.
+     The pairs share the line. */
   .meta > div {
     display: flex;
-    gap: var(--sp-2);
+    flex: 1 1 auto;
+    align-items: baseline;
     min-width: 0;
   }
 
@@ -661,6 +669,7 @@ const hops = [
   }
 
   .meta dt {
+    flex: 1 0 auto;
     color: var(--soft);
   }
 
@@ -753,6 +762,15 @@ const hops = [
 
     :global(html.js) .trace:not([data-done]) .hop:not([data-drawn])::after {
       transform: scaleY(0);
+    }
+  }
+
+  /* Phones: each value under its label, no leader. */
+  @media (max-width: 32.5rem) {
+    .meta > div {
+      flex-direction: column;
+      flex-grow: 0;
+      align-items: start;
     }
   }
 

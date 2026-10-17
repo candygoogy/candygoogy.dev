@@ -12,10 +12,6 @@ dist/
 .env
 .env.*
 
-# Fonts: downloaded by `npm run fonts` at build time (ITF FFL v2.0 forbids
-# distributing them via a repository). Never commit them.
-src/fonts/
-
 # Fresh GitHub data written by scripts/github-data.mjs at build time
 # (the committed fallback is src/data/github.snapshot.json).
 src/data/github.json

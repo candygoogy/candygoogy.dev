@@ -6,9 +6,8 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
-    "fonts": "node scripts/fonts.mjs",
-    "build": "node scripts/fonts.mjs && node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro build",
+    "dev": "node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
+    "build": "node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro build",
     "build:deploy": "npm run lint && npm run typecheck && npm test && npm run build",
     "preview": "wrangler dev",
     "lint": "eslint . && prettier --check .",
@@ -32,7 +31,6 @@
     "eslint": "10.0.1",
     "eslint-plugin-astro": "3.2.1",
     "eslint-plugin-jsx-a11y-x": "0.2.0",
-    "fflate": "0.8.3",
     "globals": "17.13.0",
     "playwright": "1.64.0",
     "prettier": "3.9.10",

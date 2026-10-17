@@ -36,9 +36,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      # These three steps are package.json's build, split so that only the
+      # These two steps are package.json's build, split so that only the
       # data scripts see the token, not every build script and dependency.
-      - run: npm run fonts
       - run: npm run data
         env:
           # The data scripts warn and fall back on push and pull requests;

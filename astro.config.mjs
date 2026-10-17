@@ -34,20 +34,23 @@ export default defineConfig({
       ),
     },
   },
-  // The official, unmodified WOFF2 files fetched by `npm run fonts` (see
-  // scripts/fonts.mjs). Astro serves them from our domain and generates
-  // metric-matched fallbacks, so swapping in the web font doesn't shift layout.
+  // Newsreader (headings) and Schibsted Grotesk (body and wordmark), both
+  // SIL Open Font License 1.1. The subset WOFF2 files and their licenses
+  // are committed in src/fonts/, built from the upstream sources by
+  // scripts/make-fonts.py (a maintainer tool; the build doesn't run it).
+  // Astro serves them from our domain and generates metric-matched
+  // fallbacks, so swapping in the web font doesn't shift layout.
   fonts: [
     {
       provider: fontProviders.local(),
-      name: "Cabinet Grotesk",
+      name: "Newsreader",
       cssVariable: "--font-display",
-      fallbacks: ["sans-serif"],
+      fallbacks: ["serif"],
       options: {
         variants: [
           {
-            src: ["./src/fonts/CabinetGrotesk-Variable.woff2"],
-            weight: "100 900",
+            src: ["./src/fonts/Newsreader-Display.woff2"],
+            weight: "500 700",
             style: "normal",
           },
         ],
@@ -55,14 +58,14 @@ export default defineConfig({
     },
     {
       provider: fontProviders.local(),
-      name: "Satoshi",
+      name: "Schibsted Grotesk",
       cssVariable: "--font-text",
       fallbacks: ["sans-serif"],
       options: {
         variants: [
           {
-            src: ["./src/fonts/Satoshi-Variable.woff2"],
-            weight: "300 900",
+            src: ["./src/fonts/SchibstedGrotesk.woff2"],
+            weight: "400 700",
             style: "normal",
           },
         ],

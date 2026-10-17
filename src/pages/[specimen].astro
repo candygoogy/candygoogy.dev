@@ -9,20 +9,21 @@ export function getStaticPaths() {
 
 const neutrals = ["bg", "ink", "soft", "line", "acc"];
 const band = ["band", "band-ink", "band-soft", "band-line", "band-acc"];
+const bold = "--fw-d-bold";
 const display = [
-  ["--fs-d-band", "Fettle", "--ls-band", "--lh-band", 800],
+  ["--fs-d-band", "Fettle", "--ls-band", "--lh-band", "--fw-d-heavy"],
   [
     "--fs-d-hero",
     "I build the tools I wish existed.",
     "--ls-hero",
     "--lh-display",
-    700,
+    bold,
   ],
-  ["--fs-d-section", "Websites", "--ls-section", "--lh-tight", 700],
-  ["--fs-d-lg", "Dolci Eoliani", "--ls-d-md", "--lh-tight", 700],
-  ["--fs-d-md", "hello@candygoogy.dev", "--ls-d-sm", "--lh-tight", 700],
-  ["--fs-d-sm", "What was hard", "--ls-d-sm", "--lh-tight", 700],
-  ["--fs-d-xs", "Systems and hardware", "--ls-d-sm", "--lh-tight", 700],
+  ["--fs-d-section", "Websites", "--ls-section", "--lh-tight", bold],
+  ["--fs-d-lg", "Dolci Eoliani", "--ls-d-md", "--lh-tight", bold],
+  ["--fs-d-md", "hello@candygoogy.dev", "--ls-d-sm", "--lh-tight", bold],
+  ["--fs-d-sm", "What was hard", "--ls-d-sm", "--lh-tight", bold],
+  ["--fs-d-xs", "Systems and hardware", "--ls-d-sm", "--lh-tight", bold],
 ] as const;
 const text = ["--fs-lede", "--fs-body", "--fs-meta", "--fs-sm", "--fs-xs"];
 const space = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -56,14 +57,14 @@ const space = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     </section>
 
     <section aria-labelledby="t">
-      <h2 id="t">Display, Cabinet Grotesk</h2>
+      <h2 id="t">Display, Newsreader</h2>
       <ol class="scale">
         {display.map(([size, sample, ls, lh, weight]) => (
           <li>
             <code>{size}</code>
             <span
               class="d"
-              style={`font-size: var(${size}); letter-spacing: var(${ls}); line-height: var(${lh}); font-weight: ${weight}`}
+              style={`font-size: var(${size}); letter-spacing: var(${ls}); line-height: var(${lh}); font-weight: var(${weight})`}
             >
               {sample}
             </span>
@@ -73,7 +74,7 @@ const space = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     </section>
 
     <section aria-labelledby="x">
-      <h2 id="x">Text, Satoshi</h2>
+      <h2 id="x">Text, Schibsted Grotesk</h2>
       <ol class="scale">
         {text.map((size) => (
           <li>
@@ -232,7 +233,7 @@ const space = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   .band-title {
     font-family: var(--ff-display);
     font-size: var(--fs-d-band);
-    font-weight: var(--fw-heavy);
+    font-weight: var(--fw-d-heavy);
     letter-spacing: var(--ls-band);
     line-height: var(--lh-band);
     margin-bottom: var(--sp-5);

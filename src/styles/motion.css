@@ -273,10 +273,12 @@
   }
 }
 
-/* Masks clip with a little room for descenders and overshoot. */
+/* Masks clip with a little room for descenders and overshoot. Only a
+   little below: the display face's ascenders stand level with the line's
+   top, so a deeper clip shows them before the rise. */
 .rv-mask {
   display: inline-block;
-  clip-path: inset(-0.08em -0.1em -0.22em -0.1em);
+  clip-path: inset(-0.08em -0.1em -0.12em -0.1em);
 }
 
 .rv-mask > span {

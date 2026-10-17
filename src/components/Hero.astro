@@ -95,11 +95,11 @@ const [, rest = lineAfter, lastPair = ""] =
   }
 
   /* Beside the index, the headline's capitals start level with the
-     index's top rule: the line box sits 0.113em above the cap height
-     (the display face's ascent, descent and cap height at this line
-     height). */
+     index's top rule: the line box sits 0.04em above the cap height
+     (the display face's ascent 0.735em, descent 0.265em and capitals
+     0.685em tall, at this line height). */
   h1 {
-    margin-top: -0.113em;
+    margin-top: -0.04em;
     font-size: var(--fs-d-hero);
     line-height: var(--lh-display);
     letter-spacing: var(--ls-hero);
@@ -108,7 +108,7 @@ const [, rest = lineAfter, lastPair = ""] =
   /* Each word clips its own rise, with room for descenders. */
   .w {
     display: inline-block;
-    clip-path: inset(-0.06em -0.08em -0.14em -0.08em);
+    clip-path: inset(-0.06em -0.08em -0.03em -0.08em);
   }
 
   .w > span {
@@ -124,9 +124,9 @@ const [, rest = lineAfter, lastPair = ""] =
   }
 
   /* The hero stacks earlier than the site's other two-column layouts
-     (53.75rem): below about 60.5rem the index's minimum width leaves the
+     (53.75rem): below about 63rem the index's minimum width leaves the
      headline too narrow a column, and it breaks into five lines. */
-  @media (max-width: 62.5rem) {
+  @media (max-width: 65rem) {
     .hero {
       grid-template-columns: 1fr;
     }
@@ -140,7 +140,7 @@ const [, rest = lineAfter, lastPair = ""] =
      the projects list right after it repeat its rows, so on screen
      it goes (the same breakpoint as above). Print keeps it as the
      receipt's index (print.css). */
-  @media screen and (max-width: 62.5rem) {
+  @media screen and (max-width: 65rem) {
     .hero > :global(.index) {
       display: none;
     }

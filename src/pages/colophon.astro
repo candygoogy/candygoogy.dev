@@ -22,7 +22,7 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
       How this site is made, for anyone who wonders.
     </p>
 
-    <dl class="rows">
+    <dl class="rows leaders">
       <div class="row rv rv-line" data-i="0" data-line="line">
         <dt>Stack</dt>
         <dd>
@@ -144,7 +144,7 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
   }
 
   dt {
-    font: var(--fw-bold) var(--fs-d-sm) / var(--lh-tight) var(--ff-display);
+    font: var(--fw-d-bold) var(--fs-d-sm) / var(--lh-tight) var(--ff-display);
     letter-spacing: var(--ls-d-sm);
   }
 
@@ -155,6 +155,25 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
     margin: 0;
     font-size: var(--fs-lede);
     color: var(--ink);
+  }
+
+  /* Side by side, a label's dotted leader (base.css) runs across the
+     gap to its text. */
+  @media screen and (min-width: 53.76rem) {
+    dt {
+      margin-right: calc(-1 * var(--gap-hero));
+    }
+  }
+
+  /* Stacked (and on paper), the label sits above its text, no leader. */
+  @media (max-width: 53.75rem), print {
+    .rows dt {
+      display: block;
+    }
+
+    .rows dt::after {
+      display: none;
+    }
   }
 
   @media (max-width: 53.75rem) {

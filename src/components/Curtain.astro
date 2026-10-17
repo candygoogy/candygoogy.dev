@@ -336,14 +336,17 @@ import { site } from "../data/site";
     opacity: 0;
     transform-origin: 0 0;
     color: var(--band-ink);
-    font: var(--fw-heavy) 1.125rem / 1 var(--ff-display);
+    font: var(--fw-semibold) 1.125rem / 1 var(--ff-text);
     letter-spacing: var(--ls-d-sm);
     white-space: nowrap;
   }
 
+  /* Room below for the y's and g's tails (about 0.06em past the box at
+     this line height), and no more: a deeper clip would show the tops of
+     the d's before the rise. */
   .l {
     display: inline-block;
-    clip-path: inset(-0.05em -0.06em -0.2em -0.06em);
+    clip-path: inset(-0.05em -0.06em -0.12em -0.06em);
   }
 
   .l > span {

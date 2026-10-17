@@ -149,10 +149,13 @@ const version = latestVersion(data.repo, data.version);
     align-items: end;
   }
 
-  /* Letters clip their own rise (see motion.css). */
+  /* Letters clip their own rise (see motion.css). At this line height
+     the display face's capitals and ascenders reach about 0.06em above
+     each letter's box and its descenders 0.05em below it, and the f's
+     hook overhangs its advance by about 0.15em on the right. */
   .title .l {
     display: inline-block;
-    clip-path: inset(-0.05em -0.06em -0.18em -0.06em);
+    clip-path: inset(-0.1em -0.18em -0.1em -0.06em);
   }
 
   .title .l > span {
@@ -161,7 +164,7 @@ const version = latestVersion(data.repo, data.version);
 
   .title {
     font-size: var(--fs-d-band);
-    font-weight: var(--fw-heavy);
+    font-weight: var(--fw-d-heavy);
     line-height: var(--lh-band);
     letter-spacing: var(--ls-band);
   }

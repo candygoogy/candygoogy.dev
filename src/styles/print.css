@@ -110,9 +110,9 @@
   }
 
   /* Except the label-and-value rows, which read best side by side, the
-     way a receipt lists its lines: the facts, the /uses spec sheets. */
+     way a receipt lists its lines: the facts (one flex row each, with
+     their dotted leaders), the /uses spec sheets. */
   .facts {
-    grid-template-columns: auto minmax(0, 1fr) !important;
     gap: 1mm 3mm !important;
   }
 
@@ -126,7 +126,6 @@
     padding: 1mm 0 !important;
   }
 
-  .facts > *,
   .spec .row > *,
   #contact .row > * {
     grid-column: auto !important;
@@ -339,7 +338,7 @@
   /* Shown even mid-intro (the curtain holds it hidden on screen). */
   .brand {
     font-size: 12pt !important;
-    font-weight: 800;
+    font-weight: var(--fw-semibold);
     opacity: 1 !important;
     visibility: visible !important;
   }

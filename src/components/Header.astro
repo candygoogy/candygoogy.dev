@@ -110,7 +110,7 @@ const featured = featuredProjects(await orderedProjects());
 </header>
 
 <script>
-  // The menu (below 47.5rem, where the full row doesn't fit). It opens as
+  // The menu (below 49.5rem, where the full row doesn't fit). It opens as
   // a modal dialog: the page behind can't be reached or scrolled. Close,
   // Esc, a link or a wider window closes it, and focus goes back to Menu
   // (or, wider, to what's in its place).
@@ -119,7 +119,7 @@ const featured = featuredProjects(await orderedProjects());
   const menu = document.querySelector<HTMLDialogElement>("[data-menu]");
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   // Where the header is one row (the wordmark and Menu) and stays with you.
-  const narrow = matchMedia("(max-width: 47.5rem)");
+  const narrow = matchMedia("(max-width: 49.5rem)");
   // What runs once it's closed (a jump to a section), instead of focusing
   // Menu again.
   let then: (() => void) | undefined;
@@ -308,7 +308,7 @@ const featured = featuredProjects(await orderedProjects());
     });
   }
 
-  // Below 47.5rem the header stays with you: scrolling down slides it up
+  // Below 49.5rem the header stays with you: scrolling down slides it up
   // out of view, scrolling up brings it back, and at the top it sits in
   // its place (CSS, header.top). One passive scroll listener, read once a
   // frame. A jump to a section (a link to it, or arriving at one) keeps it
@@ -434,7 +434,7 @@ const featured = featuredProjects(await orderedProjects());
     margin-right: auto;
     color: var(--ink);
     background: none;
-    font: var(--fw-heavy) 1.125rem / 1 var(--ff-display);
+    font: var(--fw-semibold) 1.125rem / 1 var(--ff-text);
     letter-spacing: var(--ls-d-sm);
   }
 
@@ -550,10 +550,10 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* Without JavaScript there's no menu: the nav stays (on two rows on
-     phones). With it, below 47.5rem, where the wordmark, the nav and the
-     switch no longer fit on one line (they need about 750px), the header
+     phones). With it, below 49.5rem, where the wordmark, the nav and the
+     switch no longer fit on one line (they need about 785px), the header
      is one row: the wordmark and Menu. */
-  @media (max-width: 47.5rem) {
+  @media (max-width: 49.5rem) {
     :global(.js) .top > :is(.nav, .tools) {
       display: none;
     }
@@ -563,12 +563,12 @@ const featured = featuredProjects(await orderedProjects());
     }
   }
 
-  /* Below 47.5rem the header stays at the top of the window, in the page's
+  /* Below 49.5rem the header stays at the top of the window, in the page's
      own colour (no line or shadow: over the dark band it still reads as
      the page). Scrolling down slides it up out of view (.away, quicker,
      like every exit); scrolling up brings it back. It moves only by
      transform, so nothing below it shifts. */
-  @media (max-width: 47.5rem) {
+  @media (max-width: 49.5rem) {
     :global(.js) header.top {
       position: sticky;
       top: 0;
@@ -709,19 +709,20 @@ const featured = featuredProjects(await orderedProjects());
 
   /* Each stop is a row one and a half times its name's size. The nodes
      sit on the page edge, under the wordmark: half the names' cap
-     height (0.67em) across, ringed like the line, 2px, and centred on the
-     capitals' middle, 0.07em above the row's (Cabinet Grotesk at this
+     height (0.685em) across, ringed like the line, 2px, and centred on
+     the capitals' middle, 0.12em above the row's (Newsreader at this
      line height). The names start one step in. */
   .route ul {
     --row: 1.5em;
     --dot: 0.34em;
     --weight: 2px;
-    --mid: calc(var(--row) / 2 - 0.07em);
+    --mid: calc(var(--row) / 2 - 0.12em);
     position: relative;
     margin: 0;
     padding: 0;
     list-style: none;
-    font: var(--fw-bold) var(--fs-d-hero) / var(--lh-display) var(--ff-display);
+    font: var(--fw-d-bold) var(--fs-d-hero) / var(--lh-display)
+      var(--ff-display);
     letter-spacing: var(--ls-section);
   }
 
