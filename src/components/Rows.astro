@@ -5,8 +5,8 @@ import { vtAttr } from "../lib/vt";
 
 // A list of things made, one row each: the name with its kind and year on
 // the left; the description on the right, under it the row's link (the
-// whole row is the link) and one quiet sentence (the credit in ink, the
-// stack soft). A row can also link its source on its own.
+// whole row is the link), then one quiet line: the credit in ink, the
+// stack soft. A row can also link its source on its own.
 export interface Row {
   id: string;
   name: string;
@@ -64,7 +64,7 @@ const closing = more && more.count > 0 ? more : undefined;
   The section opens like Contact: the section gap, then the heading.
   Each row then uses the section grid: the name with its kind and
   year on the left; the description on the right, under it the row's one
-  link and one quiet sentence (what I did in ink, the stack soft).
+  link, then one quiet line: what I did (ink), the stack (soft).
 -->
 <section
   id={id}
@@ -181,8 +181,16 @@ const closing = more && more.count > 0 ? more : undefined;
                   <span class="visually-hidden"> of {row.name} on GitHub</span>
                 </a>
               )}
-              <p>
-                <span class="role">{row.credit}</span> {row.stack.join(", ")}.
+              <p class="credit">
+                {row.credit && <span class="role">{row.credit}</span>}
+                <span class="stack">
+                  {row.stack.flatMap((tool, i) => [
+                    // The dot is only seen; the space after it keeps the
+                    // names apart when read aloud.
+                    i > 0 && [<span aria-hidden="true">{" ·"}</span>, " "],
+                    tool,
+                  ])}
+                </span>
               </p>
             </div>
           </div>
@@ -284,10 +292,10 @@ const closing = more && more.count > 0 ? more : undefined;
     margin-top: 0;
   }
 
-  /* The description in ink at lede size; the meta row shares its measure,
-     so the column has one right edge. */
-  .desc,
-  .meta {
+  /* The description in ink at lede size. The meta row spans the column
+     the description fills, so the column has one right edge: a 60ch of its
+     own, at the smaller size, stopped short and broke the credit line. */
+  .desc {
     max-width: 60ch;
   }
 
@@ -307,11 +315,19 @@ const closing = more && more.count > 0 ? more : undefined;
     color: var(--soft);
   }
 
-  /* The sentence always takes its own line under the link(s): left to
-     wrap, it sat beside them in rows with a short stack and fell under
-     them in the rest. */
+  /* The credit and the stack take their own line under the link(s): left
+     to wrap, they sat beside them in rows with a short stack and fell
+     under them in the rest. A wider gap parts the two, and dots part the
+     tools (the credit has the commas). Too long for one line, the stack
+     moves under the credit whole. */
   .meta > p {
     flex-basis: 100%;
+  }
+
+  .credit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-4);
   }
 
   .role {
