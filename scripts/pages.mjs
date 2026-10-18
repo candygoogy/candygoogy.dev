@@ -6,8 +6,10 @@
 // In order: the motion loader's tag made inert (scripts/motion-loader.mjs),
 // the inline scripts minified (scripts/inline-scripts.mjs), the unused
 // lookup rules taken out (below), then each page's Content-Security-Policy
-// (scripts/csp.mjs), last, because it hashes the scripts and styles exactly
-// as they ship. Development is untouched.
+// (scripts/csp.mjs), after the others because it hashes the scripts and
+// styles exactly as they ship, and last the weights the colophon lists
+// (scripts/weights.mjs), measured on the pages as they ship; it writes
+// text only, so the policies still hold. Development is untouched.
 //
 // The lookup rules: motion.css maps data-i, data-w and data-d to custom
 // properties with one rule per value (and ProductPage.astro maps its row
@@ -26,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import { csp, STYLE } from "./csp.mjs";
 import { inlineScripts } from "./inline-scripts.mjs";
 import { motionLoader } from "./motion-loader.mjs";
+import { weights } from "./weights.mjs";
 
 /** @typedef {{ page: string, html: string }} Page */
 /** @typedef {(pages: Page[], logger: import("astro").AstroIntegrationLogger) => Page[]} Step */
@@ -107,19 +110,22 @@ const lookups = (pages, logger) => {
 /** @returns {import("astro").AstroIntegration} */
 export default function pages() {
   const loader = motionLoader();
-  /** @type {[string, Step][]} */
-  const steps = [
+  const weight = weights();
+  /** The steps, given the built site's folder (the weights read the files
+   * the pages load). @param {string} root @returns {[string, Step][]} */
+  const steps = (root) => [
     ["motion-loader", loader.transform],
     ["inline-scripts", inlineScripts],
     ["lookups", lookups],
     ["csp", csp],
+    ["weights", weight.transform(root)],
   ];
   return {
     name: "pages",
     hooks: {
       "astro:config:setup": ({ command, updateConfig }) => {
         if (command !== "build") return;
-        updateConfig({ vite: { plugins: [loader.plugin] } });
+        updateConfig({ vite: { plugins: [loader.plugin, weight.plugin] } });
       },
       "astro:build:done": async ({ dir, logger }) => {
         const root = fileURLToPath(dir);
@@ -134,7 +140,9 @@ export default function pages() {
         );
         // Each step logs under its own name, as when each was its own
         // integration.
-        for (const [name, step] of steps) all = step(all, logger.fork(name));
+        for (const [name, step] of steps(root)) {
+          all = step(all, logger.fork(name));
+        }
         await Promise.all(
           all.map(({ page, html }) => writeFile(join(root, page), html)),
         );

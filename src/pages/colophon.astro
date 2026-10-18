@@ -6,6 +6,18 @@ import { site } from "../data/site";
 import Base from "../layouts/Base.astro";
 
 const credit = "https://x.com/dark_night1109/status/2104328383211737219";
+
+// The pages the Weight row lists, by their built files. Each number is
+// written in by the build (scripts/weights.mjs); in development it stays
+// a dash.
+const weights = [
+  ["Home", "index.html"],
+  ["Fettle", "fettle.html"],
+  ["Install diff", "idiff.html"],
+  ["Experiments", "experiments.html"],
+  ["Uses", "uses.html"],
+  ["Colophon", "colophon.html"],
+];
 ---
 
 <Base
@@ -90,6 +102,41 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
         </dd>
       </div>
       <div class="row rv rv-line" data-i="5" data-line="line">
+        <dt>Weight</dt>
+        <dd>
+          <p>
+            Each page is one file with its styles inside, sent compressed. A few
+            small scripts for the motion follow once it’s drawn. The numbers
+            count both, but not pictures.
+          </p>
+          <dl class="weights leaders">
+            {weights.map(([name, page]) => (
+              <div>
+                <dt>{name}</dt>
+                <dd>
+                  <span class="nobr">
+                    <data value="" data-weight={page}>
+                      –
+                    </data>{" "}
+                    KB
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p>
+            The fonts add{" "}
+            <span class="nobr">
+              <data value="" data-weight="fonts">
+                –
+              </data>{" "}
+              KB
+            </span>{" "}
+            on your first visit, and come from your browser’s cache after that.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" data-i="6" data-line="line">
         <dt>Credits</dt>
         <dd>
           <p>
@@ -97,7 +144,7 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
           </p>
         </dd>
       </div>
-      <div class="row rv rv-line" data-i="6" data-line="line">
+      <div class="row rv rv-line" data-i="7" data-line="line">
         <dt>Source</dt>
         <dd>
           <p>
@@ -144,12 +191,12 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
     padding-block: var(--sp-6);
   }
 
-  dt {
+  .row > dt {
     font: var(--fw-d-bold) var(--fs-d-sm) / var(--lh-tight) var(--ff-display);
     letter-spacing: var(--ls-d-sm);
   }
 
-  dd {
+  .row > dd {
     display: grid;
     gap: var(--sp-4);
     max-width: 60ch;
@@ -158,21 +205,48 @@ const credit = "https://x.com/dark_night1109/status/2104328383211737219";
     color: var(--ink);
   }
 
+  /* The weights, as on a receipt: each page's name, a dotted leader
+     (base.css) and its number on the list's right edge. The numbers are
+     short, so on phones too, where base.css puts a value under its
+     label. */
+  .weights {
+    display: grid;
+    gap: var(--sp-2);
+    margin: 0;
+  }
+
+  .weights > div {
+    grid-template-columns: minmax(0, auto) minmax(0, max-content);
+  }
+
+  .weights dt {
+    display: flex;
+    color: var(--soft);
+  }
+
+  .weights dt::after {
+    display: block;
+  }
+
+  .weights dd {
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Side by side, a label's dotted leader (base.css) runs across the
      gap to its text. */
   @media screen and (min-width: 53.76rem) {
-    dt {
+    .row > dt {
       margin-right: calc(-1 * var(--gap-hero));
     }
   }
 
   /* Stacked (and on paper), the label sits above its text, no leader. */
   @media (max-width: 53.75rem), print {
-    .rows dt {
+    .row > dt {
       display: block;
     }
 
-    .rows dt::after {
+    .row > dt::after {
       display: none;
     }
   }
