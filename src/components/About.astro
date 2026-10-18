@@ -297,7 +297,7 @@ const dates = (when: string): [string, string] => {
   }
 
   /* The line: a hairline track through the dots with its ink fill, and
-     the two tails, three dots 10px apart, fading away from it. Until the
+     the two tails, two dots 10px apart, fading away from it. Until the
      script measures the dots, it starts and ends at CSS's best guess. */
   .line {
     position: absolute;
@@ -318,11 +318,12 @@ const dates = (when: string): [string, string] => {
     transform-origin: top;
   }
 
+  /* Two dots, so the top tail stays below the first group's heading. */
   .tail {
     position: absolute;
     left: -1px;
     width: 3px;
-    height: 30px;
+    height: 20px;
     overflow: hidden;
   }
 
