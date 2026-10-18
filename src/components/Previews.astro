@@ -74,7 +74,8 @@ const shot = {
 <style>
   /* Placed by the script (fixed, so it never moves the page): above its
      chip, centred, flipped below if there's no room, kept inside the
-     window. It rises 6px and scales up from .98 as it fades in. */
+     window. It rises 6px and scales up from .98 as it fades in, and goes
+     quicker than it came, like every exit. */
   .pv {
     position: fixed;
     top: 0;
@@ -93,8 +94,8 @@ const shot = {
     transform: translateY(6px) scale(0.98);
     transform-origin: 50% 100%;
     transition:
-      opacity 180ms var(--ease-out),
-      transform 180ms var(--ease-out);
+      opacity 120ms var(--ease-out),
+      transform 120ms var(--ease-out);
   }
 
   .pv[hidden] {
@@ -107,6 +108,7 @@ const shot = {
   }
 
   .pv.is-open {
+    transition-duration: 180ms;
     opacity: 1;
     pointer-events: auto;
     transform: none;

@@ -17,7 +17,7 @@ import { visible } from "./motion";
 
 const DELAY = 250;
 const GRACE = 100;
-const FADE = 200; // The card's fade-out (Previews.astro), then it's hidden.
+const FADE = 120; // The card's fade-out (Previews.astro), then it's hidden.
 const GAP = 10; // Between the chip and the card.
 const EDGE = 8; // Kept clear of the window's edges.
 
