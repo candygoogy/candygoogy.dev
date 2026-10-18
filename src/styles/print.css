@@ -408,11 +408,8 @@
     padding: 0 !important;
   }
 
-  /* A block's own drawn rule would sit right on the dashed one above it
-     (one solid, one dashed, a heavier line): the sections that get the
-     dashed rule, Privacy inside its section, and the footer. */
-  main > * + .rv-line::before,
-  .pair > .rv-line::before,
+  /* The footer's own drawn rule would sit right on its dashed one (one
+     solid, one dashed, a heavier line). */
   footer .inner.rv-line::before {
     display: none !important;
   }

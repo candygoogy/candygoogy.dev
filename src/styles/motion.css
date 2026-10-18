@@ -170,9 +170,6 @@
 [data-line="band-line"] {
   --line-color: var(--band-line);
 }
-[data-line="ink"] {
-  --line-color: var(--ink);
-}
 
 @keyframes pulse-once {
   from {

@@ -129,7 +129,7 @@ const dates = (when: string): [string, string] => {
 
 <!-- Skills span the page as one row of four groups,
      so the lower half of About doesn't sit beside an empty column. -->
-<section class="skills-row rv-line" aria-labelledby="skills-title">
+<section class="skills-row" aria-labelledby="skills-title">
   <h3 id="skills-title" class="rv">
     Skills
   </h3>
@@ -155,7 +155,7 @@ const dates = (when: string): [string, string] => {
   /* The heatmap is a feature, so it gets the full content width below the
      About columns instead of a narrow slot inside them. */
   days.length > 0 && (
-    <section class="github heat-draw rv-line" aria-labelledby="github-title">
+    <section class="github heat-draw" aria-labelledby="github-title">
       <h3 id="github-title">On GitHub</h3>
       <Heatmap days={days} profile={site.github} />
     </section>
@@ -469,11 +469,10 @@ const dates = (when: string): [string, string] => {
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 12%, transparent);
   }
 
-  /* Skills and On GitHub are sibling subsections: each opens on the same
-     full-width line. */
+  /* Skills and On GitHub are sibling subsections, each a heading over
+     the full content width. */
   .skills-row {
     margin-top: var(--sp-9);
-    padding-top: var(--sp-5);
   }
 
   .skills-row > h3 {
@@ -484,7 +483,6 @@ const dates = (when: string): [string, string] => {
 
   .github {
     margin-top: var(--sp-8);
-    padding-top: var(--sp-5);
   }
 
   .github > h3 {

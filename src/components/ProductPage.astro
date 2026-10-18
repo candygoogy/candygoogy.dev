@@ -171,7 +171,7 @@ const rows = note
     class:list={["pair", { single: !page.learned }]}
     aria-label={page.learned ? "Privacy and what I learned" : "Privacy"}
   >
-    <div class="rv rv-line">
+    <div class="rv">
       <h2>Privacy</h2>
       {page.privacy.split("\n\n").map((para) => (
         <p>
@@ -180,7 +180,7 @@ const rows = note
       ))}
     </div>
     {page.learned && (
-      <div class="rv rv-line" data-i="1">
+      <div class="rv" data-i="1">
         <h2>What I learned</h2>
         {page.learned.split("\n\n").map((para) => (
           <p>{para}</p>
@@ -190,7 +190,7 @@ const rows = note
   </section>
 
   <!-- The landing: the promise, the download, and a way back. -->
-  <section class="cta rv-line" aria-labelledby="cta-title">
+  <section class="cta" aria-labelledby="cta-title">
     <h2 id="cta-title" class="visually-hidden">
       Get {data.name}
     </h2>
@@ -414,10 +414,6 @@ const rows = note
     padding-top: var(--sp-9);
   }
 
-  .pair > div {
-    padding-top: var(--sp-5);
-  }
-
   .single {
     grid-template-columns: 1fr;
   }
@@ -454,7 +450,6 @@ const rows = note
   /* The landing. */
   .cta {
     margin-top: var(--space-section);
-    padding-top: var(--sp-7);
   }
 
   .statement {

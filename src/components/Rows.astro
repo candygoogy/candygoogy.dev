@@ -47,14 +47,14 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
 ---
 
 <!--
-  The section opens like Contact: the section gap, its line, then the
-  heading. Each row then uses the section grid: the name with its kind and
+  The section opens like Contact: the section gap, then the heading.
+  Each row then uses the section grid: the name with its kind and
   year on the left; the description on the right, under it the row's one
   link and one quiet sentence (what I did in ink, the stack soft).
 -->
 <section
   id={id}
-  class="projects rv-line"
+  class="projects"
   aria-labelledby={title ? `${id}-title` : labelledBy}
 >
   {aliases.length > 0 && (
@@ -180,7 +180,6 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
 <style>
   .projects {
     margin-top: var(--space-section);
-    padding-top: var(--sp-7);
   }
 
   .alias {
