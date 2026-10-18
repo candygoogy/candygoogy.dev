@@ -181,6 +181,96 @@ test(
 );
 
 test(
+  "coming home from another page of the site plays no intro",
+  OPTIONS,
+  async (t) => {
+    // A tab that landed on /projects, then follows the header's wordmark.
+    const { page } = await fresh(t);
+    await page.addInitScript(() => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const root = document.documentElement;
+        window.__start = {
+          on: root.classList.contains("intro-on"),
+          hold: root.classList.contains("intro-hold"),
+        };
+      });
+    });
+    await page.goto(url("/projects"));
+    assert.equal(
+      await page.evaluate(() => sessionStorage.getItem("intro-seen")),
+      "1",
+      "/projects didn't mark the session seen",
+    );
+    await page.locator("header.top a.brand").first().click();
+    await page.waitForURL(url("/"));
+    await page.waitForFunction(() => window.__start !== undefined);
+    const r = await page.evaluate(() => ({
+      start: window.__start,
+      curtain: getComputedStyle(document.querySelector(".curtain")).display,
+    }));
+    assert.deepEqual(r, {
+      start: { on: false, hold: false },
+      curtain: "none",
+    });
+  },
+);
+
+test(
+  "on a tall window the band waits under the curtain and rises with the lift",
+  OPTIONS,
+  async (t) => {
+    // Tall enough that the band's top is above its reveal line on load.
+    const { page } = await fresh(t, {
+      viewport: { width: 1280, height: 1300 },
+    });
+    // Whether the band was ever shown while the curtain held the page.
+    await page.addInitScript(() => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const root = document.documentElement;
+        const band = document.querySelector(".band.rv-band");
+        window.__band = {
+          top: band.getBoundingClientRect().top / innerHeight,
+          early: false,
+        };
+        new MutationObserver(() => {
+          if (
+            band.classList.contains("is-in") &&
+            root.classList.contains("intro-hold")
+          ) {
+            window.__band.early = true;
+          }
+        }).observe(band, { attributes: true, attributeFilter: ["class"] });
+      });
+    });
+    await page.goto(url("/"));
+    await page.waitForFunction(
+      () => !document.documentElement.classList.contains("intro-on"),
+      null,
+      { timeout: 3200 },
+    );
+    const r = await page.evaluate(async () => {
+      const band = document.querySelector(".band.rv-band");
+      await Promise.all(band.getAnimations().map((a) => a.finished));
+      return {
+        above: window.__band.top < 0.7,
+        early: window.__band.early,
+        // It rose with the lift, and ended open.
+        classes: ["is-in", "from-intro"].filter((c) =>
+          band.classList.contains(c),
+        ),
+        clip: getComputedStyle(band).clipPath,
+      };
+    });
+    assert.deepEqual(r, {
+      above: true,
+      early: false,
+      classes: ["is-in", "from-intro"],
+      clip: "none",
+    });
+  },
+);
+
+test(
   "under reduced motion a first visit shows the page at once, with no intro",
   OPTIONS,
   async (t) => {

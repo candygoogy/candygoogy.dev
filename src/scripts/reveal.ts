@@ -385,8 +385,12 @@ const seen =
   !root.classList.contains("intro-hold");
 for (const el of all) {
   const top = el.getBoundingClientRect().top;
-  if (top < (seen ? 1 : line(el)) * innerHeight) arrived(el);
-  else watch(el);
+  if (top >= (seen ? 1 : line(el)) * innerHeight) watch(el);
+  // On a tall window the band is already above its line under the
+  // curtain: it waits to rise with the lift (motion.css), not shown
+  // settled where the lifting curtain would uncover it.
+  else if (held && el.matches(BAND)) arrive(el);
+  else arrived(el);
 }
 if (motion) root.classList.add("motion-ready");
 

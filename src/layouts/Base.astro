@@ -167,17 +167,20 @@ const speculation = {
         } catch {
           // Storage blocked: stay on Auto.
         }
-        // The intro curtain: home page only, once per session, never under
-        // reduced motion or without the motion system. intro-hold keeps the
-        // hero's reveal waiting until the curtain lifts.
+        // The intro curtain greets a visitor who lands on the home page:
+        // only when it's the session's first page (every page marks the
+        // session seen, so coming home from another page never plays it),
+        // never under reduced motion or without the motion system.
+        // intro-hold keeps the hero's reveal waiting until the curtain lifts.
         try {
+          const first = !sessionStorage.getItem("intro-seen");
+          sessionStorage.setItem("intro-seen", "1");
           if (
+            first &&
             root.hasAttribute("data-intro-page") &&
             root.classList.contains("js") &&
-            !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-            !sessionStorage.getItem("intro-seen")
+            !matchMedia("(prefers-reduced-motion: reduce)").matches
           ) {
-            sessionStorage.setItem("intro-seen", "1");
             // intro-played stays after the curtain is gone (motion.css).
             root.classList.add("intro-on", "intro-hold", "intro-played");
             // If the curtain never releases the page (its script failed to

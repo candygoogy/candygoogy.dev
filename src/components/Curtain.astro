@@ -1,6 +1,7 @@
 ---
-// The home page's intro, once per session. A panel in the band's ink covers
-// the page from the first paint (the page is fully rendered underneath).
+// The home page's intro, when a session lands there first. A panel in the
+// band's ink covers the page from the first paint (the page is fully
+// rendered underneath).
 // "candygoogy", the header's own wordmark scaled up and centred, rises
 // letter by letter; then, with only a short beat after the last letter
 // lands, the panel lifts away while the wordmark glides and shrinks into
@@ -9,7 +10,8 @@
 // and the band rise while the panel is still going: one movement.
 //
 // The head script in Base.astro decides whether it runs (html.intro-on):
-// never without JS, never under reduced motion, never twice in a session.
+// never without JS, never under reduced motion, only when home is the
+// session's first page.
 // Any click, key, wheel or tap fast-forwards it: whatever is left plays
 // at twice the speed or more (450ms at most), so the
 // panel still lifts and the wordmark still lands in the header. A finger
