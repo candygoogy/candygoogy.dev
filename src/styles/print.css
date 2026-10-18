@@ -165,6 +165,18 @@
     border: 0 !important;
   }
 
+  /* Its name doesn't print (below), so the first group has no rule over
+     it, and the rule between the groups runs the full width, as the card
+     has no inset on paper. */
+  #contact .rows:first-of-type::before {
+    display: none !important;
+  }
+
+  #contact .rows::before {
+    left: 0 !important;
+    right: 0 !important;
+  }
+
   /* The index: the name, then its line, close together. */
   .index .shift {
     padding-block: 1.5mm !important;
