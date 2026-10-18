@@ -3,7 +3,7 @@
 // complete without it:
 // - the grid: one tab stop with arrow-key movement (Home/End along the
 //   row), a tooltip for pointer and keyboard, and a crosshair through the
-//   marked day; the busiest date in the summary points at its day;
+//   marked day;
 // - the total rolls into place once, like an odometer;
 // - on phones, the weekly strip: drawn here from its data, its bars grow
 //   in with the total, and a tap or a drag reads a week.
@@ -189,16 +189,6 @@ export default function init(root: HTMLElement) {
   });
   wrap.addEventListener("pointerleave", (e) => {
     if (e.pointerType === "mouse") hide();
-  });
-
-  // The busiest date in the summary points at its day.
-  const busiest = root.querySelector<HTMLElement>(".busiest");
-  busiest?.addEventListener("pointerenter", () => {
-    const el = table.querySelector<HTMLElement>("td[data-busiest]");
-    if (visible(el)) mark(el);
-  });
-  busiest?.addEventListener("pointerleave", (e) => {
-    if (e.pointerType === "mouse") unmark();
   });
 
   // A tap shows the crosshair and the tooltip until the next tap elsewhere

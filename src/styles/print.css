@@ -444,12 +444,6 @@
     display: none !important;
   }
 
-  /* The busiest date's dotted underline points into the grid on screen;
-     on paper it would read as a link. */
-  .busiest {
-    text-decoration: none !important;
-  }
-
   .printed {
     display: block !important;
     margin-top: 2mm;
