@@ -74,7 +74,7 @@ export default function init(net: HTMLElement) {
       row.querySelectorAll(".dot").forEach((dot, i) =>
         arriving.push(
           dot.animate(
-            { transform: ["scale(0)", "none"] },
+            { transform: ["scale(0.6)", "none"], opacity: [0, 1] },
             {
               delay: t + i * 60,
               duration: 600,

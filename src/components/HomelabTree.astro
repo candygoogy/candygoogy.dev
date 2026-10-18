@@ -349,9 +349,15 @@ const HOW = { poe: "PoE", wifi: "Wi-Fi" };
   @media screen and (prefers-reduced-motion: no-preference) {
     :global(html.motion-ready) .pending:not(:global(.is-in)) li::before,
     :global(html.motion-ready) .pending:not(:global(.is-in)) li::after,
-    :global(html.motion-ready) .pending:not(:global(.is-in)) .kids::after,
-    :global(html.motion-ready) .pending:not(:global(.is-in)) .dot {
+    :global(html.motion-ready) .pending:not(:global(.is-in)) .kids::after {
       transform: scale(0);
+    }
+
+    /* Dots this size don't grow from nothing: they pop from 0.6, as the
+       timeline's do. */
+    :global(html.motion-ready) .pending:not(:global(.is-in)) .dot {
+      opacity: 0;
+      transform: scale(0.6);
     }
 
     :global(html.motion-ready) .pending:not(:global(.is-in)) :is(.lab, .val),
