@@ -235,9 +235,10 @@ const weekly = weeks.map((week) => {
     --cell-4: var(--acc);
   }
 
+  /* One sentence across the full width the grid gets, so on a wide
+     screen it reads on one line; it wraps only where the width runs out. */
   .heatmap .summary {
     color: var(--soft);
-    max-width: var(--measure);
     font-variant-numeric: tabular-nums;
   }
 
