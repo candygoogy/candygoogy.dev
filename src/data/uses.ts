@@ -90,7 +90,7 @@ export const uses = {
           detail: {
             tag: "Runs",
             text: "candygoogy-bot",
-            href: "/#candygoogy-bot",
+            href: "/projects#candygoogy-bot",
           },
         },
         {

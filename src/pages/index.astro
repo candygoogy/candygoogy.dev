@@ -8,12 +8,15 @@ import ProjectRows from "../components/ProjectRows.astro";
 import Previews from "../components/Previews.astro";
 import { featuredProject, site } from "../data/site";
 import Base from "../layouts/Base.astro";
-import { orderedProjects, ownPages } from "../lib/projects";
+import { featuredProjects, orderedProjects, ownPages } from "../lib/projects";
 
 const projects = await orderedProjects();
-// The band is the featured product's alone; every other product is a row.
+// The band is the featured product's alone; the other featured projects
+// are the rows here, and every project is on /projects, linked under them.
 const band = projects.find((p) => p.id === featuredProject);
-const others = projects.filter((p) => p.id !== featuredProject);
+const shortlist = featuredProjects(projects).filter(
+  (p) => p.id !== featuredProject,
+);
 
 // Structured data: who the site belongs to (the public handle only).
 const schema = {
@@ -29,8 +32,28 @@ const schema = {
   <ProjectNames slot="head" projects={ownPages(projects)} />
   <Hero projects={projects} />
   {band && <FettleBand project={band} />}
-  <ProjectRows projects={others} />
+  <ProjectRows
+    projects={shortlist}
+    id="projects"
+    title="More things I’ve made"
+    aliases={["websites", "side-projects"]}
+  >
+    <p class="all rv">
+      <a class="tap" href="/projects">
+        All {projects.length} projects
+      </a>
+    </p>
+  </ProjectRows>
   <About />
   <Contact />
   <Previews />
 </Base>
+
+<style>
+  /* Under the last row, as a product page's way back sits under its
+     facts. */
+  .all {
+    margin-top: var(--sp-7);
+    font-size: var(--fs-meta);
+  }
+</style>

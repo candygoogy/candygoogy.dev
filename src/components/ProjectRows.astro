@@ -1,15 +1,17 @@
 ---
+import type { ComponentProps } from "astro/types";
 import type { CollectionEntry } from "astro:content";
 import { site } from "../data/site";
 import Rows, { type Row } from "./Rows.astro";
 
-// Everything made besides the products, in the hero index's order: side
-// projects and client sites share one list and one row shape.
-interface Props {
+// Projects as text rows, in the order given: the home page's shortlist
+// and /projects share one row shape. The list itself (its id, heading,
+// aliases, row level) is the page's, passed on to Rows.
+type Props = {
   projects: CollectionEntry<"projects">[];
-}
+} & Omit<ComponentProps<typeof Rows>, "rows">;
 
-const { projects } = Astro.props;
+const { projects, ...list } = Astro.props;
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 const kind = { side: "Side project", website: "Website", product: "Product" };
 
@@ -49,9 +51,6 @@ const rows: Row[] = projects.map((p) => {
 });
 ---
 
-<Rows
-  id="projects"
-  title="More things I’ve made"
-  rows={rows}
-  aliases={["websites", "side-projects"]}
-/>
+<Rows {...list} rows={rows}>
+  <slot />
+</Rows>

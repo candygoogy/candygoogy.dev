@@ -175,6 +175,8 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
       );
     })}
   </ol>
+  {/* Anything after the rows (the home list's link to every project). */}
+  <slot />
 </section>
 
 <style>

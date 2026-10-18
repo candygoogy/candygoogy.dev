@@ -1,9 +1,11 @@
 // Every built page, and the theme switch, against the built site.
 // Needs `npm run build` first.
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { after, before, test } from "node:test";
 import { chromium } from "playwright";
+import { frontmatter, frontmatterFlag } from "../../scripts/github-days.mjs";
+import { featuredProject } from "../../src/data/site.ts";
 import { serve } from "./server.mjs";
 
 let server;
@@ -474,5 +476,66 @@ test(
       await context.close();
     }
     assert.deepEqual(problems, [], "the page reported problems");
+  },
+);
+
+// The published projects, from their content files: the ids, and which
+// are featured.
+const PROJECTS = readdirSync(
+  new URL("../../src/content/projects/", import.meta.url),
+)
+  .filter((file) => file.endsWith(".md"))
+  .map((file) => {
+    const front = frontmatter(
+      readFileSync(
+        new URL(`../../src/content/projects/${file}`, import.meta.url),
+        "utf8",
+      ),
+    );
+    return {
+      id: file.slice(0, -".md".length),
+      featured: frontmatterFlag(front, "featured"),
+      draft: frontmatterFlag(front, "draft"),
+    };
+  })
+  .filter((p) => !p.draft);
+
+test(
+  "home lists the featured projects but the band's, then a link to all of them; /projects lists every one",
+  OPTIONS,
+  async () => {
+    const rows = (page) =>
+      page.evaluate(() =>
+        [...document.querySelectorAll("#projects .row")].map((li) => li.id),
+      );
+    const home = await open("/");
+    try {
+      assert.deepEqual(
+        (await rows(home.page)).sort(),
+        PROJECTS.filter((p) => p.featured && p.id !== featuredProject)
+          .map((p) => p.id)
+          .sort(),
+      );
+      const all = await home.page.evaluate(() =>
+        [...document.querySelectorAll('#projects a[href="/projects"]')].map(
+          (a) => a.textContent.trim(),
+        ),
+      );
+      assert.deepEqual(all, [`All ${PROJECTS.length} projects`]);
+    } finally {
+      await home.context.close();
+    }
+    assert.deepEqual(home.problems, [], "home reported problems");
+
+    const list = await open("/projects");
+    try {
+      assert.deepEqual(
+        (await rows(list.page)).sort(),
+        PROJECTS.map((p) => p.id).sort(),
+      );
+    } finally {
+      await list.context.close();
+    }
+    assert.deepEqual(list.problems, [], "/projects reported problems");
   },
 );

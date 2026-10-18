@@ -1,0 +1,53 @@
+---
+// Every published project, in the site's order, as text rows like the
+// home page's shortlist (linked from under it). The featured product is a
+// row here too, linking to its page.
+import ProjectRows from "../components/ProjectRows.astro";
+import { hero, site } from "../data/site";
+import Base from "../layouts/Base.astro";
+import { orderedProjects } from "../lib/projects";
+
+const projects = await orderedProjects();
+---
+
+<Base
+  title={`${hero.indexTitle} – ${site.name}`}
+  description={`Everything ${site.name} has built: products, side projects and websites.`}
+  section="Projects"
+>
+  <div class="head">
+    <h1 id="projects-title">
+      <span class="rv-mask">
+        <span>{hero.indexTitle}</span>
+      </span>
+    </h1>
+  </div>
+  <ProjectRows
+    projects={projects}
+    id="projects"
+    labelledBy="projects-title"
+    level={2}
+  />
+</Base>
+
+<style>
+  .head {
+    padding-block: var(--space-hero-top) var(--sp-8);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  /* The list starts right under the head, not a section gap away. */
+  :global(#projects.projects) {
+    margin-top: 0;
+  }
+
+  /* Here the rows' names are the page's h2s: no list-heading margin. */
+  :global(#projects .name) {
+    margin-bottom: 0;
+  }
+</style>
