@@ -30,9 +30,11 @@ for (const item of work) {
   if (last && last.org === item.org) last.items.push(item);
   else groups.push({ org: item.org, items: [item] });
 }
+// An employer's year is when it started; Education's is its newest school,
+// the one level with the heading.
 for (const g of groups) {
   const starts = g.items.flatMap((i) => (i.datetime ? [i.datetime] : []));
-  g.year = starts.sort()[0]?.slice(0, 4);
+  g.year = (g.org ? starts.sort()[0] : starts[0])?.slice(0, 4);
 }
 // "Mar 2024 to Dec 2025": the start goes in a <time>, the rest follows it.
 const dates = (when: string): [string, string] => {

@@ -35,8 +35,8 @@ export interface WorkItem {
   // The dates as shown, e.g. "Mar 2024 to Dec 2025", or "Feb 2026 to now"
   // for the job going on now.
   when?: string;
-  // Machine-readable start for <time>, e.g. "2026-02"; its year heads the
-  // employer's group.
+  // Machine-readable start for <time>, e.g. "2026-02" (schools: the year
+  // alone); its year heads the group.
   datetime?: string;
   // The kind of job, e.g. "Full-time".
   type?: string;
@@ -77,12 +77,14 @@ export const work: WorkItem[] = [
     detail: "Remote. Tested builds and reported bugs.",
   },
   {
+    when: "2020 to 2024",
+    datetime: "2020",
     title: "Bachelor’s degree in computer engineering",
-    detail: "Three-year university degree.",
   },
   {
-    title: "Technical diploma",
-    detail: "Information technology.",
+    when: "2015 to 2020",
+    datetime: "2015",
+    title: "Technical diploma in information technology",
   },
 ];
 
