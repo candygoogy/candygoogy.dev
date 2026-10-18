@@ -41,10 +41,10 @@ interface Props {
   // The rows' heading level: 3 under the list's heading, 2 when the list
   // is the page's whole content.
   level?: 2 | 3;
-  // A closing row for what the list leaves out: how many, their names, and
-  // a page link to where they all are. Not a list item, as it isn't one
-  // of the things made.
-  more?: { names: string[]; href: string; label: string };
+  // A closing row for what the list leaves out: how many, one line on
+  // what they are, and a page link to where they all are. Not a list
+  // item, as it isn't one of the things made.
+  more?: { count: number; line: string; href: string; label: string };
 }
 
 const {
@@ -57,16 +57,7 @@ const {
   more,
 } = Astro.props;
 
-// The closing row's sentence: up to three names, then how many others,
-// e.g. "A, B, C and 2 more."
-const named = (names: string[]) => {
-  const rest = names.length - 3;
-  const items = rest > 0 ? [...names.slice(0, 3), `${rest} more`] : names;
-  return items.length > 1
-    ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}.`
-    : `${items[0]}.`;
-};
-const closing = more && more.names.length > 0 ? more : undefined;
+const closing = more && more.count > 0 ? more : undefined;
 ---
 
 <!--
@@ -203,12 +194,12 @@ const closing = more && more.names.length > 0 ? more : undefined;
     <div class="row rv end" data-i={rows.length}>
       <div class="who">
         <p class="kind">
-          <span>{closing.names.length} more</span>
+          <span>{closing.count} more</span>
         </p>
       </div>
       <div class="what">
         <p class="desc">
-          <Keep text={named(closing.names)} />
+          <Keep text={closing.line} />
         </p>
         <div class="meta">
           <a class="go" href={closing.href}>

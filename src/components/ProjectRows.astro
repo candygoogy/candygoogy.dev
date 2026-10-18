@@ -51,13 +51,32 @@ const rows: Row[] = projects.map((p) => {
     stack: p.data.stack,
   };
 });
+// The closing row's line: the kinds of the projects it stands for, as
+// categories (plural even for one), so it stays true as the list changes,
+// e.g. "Side projects, and websites I’ve built for others."
+const kinds = {
+  product: "products",
+  side: "side projects",
+  website: "websites I’ve built for others",
+} as const;
+const line = (left: CollectionEntry<"projects">[]) => {
+  const parts = (["product", "side", "website"] as const)
+    .filter((k) => left.some((p) => p.data.kind === k))
+    .map((k) => kinds[k]);
+  const text =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`
+      : (parts[0] ?? "");
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
+};
 ---
 
 <Rows
   {...list}
   rows={rows}
   more={{
-    names: more.map((p) => p.data.name),
+    count: more.length,
+    line: line(more),
     href: "/projects",
     label: `${host(site.url)}/projects`,
   }}

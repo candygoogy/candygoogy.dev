@@ -479,7 +479,7 @@ test(
   },
 );
 
-// The published projects, from their content files: the ids, names, and
+// The published projects, from their content files: the ids, kinds, and
 // which are featured.
 const PROJECTS = readdirSync(
   new URL("../../src/content/projects/", import.meta.url),
@@ -494,7 +494,7 @@ const PROJECTS = readdirSync(
     );
     return {
       id: file.slice(0, -".md".length),
-      name: /^name:[ \t]*["']?(.+?)["']?[ \t]*\r?$/m.exec(front)?.[1],
+      kind: /^kind:[ \t]*(\w+)/m.exec(front)?.[1],
       featured: frontmatterFlag(front, "featured"),
       draft: frontmatterFlag(front, "draft"),
     };
@@ -513,7 +513,7 @@ test(
       page.evaluate(() =>
         [...document.querySelectorAll("#projects > .row")].map((row) => ({
           count: row.querySelector(".kind").textContent.trim(),
-          names: row.querySelector(".desc").textContent.trim(),
+          line: row.querySelector(".desc").textContent.trim(),
           href: row.querySelector("a.go").getAttribute("href"),
         })),
       );
@@ -533,11 +533,18 @@ test(
       assert.deepEqual(extra, [], "one closing row");
       assert.equal(row.count, `${hidden.length} more`);
       assert.equal(row.href, "/projects");
-      // Up to three names, then how many others.
-      const named = hidden.filter((p) => row.names.includes(p.name));
-      assert.equal(named.length, Math.min(hidden.length, 3), row.names);
-      if (hidden.length > 3) {
-        assert.ok(row.names.endsWith(` and ${hidden.length - 3} more.`));
+      // One line naming the kinds left out, and only those.
+      const words = {
+        product: /product/i,
+        side: /side project/i,
+        website: /website/i,
+      };
+      for (const [kind, word] of Object.entries(words)) {
+        assert.equal(
+          word.test(row.line),
+          hidden.some((p) => p.kind === kind),
+          `${kind} in "${row.line}"`,
+        );
       }
     } finally {
       await home.context.close();
