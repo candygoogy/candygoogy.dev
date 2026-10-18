@@ -814,12 +814,14 @@ const featured = featuredProjects(await orderedProjects());
      stop, and each stop's ring lands and its name rises out of its clip
      as the line reaches it (the line's curve passes the stops about 50ms
      apart); the filled node fills after its ring. The index follows,
-     160ms in, its heading then its rows rising in turn, as rows do on the
-     page; the switch comes last, 160ms after the index's last row (after
-     the route alone, without the index). Closing is one quick fade.
-     Under reduced motion it simply appears and goes. */
+     80ms in, its heading then its rows rising in turn, 40ms apart (half
+     the page's stagger: the menu is opened often, and is for going
+     somewhere); the switch comes last, 80ms after the index's last row
+     (80ms after the route's last stop, at 195ms, without the index).
+     Closing is one quick fade. Under reduced motion it simply appears and
+     goes. */
   .menu {
-    --lead: 160ms;
+    --lead: 80ms;
   }
 
   .shortlist {
@@ -827,15 +829,15 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   .shortlist :global(li) {
-    --rise: calc(var(--lead) + 80ms + var(--i) * 80ms);
+    --rise: calc(var(--lead) + 40ms + var(--i) * 40ms);
   }
 
   .end {
-    --end: calc(var(--lead) + 480ms);
+    --end: calc(var(--lead) + 240ms);
   }
 
   .shortlist[hidden] ~ .end {
-    --end: 320ms;
+    --end: 280ms;
   }
 
   .route li:nth-child(2) {

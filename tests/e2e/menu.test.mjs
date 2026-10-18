@@ -408,3 +408,44 @@ test(
     assert.deepEqual(r, { first: true, before: true });
   },
 );
+
+// Tall enough for the project index, and too short for it (the route
+// alone, whose last stop is timed by the line, not by the index).
+for (const [height, index] of [
+  [844, true],
+  [560, false],
+]) {
+  test(
+    `opening ${index ? "with" : "without"} the index, nothing waits past 400ms and the switch comes last`,
+    OPTIONS,
+    async (t) => {
+      const page = await phone(t, 390, height);
+      await page.locator("[data-menu-open]").click();
+      await page.waitForFunction(
+        () => document.querySelector("[data-menu]").open,
+      );
+      // Each opening animation's start delay, read while they run.
+      const { delays, end, shown } = await page.evaluate(() => {
+        const menu = document.querySelector("[data-menu]");
+        const delayOf = (a) => a.effect.getComputedTiming().delay;
+        const all = menu.getAnimations({ subtree: true });
+        const ends = menu.querySelector(".end").getAnimations();
+        return {
+          delays: all.map(delayOf),
+          end: Math.max(...ends.map(delayOf)),
+          shown: !menu.querySelector("[data-menu-index]").hidden,
+        };
+      });
+      assert.equal(shown, index, "the index is shown only where it fits");
+      assert.ok(delays.length > 0, "the menu's opening animations ran");
+      const last = Math.max(...delays);
+      assert.ok(last <= 400, `the last part starts at ${last}ms`);
+      assert.equal(end, last, "the theme switch is the last to start");
+      const next = Math.max(...delays.filter((d) => d < end));
+      assert.ok(
+        end - next >= 40,
+        `the switch starts ${end - next}ms after the part before it`,
+      );
+    },
+  );
+}
