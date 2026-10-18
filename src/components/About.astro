@@ -3,12 +3,29 @@ import gaijinLogo from "../assets/logos/gaijin-entertainment.svg";
 // Prepared at 2x (36px) with a clean circular alpha; served as is, not
 // resampled again, so the edge stays free of halos.
 import sielLogo from "../assets/logos/siel-eolie.webp";
-import { about, orgs, site, skills, work } from "../data/site";
+import {
+  about,
+  fixes as allFixes,
+  fixesTitle,
+  orgs,
+  site,
+  skills,
+  work,
+} from "../data/site";
+import { checkFixes } from "../lib/fixes";
 import { github } from "../lib/github";
 import Heatmap from "./Heatmap.astro";
 import Section from "./Section.astro";
 
 const days = github.contributions?.days ?? [];
+// Throws, and so stops the build, on a fix that isn't a pull request on
+// someone else's project.
+const fixes = checkFixes(allFixes);
+const fmtMonth = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 const logos = { siel: sielLogo, gaijin: gaijinLogo };
 // Display size: Siel's round mark 18px, Gaijin's white wordmark 14px tall.
 const logoSize = (org: keyof typeof logos) => {
@@ -149,11 +166,35 @@ const dates = (when: string): [string, string] => {
 
 {
   /* The heatmap is a feature, so it gets the full content width below the
-     About columns instead of a narrow slot inside them. */
-  days.length > 0 && (
-    <section class="github heat-draw" aria-labelledby="github-title">
+     About columns instead of a narrow slot inside them. The fixes follow
+     it, and stay under the heading when there's no heatmap to show. */
+  (days.length > 0 || fixes.length > 0) && (
+    <section
+      class:list={["github", { "heat-draw": days.length > 0 }]}
+      aria-labelledby="github-title"
+    >
       <h3 id="github-title">On GitHub</h3>
-      <Heatmap days={days} profile={site.github} />
+      {days.length > 0 && <Heatmap days={days} profile={site.github} />}
+      {fixes.length > 0 && (
+        <div class="fixes">
+          <h4>{fixesTitle}</h4>
+          <ol>
+            {fixes.map((fix) => (
+              <li>
+                <h5>
+                  <a href={fix.url}>{fix.project}</a>
+                </h5>
+                <p class="meta">
+                  <time datetime={fix.merged}>
+                    {fmtMonth.format(new Date(`${fix.merged}T00:00:00Z`))}
+                  </time>
+                </p>
+                <p class="detail">{fix.line}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
     </section>
   )
 }
@@ -483,6 +524,36 @@ const dates = (when: string): [string, string] => {
     letter-spacing: var(--ls-d-sm);
   }
 
+  /* The fixes, under the heatmap: a subheading like a skill group's, then
+     each fix the way the timeline shows a role (the name, the month soft,
+     the line), side by side while there's room. */
+  .fixes {
+    margin-top: var(--sp-7);
+  }
+
+  .fixes > h4 {
+    margin-bottom: var(--sp-4);
+    font-size: var(--fs-d-xs);
+  }
+
+  .fixes > ol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-5) var(--sp-7);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fixes li {
+    max-width: var(--measure);
+  }
+
+  .fixes h5 {
+    margin: 0;
+    font: var(--fw-bold) var(--fs-body) / var(--lh-body) var(--ff-text);
+  }
+
   .skills {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -504,6 +575,10 @@ const dates = (when: string): [string, string] => {
   @media (max-width: 53.75rem) {
     .skills {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .fixes > ol {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 

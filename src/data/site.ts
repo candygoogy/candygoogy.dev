@@ -1,6 +1,8 @@
 // Site-wide copy.
 // Typographic quotes and apostrophes throughout (’ “ ”).
 
+import type { Fix } from "../lib/fixes";
+
 export const site = {
   name: "candygoogy",
   url: "https://candygoogy.dev",
@@ -106,6 +108,25 @@ export const skills: { group: string; items: string }[] = [
     group: "Hands-on",
     items:
       "Electrical work, building and tuning PCs, structured cabling, racks",
+  },
+];
+
+// Fixes I’ve sent to other projects, under the heatmap (About). Written
+// by hand, newest first; src/lib/fixes.ts checks each one at build time.
+export const fixesTitle = "Fixes I’ve sent to other projects";
+
+export const fixes: Fix[] = [
+  {
+    project: "distlib",
+    url: "https://github.com/pypa/distlib/pull/269",
+    merged: "2026-10-15",
+    line: "When pip couldn’t write a launcher on Windows, it showed a misleading “file not found” error. Now it shows the real one.",
+  },
+  {
+    project: "Pi-hole",
+    url: "https://github.com/pi-hole/pi-hole/pull/6711",
+    merged: "2026-10-07",
+    line: "Pi-hole reset its version file’s permissions on every start, so anyone but root saw every version as N/A. The file now stays readable.",
   },
 ];
 
