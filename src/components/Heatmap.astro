@@ -46,8 +46,9 @@ const fmtDay = new Intl.DateTimeFormat("en-US", {
 });
 
 const parse = (iso: string) => new Date(`${iso}T00:00:00Z`);
+// A no-break space keeps a count on the same line as its noun.
 const plural = (n: number) =>
-  `${n.toLocaleString("en-US")} contribution${n === 1 ? "" : "s"}`;
+  `${n.toLocaleString("en-US")}\u00a0contribution${n === 1 ? "" : "s"}`;
 
 // Weeks as columns (Sunday first), the way GitHub lays them out. Days
 // before the first date are empty padding cells.
@@ -87,6 +88,9 @@ const busiest = days.reduce<Day | undefined>(
   (best, d) => (d.count > (best?.count ?? 0) ? d : best),
   undefined,
 );
+// "Oct 15" stays on one line.
+const busiestDay =
+  busiest && fmtShort.format(parse(busiest.date)).replace(" ", "\u00a0");
 
 // Each day's week number (--w, its column; the day name comes first in
 // its row), for the charge-up's left-to-right start (motion.css): one rule
@@ -141,9 +145,8 @@ const weekly = weeks.map((week) => {
     contribution{total === 1 ? "" : "s"} in the last year.{" "}
     {busiest && (
       <>
-        The busiest was{" "}
-        <span class="busiest">{fmtShort.format(parse(busiest.date))}</span>,
-        with {plural(busiest.count)}.{" "}
+        The busiest was <span class="busiest">{busiestDay}</span>, with{" "}
+        {plural(busiest.count)}.{" "}
       </>
     )}
     <a href={profile}>See them on GitHub</a>.
