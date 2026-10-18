@@ -41,9 +41,32 @@ interface Props {
   // The rows' heading level: 3 under the list's heading, 2 when the list
   // is the page's whole content.
   level?: 2 | 3;
+  // A closing row for what the list leaves out: how many, their names, and
+  // a page link to where they all are. Not a list item, as it isn't one
+  // of the things made.
+  more?: { names: string[]; href: string; label: string };
 }
 
-const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
+const {
+  id,
+  title,
+  labelledBy,
+  rows,
+  aliases = [],
+  level = 3,
+  more,
+} = Astro.props;
+
+// The closing row's sentence: up to three names, then how many others,
+// e.g. "A, B, C and 2 more."
+const named = (names: string[]) => {
+  const rest = names.length - 3;
+  const items = rest > 0 ? [...names.slice(0, 3), `${rest} more`] : names;
+  return items.length > 1
+    ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}.`
+    : `${items[0]}.`;
+};
+const closing = more && more.names.length > 0 ? more : undefined;
 ---
 
 <!--
@@ -73,14 +96,15 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
   <ol class="rows">
     {rows.map((row, i) => {
       const go = row.link;
-      const last = i === rows.length - 1;
+      // With a closing row the last project isn't the list's end.
+      const last = i === rows.length - 1 && !closing;
       // A page link's name goes on past its address. Kept in one
       // expression with the label, so no space lands before the comma.
       const about = `, about ${row.name}`;
       return (
         <li
           id={row.id}
-          class:list={["row", "rv", { "rv-line at-bottom": !last }]}
+          class:list={["row", "rv", { "rv-line at-bottom": !last, end: last }]}
           data-arrive
           data-i={i}
           data-line={last ? undefined : "line"}
@@ -175,8 +199,37 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
       );
     })}
   </ol>
-  {/* Anything after the rows (the home list's link to every project). */}
-  <slot />
+  {closing && (
+    <div class="row rv end" data-i={rows.length}>
+      <div class="who">
+        <p class="kind">
+          <span>{closing.names.length} more</span>
+        </p>
+      </div>
+      <div class="what">
+        <p class="desc">
+          <Keep text={named(closing.names)} />
+        </p>
+        <div class="meta">
+          <a class="go" href={closing.href}>
+            {[
+              closing.label,
+              <span class="visually-hidden">, every project</span>,
+            ]}
+            <svg
+              class="arr next"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              aria-hidden="true"
+            >
+              <path d="M3.5 8h9M8.5 4l4 4-4 4" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  )}
 </section>
 
 <style>
@@ -215,7 +268,7 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
 
   /* The list ends on its last line of text: no rule under it, so the gap
      to About is the usual section gap. */
-  .row:last-child {
+  .row.end {
     padding-bottom: 0;
   }
 
@@ -233,6 +286,11 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     font-size: var(--fs-meta);
     color: var(--soft);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* The closing row's count stands alone, with no name above it. */
+  .who > .kind:first-child {
+    margin-top: 0;
   }
 
   /* The description in ink at lede size; the meta row shares its measure,
@@ -331,7 +389,7 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     transition: opacity var(--dur-ui) var(--ease-out);
   }
 
-  .row:last-child::after {
+  .row.end::after {
     bottom: calc(-1 * var(--sp-5));
   }
 

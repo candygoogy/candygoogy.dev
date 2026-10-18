@@ -479,8 +479,8 @@ test(
   },
 );
 
-// The published projects, from their content files: the ids, and which
-// are featured.
+// The published projects, from their content files: the ids, names, and
+// which are featured.
 const PROJECTS = readdirSync(
   new URL("../../src/content/projects/", import.meta.url),
 )
@@ -494,6 +494,7 @@ const PROJECTS = readdirSync(
     );
     return {
       id: file.slice(0, -".md".length),
+      name: /^name:[ \t]*["']?(.+?)["']?[ \t]*\r?$/m.exec(front)?.[1],
       featured: frontmatterFlag(front, "featured"),
       draft: frontmatterFlag(front, "draft"),
     };
@@ -501,27 +502,43 @@ const PROJECTS = readdirSync(
   .filter((p) => !p.draft);
 
 test(
-  "home lists the featured projects but the band's, then a link to all of them; /projects lists every one",
+  "home lists the featured projects but the band's and closes on the rest; /projects lists every one",
   OPTIONS,
   async () => {
     const rows = (page) =>
       page.evaluate(() =>
-        [...document.querySelectorAll("#projects .row")].map((li) => li.id),
+        [...document.querySelectorAll("#projects li.row")].map((li) => li.id),
       );
+    const closing = (page) =>
+      page.evaluate(() =>
+        [...document.querySelectorAll("#projects > .row")].map((row) => ({
+          count: row.querySelector(".kind").textContent.trim(),
+          names: row.querySelector(".desc").textContent.trim(),
+          href: row.querySelector("a.go").getAttribute("href"),
+        })),
+      );
+    const shown = PROJECTS.filter(
+      (p) => p.featured && p.id !== featuredProject,
+    );
+    const hidden = PROJECTS.filter(
+      (p) => !p.featured && p.id !== featuredProject,
+    );
     const home = await open("/");
     try {
       assert.deepEqual(
         (await rows(home.page)).sort(),
-        PROJECTS.filter((p) => p.featured && p.id !== featuredProject)
-          .map((p) => p.id)
-          .sort(),
+        shown.map((p) => p.id).sort(),
       );
-      const all = await home.page.evaluate(() =>
-        [...document.querySelectorAll('#projects a[href="/projects"]')].map(
-          (a) => a.textContent.trim(),
-        ),
-      );
-      assert.deepEqual(all, [`All ${PROJECTS.length} projects`]);
+      const [row, ...extra] = await closing(home.page);
+      assert.deepEqual(extra, [], "one closing row");
+      assert.equal(row.count, `${hidden.length} more`);
+      assert.equal(row.href, "/projects");
+      // Up to three names, then how many others.
+      const named = hidden.filter((p) => row.names.includes(p.name));
+      assert.equal(named.length, Math.min(hidden.length, 3), row.names);
+      if (hidden.length > 3) {
+        assert.ok(row.names.endsWith(` and ${hidden.length - 3} more.`));
+      }
     } finally {
       await home.context.close();
     }
@@ -533,6 +550,7 @@ test(
         (await rows(list.page)).sort(),
         PROJECTS.map((p) => p.id).sort(),
       );
+      assert.deepEqual(await closing(list.page), [], "no closing row");
     } finally {
       await list.context.close();
     }

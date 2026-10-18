@@ -6,12 +6,14 @@ import Rows, { type Row } from "./Rows.astro";
 
 // Projects as text rows, in the order given: the home page's shortlist
 // and /projects share one row shape. The list itself (its id, heading,
-// aliases, row level) is the page's, passed on to Rows.
+// aliases, row level) is the page's, passed on to Rows. The projects a
+// shortlist leaves out (more) close it with one row, linking to them all.
 type Props = {
   projects: CollectionEntry<"projects">[];
-} & Omit<ComponentProps<typeof Rows>, "rows">;
+  more?: CollectionEntry<"projects">[];
+} & Omit<ComponentProps<typeof Rows>, "rows" | "more">;
 
-const { projects, ...list } = Astro.props;
+const { projects, more = [], ...list } = Astro.props;
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 const kind = { side: "Side project", website: "Website", product: "Product" };
 
@@ -51,6 +53,12 @@ const rows: Row[] = projects.map((p) => {
 });
 ---
 
-<Rows {...list} rows={rows}>
-  <slot />
-</Rows>
+<Rows
+  {...list}
+  rows={rows}
+  more={{
+    names: more.map((p) => p.data.name),
+    href: "/projects",
+    label: `${host(site.url)}/projects`,
+  }}
+/>

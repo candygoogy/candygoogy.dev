@@ -12,10 +12,14 @@ import { featuredProjects, orderedProjects, ownPages } from "../lib/projects";
 
 const projects = await orderedProjects();
 // The band is the featured product's alone; the other featured projects
-// are the rows here, and every project is on /projects, linked under them.
+// are the rows here, and the list closes on the rest, named and linked to
+// /projects, where every project is.
 const band = projects.find((p) => p.id === featuredProject);
 const shortlist = featuredProjects(projects).filter(
   (p) => p.id !== featuredProject,
+);
+const rest = projects.filter(
+  (p) => p.id !== featuredProject && !shortlist.includes(p),
 );
 
 // Structured data: who the site belongs to (the public handle only).
@@ -37,23 +41,9 @@ const schema = {
     id="projects"
     title="More things I’ve made"
     aliases={["websites", "side-projects"]}
-  >
-    <p class="all rv">
-      <a class="tap" href="/projects">
-        All {projects.length} projects
-      </a>
-    </p>
-  </ProjectRows>
+    more={rest}
+  />
   <About />
   <Contact />
   <Previews />
 </Base>
-
-<style>
-  /* Under the last row, as a product page's way back sits under its
-     facts. */
-  .all {
-    margin-top: var(--sp-7);
-    font-size: var(--fs-meta);
-  }
-</style>
