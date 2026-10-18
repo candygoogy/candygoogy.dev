@@ -74,7 +74,7 @@ export const work: WorkItem[] = [
     type: "Freelance",
     title: "QA Tester",
     org: "gaijin",
-    detail: "Remote. Tested builds and reported bugs.",
+    detail: "Remote. Pre-release builds, regression passes, and bug reports.",
   },
   {
     when: "2020 to 2024",
