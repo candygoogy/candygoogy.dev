@@ -18,10 +18,10 @@ const logoSize = (org: keyof typeof logos) => {
 };
 
 // The timeline's groups: consecutive items with the same employer, headed
-// by its chip and the year it started; items without one form Education.
+// by its chip; items without one form Education. Each role shows the year
+// it started, level with its dot.
 type Group = {
   org: keyof typeof orgs | undefined;
-  year?: string | undefined;
   items: typeof work;
 };
 const groups: Group[] = [];
@@ -29,12 +29,6 @@ for (const item of work) {
   const last = groups.at(-1);
   if (last && last.org === item.org) last.items.push(item);
   else groups.push({ org: item.org, items: [item] });
-}
-// An employer's year is when it started; Education's is its newest school,
-// the one level with the heading.
-for (const g of groups) {
-  const starts = g.items.flatMap((i) => (i.datetime ? [i.datetime] : []));
-  g.year = (g.org ? starts.sort()[0] : starts[0])?.slice(0, 4);
 }
 // "Mar 2024 to Dec 2025": the start goes in a <time>, the rest follows it.
 const dates = (when: string): [string, string] => {
@@ -66,11 +60,6 @@ const dates = (when: string): [string, string] => {
     <ol class="groups">
       {groups.map((g) => (
         <li class="group">
-          {g.year && (
-            <p class="year rv" aria-hidden="true">
-              {g.year}
-            </p>
-          )}
           <div class="body">
             <h3 class="rv" data-i="1">
               {g.org ? (
@@ -102,6 +91,11 @@ const dates = (when: string): [string, string] => {
                     class:list={["role", "rv", { current: item.current }]}
                     data-i={i + 2}
                   >
+                    {item.datetime && (
+                      <p class="year" aria-hidden="true">
+                        {item.datetime.slice(0, 4)}
+                      </p>
+                    )}
                     <span class="dot" aria-hidden="true">
                       <span></span>
                     </span>
@@ -178,10 +172,10 @@ const dates = (when: string): [string, string] => {
     font-size: var(--fs-lede);
   }
 
-  /* The timeline, grouped by employer: the start year in a narrow column
-     (a small line above the group on phones), then the group's heading
-     and its roles. The roles' dots sit in a 24px gutter on one line; the
-     headings and role text start after the gutter. */
+  /* The timeline, grouped by employer: a narrow column for each role's
+     start year (none on phones), then the group's heading and its roles.
+     The roles' dots sit in a 24px gutter on one line; the headings and
+     role text start after the gutter. */
   .tl {
     --year: 5.5rem;
     --gut: 24px;
@@ -209,10 +203,14 @@ const dates = (when: string): [string, string] => {
     grid-template-columns: var(--year) minmax(0, 1fr);
   }
 
+  /* Each role's start year, in the column left of the line, level with
+     its dot. */
   .year {
-    grid-column: 1;
+    position: absolute;
+    top: 0;
+    left: calc(-1 * var(--year));
     font-size: var(--fs-meta);
-    line-height: var(--head-lh);
+    line-height: var(--role-lh);
     color: var(--soft);
     font-variant-numeric: tabular-nums;
   }
@@ -368,8 +366,8 @@ const dates = (when: string): [string, string] => {
     }
   }
 
-  /* Phones: the year is a small line above its group, and the line and
-     dots run down the left edge. */
+  /* Phones: no year column, since the meta line under each title carries
+     the dates; the line and dots run down the left edge. */
   @media (max-width: 32.5rem) {
     .tl {
       --year: 0px;
@@ -379,21 +377,12 @@ const dates = (when: string): [string, string] => {
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .year,
     .body {
       grid-column: 1;
     }
 
     .year {
-      padding-left: var(--gut);
-      line-height: 1.5rem;
-    }
-
-    .line {
-      top: var(
-        --line-top,
-        calc(1.5rem + var(--head-lh) + var(--sp-3) + var(--role-lh) / 2)
-      );
+      display: none;
     }
   }
 

@@ -230,9 +230,9 @@
     display: none !important;
   }
 
-  /* The timeline as receipt lines: no line, dots or tails; each group's
-     year (soft) on its own line, the employer, then each role, its dates
-     and its detail, tight. */
+  /* The timeline as receipt lines: no line, dots or tails; the employer,
+     then each role's start year (soft) on its own line above its title,
+     its dates and its detail, tight. */
   .tl .line,
   .tl .dot {
     display: none !important;
@@ -247,6 +247,8 @@
   }
 
   .tl .year {
+    position: static !important;
+    display: block !important;
     line-height: 1.35 !important;
     color: #444;
   }
