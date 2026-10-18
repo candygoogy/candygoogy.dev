@@ -257,6 +257,13 @@ const { id, title, labelledBy, rows, aliases = [], level = 3 } = Astro.props;
     color: var(--soft);
   }
 
+  /* The sentence always takes its own line under the link(s): left to
+     wrap, it sat beside them in rows with a short stack and fell under
+     them in the rest. */
+  .meta > p {
+    flex-basis: 100%;
+  }
+
   .role {
     color: var(--ink);
   }

@@ -132,16 +132,12 @@ const rows: Row[] = entries.map(({ id, data }) => ({
   }
 
   /* Phones: the two links share a line, 24px apart so their targets
-     don't touch; the sentence goes under them. */
+     don't touch; the sentence goes under them, as everywhere. */
   @media (max-width: 53.75rem) {
     :global(#experiments .meta) {
       flex-direction: row;
       flex-wrap: wrap;
       gap: var(--sp-3) var(--sp-5);
-    }
-
-    :global(#experiments .meta > p) {
-      flex-basis: 100%;
     }
 
     :global(#experiments .src) {
