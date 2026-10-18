@@ -149,7 +149,6 @@ const words = data.name.split(" ").map((word) => {
     --band-r: var(--r-band);
     border-radius: var(--band-r);
     background: var(--band);
-    box-shadow: inset 0 0 0 var(--rule) var(--band-edge);
     color: var(--band-ink);
   }
 
@@ -204,7 +203,6 @@ const words = data.name.split(" ").map((word) => {
   .stage :global(img) {
     width: 100%;
     border-radius: var(--r-shot);
-    box-shadow: var(--shadow-shot);
   }
 
   .zig {
@@ -236,17 +234,6 @@ const words = data.name.split(" ").map((word) => {
     margin: var(--sp-6) 0 0;
   }
 
-  /* Below the page's full width (84rem, --page-max) the band reaches the
-     screen's sides, where its edge would show as stray lines: there it
-     has an edge on top and bottom only. */
-  @media (max-width: 84rem) {
-    .band {
-      box-shadow:
-        inset 0 var(--rule) 0 var(--band-edge),
-        inset 0 calc(-1 * var(--rule)) 0 var(--band-edge);
-    }
-  }
-
   /* Side by side, the facts' first row sits level with "Why": the room
      above it, under its hairline, is taken from above the column. */
   @media (min-width: 53.76rem) {
@@ -266,8 +253,8 @@ const words = data.name.split(" ").map((word) => {
     }
   }
 
-  /* Forced colors drop the band's fill and edge: a hairline in the text
-     color keeps it a band. */
+  /* Forced colors drop the band's fill: a hairline in the text color
+     keeps it a band. */
   @media (forced-colors: active) {
     .band {
       outline: var(--rule) solid CanvasText;
