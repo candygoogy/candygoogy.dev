@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  checkIndexes,
   checkLive,
   checkPolicies,
+  menuIndex,
   newestDay,
 } from "../../scripts/check-live.mjs";
 
@@ -110,4 +112,71 @@ test("checkPolicies: mail no longer listed fails, since the lede names it", () =
     [false, true],
   );
   assert.match(lines[0].text, /^mail isn't listed on \/experiments/);
+});
+
+// The home page's menu index as built (2026-10-18), with its scoped-style
+// attributes, the nowrap span and relative links; the script after it
+// names data-menu-index too.
+const SITE_MENU = `<div class="shortlist wrap" data-menu-index data-astro-cid-nen7h5rs><nav class="index in-menu" aria-labelledby="menu-index-title" data-astro-cid-bqh5cn3t><h2 id="menu-index-title" data-astro-cid-bqh5cn3t>A few things I’ve built</h2><ol data-astro-cid-bqh5cn3t><li data-i="0" data-astro-cid-bqh5cn3t><a class="shift" href="/fettle" data-astro-cid-bqh5cn3t><span class="name vt-project-title" data-astro-cid-bqh5cn3t>Fettle</span><span class="blurb" data-astro-cid-bqh5cn3t>Windows <span class="nobr">check-up</span>, printed as a readable receipt</span></a></li><li data-i="1" data-astro-cid-bqh5cn3t><a class="shift" href="/idiff" data-astro-cid-bqh5cn3t><span data-vt="idiff" class="name vt-project-title" data-astro-cid-bqh5cn3t>Install diff</span><span class="blurb" data-astro-cid-bqh5cn3t>What an installer did to your PC, in plain words</span></a></li><li data-i="2" data-astro-cid-bqh5cn3t><a class="shift" href="#notary" data-astro-cid-bqh5cn3t><span class="name" data-astro-cid-bqh5cn3t>Notary</span><span class="blurb" data-astro-cid-bqh5cn3t>Claude Code mods that check Claude’s work</span></a></li></ol></nav></div><script type="module">n?.querySelector(\`[data-menu-index]\`)</script>`;
+// An experiment's copy: its own classes, absolute links, escaped text.
+const TOOL_MENU = `<section class="menu-projects" data-menu-index>
+  <h2>A few things I&#8217;ve built</h2>
+  <ol>
+    <li><a href="https://candygoogy.dev/fettle"><span class="t">Fettle</span>
+      <span class="d">Windows <span class="nw">check-up</span>,
+      printed as a readable receipt</span></a></li>
+    <li><a href="https://candygoogy.dev/idiff"><span class="t">Install diff</span><span class="d">What an installer did to your PC, in plain words</span></a></li>
+    <li><a href="https://candygoogy.dev/#notary"><span class="t">Notary</span><span class="d">Claude Code mods that check Claude&rsquo;s work</span></a></li>
+  </ol>
+</section>`;
+const TOOL_URL = "https://keyboard.candygoogy.dev/";
+
+test("menuIndex: reads the site's and a tool's markup the same", () => {
+  const site = menuIndex(SITE_MENU, "https://candygoogy.dev/");
+  assert.deepEqual(site, menuIndex(TOOL_MENU, TOOL_URL));
+  assert.equal(site.title, "A few things I’ve built");
+  assert.deepEqual(site.rows[0], {
+    name: "Fettle",
+    blurb: "Windows check-up, printed as a readable receipt",
+    href: "https://candygoogy.dev/fettle",
+  });
+  assert.equal(site.rows[2].href, "https://candygoogy.dev/#notary");
+  assert.deepEqual(
+    checkIndexes(SITE_MENU, [
+      { id: "keyboard", url: TOOL_URL, html: TOOL_MENU },
+    ]),
+    [
+      {
+        ok: true,
+        text: "experiments' menu index matches the site's 3 rows: keyboard",
+      },
+    ],
+  );
+});
+
+test("checkIndexes: a drifted, missing or unfetched index fails by name", () => {
+  const lines = checkIndexes(SITE_MENU, [
+    {
+      id: "keyboard",
+      url: TOOL_URL,
+      html: TOOL_MENU.replace("#notary", "#x").replace("plain words", "words"),
+    },
+    { id: "photo", url: TOOL_URL, html: "<header><nav></nav></header>" },
+    { id: "mail", error: new Error("HTTP 503") },
+    { id: "subnet", url: TOOL_URL, html: TOOL_MENU },
+  ]);
+  assert.deepEqual(
+    lines.map((l) => l.ok),
+    [false, false, false, true],
+  );
+  assert.match(
+    lines[0].text,
+    /^keyboard: row 2 blurb "What an installer did to your PC, in words", site has "[^"]+plain words"; row 3 href https:\/\/candygoogy\.dev\/#x, site has https:\/\/candygoogy\.dev\/#notary:/,
+  );
+  assert.match(lines[1].text, /^photo: no menu index/);
+  assert.match(
+    lines[2].text,
+    /^mail: couldn't check its menu index: .*HTTP 503/,
+  );
+  assert.match(lines[3].text, /matches the site's 3 rows: subnet$/);
 });

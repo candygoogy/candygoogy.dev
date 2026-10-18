@@ -181,7 +181,7 @@ export function listedUrl(text) {
   return url;
 }
 
-const EXPERIMENTS = join(
+export const EXPERIMENTS = join(
   import.meta.dirname,
   "..",
   "src",

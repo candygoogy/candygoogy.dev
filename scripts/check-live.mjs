@@ -7,16 +7,26 @@
 //  - an experiment's live security policy lets it connect to more than
 //    /experiments says (scripts/experiments-policy.mjs), or it can't be
 //    checked. The build only warns about that, so the daily rebuild still
-//    deploys; this is where it's loud.
+//    deploys; this is where it's loud;
+//  - an experiment's menu index (the featured projects in its phone menu)
+//    isn't the home page's: another heading, or rows missing, added,
+//    reordered or with other names, blurbs or links; or it has none, or
+//    can't be checked. The tools keep their own copy of the site's
+//    featured list, and nothing else notices when the two drift apart;
+//    this is where that gets loud.
 //   node scripts/check-live.mjs
 //
 // The parse and checks are exported for the tests; only running the file
 // directly fetches anything.
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   allows,
   classify,
   EXPECTED,
+  EXPERIMENTS,
   expected,
+  listedUrl,
   livePolicies,
   looser,
   policyOf,
@@ -155,6 +165,227 @@ export function checkPolicies(results) {
   return lines;
 }
 
+const ENTITIES = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  lsquo: "‘",
+  rsquo: "’",
+  ldquo: "“",
+  rdquo: "”",
+  ndash: "–",
+  mdash: "—",
+  hellip: "…",
+};
+
+// Character references read back as text; an unknown one stays as written.
+const decode = (s) =>
+  s.replace(/&(?:#(\d+)|#x([\da-f]+)|([a-z]+));/gi, (ref, dec, hex, name) => {
+    if (name) return ENTITIES[name] ?? ref;
+    const code = dec ? Number(dec) : parseInt(hex, 16);
+    return code <= 0x10ffff ? String.fromCodePoint(code) : ref;
+  });
+
+// An element's text: tags dropped, references decoded, runs of whitespace
+// as one space.
+const text = (html) =>
+  decode(html.replace(/<[^>]*>/g, ""))
+    .replace(/\s+/g, " ")
+    .trim();
+
+// What's inside the element whose opening tag starts at start, counting
+// nested ones of the same name; undefined when it isn't closed.
+function inner(html, start) {
+  const name = /^<([a-z][\w-]*)/i.exec(html.slice(start))[1];
+  const open = html.indexOf(">", start) + 1;
+  if (!open) return undefined;
+  const tags = new RegExp(`<(/?)${name}(?=[\\s/>])[^>]*>`, "gi");
+  tags.lastIndex = open;
+  let depth = 1;
+  for (let tag; (tag = tags.exec(html));) {
+    depth += tag[1] ? -1 : 1;
+    if (!depth) return html.slice(open, tag.index);
+  }
+  return undefined;
+}
+
+// Each top-level element of one name in html (nested ones stay inside
+// theirs), as its opening tag and what's inside.
+function children(html, name) {
+  const out = [];
+  const opens = new RegExp(`<${name}(?=[\\s/>])[^>]*>`, "gi");
+  for (let tag; (tag = opens.exec(html));) {
+    const body = inner(html, tag.index);
+    if (body === undefined) break;
+    out.push({ tag: tag[0], body });
+    opens.lastIndex = tag.index + tag[0].length + body.length;
+  }
+  return out;
+}
+
+/** The featured-project index in a page's menu: the element marked
+ * data-menu-index, its h2 for the heading and its ol's rows, each an li
+ * with a link whose first two spans are the name and the blurb. Read from
+ * that shape, not class names, so the site's markup and the experiments'
+ * (each with their own classes) read the same. Links come back absolute,
+ * resolved against base. null when the page has no index.
+ * @param {string} html @param {string} base
+ * @returns {{ title: string, rows: { name: string, blurb: string, href: string | null }[] } | null} */
+export function menuIndex(html, base) {
+  const page = html.replace(
+    /<!--[\s\S]*?-->|<script\b[\s\S]*?<\/script>/gi,
+    "",
+  );
+  const at = /<[a-z][\w-]*(?=[\s/>])[^>]*?\sdata-menu-index(?=[\s=/>])/i.exec(
+    page,
+  );
+  if (!at) return null;
+  const box = inner(page, at.index);
+  if (box === undefined) return null;
+  const h2 = /<h2(?=[\s/>])/i.exec(box);
+  const ol = /<ol(?=[\s/>])/i.exec(box);
+  if (!h2 || !ol) return null;
+  const list = inner(box, ol.index) ?? "";
+  const rows = children(list, "li").map(({ body }) => {
+    const [link] = children(body, "a");
+    const raw =
+      /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(link?.tag ?? "") ??
+      [];
+    const href = raw[1] ?? raw[2] ?? raw[3];
+    let url = null;
+    if (href !== undefined) {
+      try {
+        url = new URL(decode(href), base).href;
+      } catch {
+        url = decode(href);
+      }
+    }
+    const [name, blurb] = children(link?.body ?? "", "span");
+    return {
+      name: text(name?.body ?? ""),
+      blurb: text(blurb?.body ?? ""),
+      href: url,
+    };
+  });
+  return { title: text(inner(box, h2.index) ?? ""), rows };
+}
+
+/** How a tool's menu index differs from the site's, one phrase each; []
+ * when they match. @param {ReturnType<typeof menuIndex>} site
+ * @param {ReturnType<typeof menuIndex>} tool */
+export function compareIndex(site, tool) {
+  if (!tool) return ["no menu index (an element with data-menu-index)"];
+  const out = [];
+  if (tool.title !== site.title) {
+    out.push(`heading "${tool.title}", site has "${site.title}"`);
+  }
+  const n = Math.max(tool.rows.length, site.rows.length);
+  for (let i = 0; i < n; i++) {
+    const row = tool.rows[i];
+    const want = site.rows[i];
+    if (!row) {
+      out.push(`row ${i + 1} missing, site has ${want.name}`);
+    } else if (!want) {
+      out.push(
+        `row ${i + 1} ${row.name} extra, site has ${site.rows.length} rows`,
+      );
+    } else {
+      for (const key of ["name", "blurb"]) {
+        if (row[key] !== want[key]) {
+          out.push(
+            `row ${i + 1} ${key} "${row[key]}", site has "${want[key]}"`,
+          );
+        }
+      }
+      if (row.href !== want.href) {
+        out.push(`row ${i + 1} href ${row.href}, site has ${want.href}`);
+      }
+    }
+  }
+  return out;
+}
+
+/** One line per tool whose menu index isn't the home page's or that
+ * couldn't be checked, and one for all the others. Each tool is its id with
+ * its live page (and its address, to resolve its links), or the error.
+ * @param {string} home
+ * @param {({ id: string, url: string, html: string } | { id: string, error: unknown })[]} tools */
+export function checkIndexes(home, tools) {
+  const site = menuIndex(home, `${SITE}/`);
+  if (!site) {
+    return [
+      {
+        ok: false,
+        text: "the home page has no menu index (data-menu-index), so the experiments' copies can't be checked",
+      },
+    ];
+  }
+  const lines = [];
+  const fine = [];
+  for (const tool of tools) {
+    if ("error" in tool) {
+      lines.push({
+        ok: false,
+        text: `${tool.id}: couldn't check its menu index: ${tool.error}`,
+      });
+      continue;
+    }
+    const problems = compareIndex(site, menuIndex(tool.html, tool.url));
+    if (problems.length) {
+      lines.push({
+        ok: false,
+        text: `${tool.id}: ${problems.join("; ")}: its menu has drifted from the site's featured list; update its copy in the experiments repo`,
+      });
+    } else {
+      fine.push(tool.id);
+    }
+  }
+  if (!tools.length) {
+    lines.push({ ok: false, text: "no experiments' menus to check" });
+  } else if (fine.length) {
+    lines.push({
+      ok: true,
+      text: `experiments' menu index matches the site's ${site.rows.length} rows: ${fine.join(", ")}`,
+    });
+  }
+  return lines;
+}
+
+// Every experiment /experiments lists, with its live page, or why it
+// couldn't be fetched. The same list livePolicies() reads.
+async function liveTools() {
+  const tools = [];
+  for (const file of (await readdir(EXPERIMENTS)).sort()) {
+    if (!file.endsWith(".md")) continue;
+    let url;
+    try {
+      url = listedUrl(await readFile(join(EXPERIMENTS, file), "utf8"));
+    } catch (error) {
+      throw new Error(`src/content/experiments/${file}: ${error.message}`, {
+        cause: error,
+      });
+    }
+    if (url) tools.push({ id: file.slice(0, -".md".length), url });
+  }
+  return Promise.all(
+    tools.map(async ({ id, url }) => {
+      try {
+        const res = await fetch(url, {
+          headers: UA,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+        return { id, url, html: await res.text() };
+      } catch (error) {
+        return { id, error };
+      }
+    }),
+  );
+}
+
 async function get(path) {
   const res = await fetch(`${SITE}${path}`, {
     headers: UA,
@@ -175,9 +406,11 @@ if (process.argv[1] === import.meta.filename) {
       }
     }
   };
-  // Each part on its own, so one that can't run doesn't hide the other.
+  // Each part on its own, so one that can't run doesn't hide the others.
+  let home;
   try {
-    const [securityTxt, home] = await Promise.all([
+    let securityTxt;
+    [securityTxt, home] = await Promise.all([
       get("/.well-known/security.txt"),
       get("/"),
     ]);
@@ -191,5 +424,17 @@ if (process.argv[1] === import.meta.filename) {
   } catch (error) {
     console.error(`check-live: FAIL couldn't check the experiments: ${error}`);
     process.exitCode = 1;
+  }
+  // Without the home page there's nothing to compare against; that has
+  // already failed above.
+  if (home !== undefined) {
+    try {
+      report(checkIndexes(home, await liveTools()));
+    } catch (error) {
+      console.error(
+        `check-live: FAIL couldn't check the experiments' menus: ${error}`,
+      );
+      process.exitCode = 1;
+    }
   }
 }
