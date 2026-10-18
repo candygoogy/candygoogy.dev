@@ -449,3 +449,31 @@ for (const [height, index] of [
     },
   );
 }
+
+// Short phones keep the index's names (the closest step) rather than lose
+// it: an iPhone in Safari with its toolbars (393x659) and the common
+// 375x667 and 390x664.
+test("short phones keep the index's names", OPTIONS, async (t) => {
+  for (const [width, height] of [
+    [393, 659],
+    [375, 667],
+    [390, 664],
+  ]) {
+    const page = await phone(t, width, height);
+    await openMenu(page);
+    const fit = await page.evaluate(() => {
+      const menu = document.querySelector("[data-menu]");
+      const end = menu.querySelector(".end");
+      return {
+        step: menu.dataset.fit ?? "hidden",
+        inside: end.offsetTop + end.offsetHeight <= menu.clientHeight + 1,
+      };
+    });
+    assert.deepEqual(
+      fit,
+      { step: "close", inside: true },
+      `${width}x${height}: the index's names, the switch on screen`,
+    );
+    await page.close();
+  }
+});

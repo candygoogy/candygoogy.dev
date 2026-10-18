@@ -690,8 +690,11 @@ const featured = featuredProjects(await orderedProjects());
   }
 
   /* Shorter still: the route's rows a little closer (the names keep their
-     size), and less room between the route and the index. */
-  .menu[data-fit="close"] .route {
+     size), and less room between the route and the index, and between
+     the index and the switch: enough for an iPhone in Safari with its
+     toolbars (393x659) to keep the names. */
+  .menu[data-fit="close"] .route,
+  .menu[data-fit="close"] .shortlist {
     padding-bottom: var(--sp-5);
   }
 
