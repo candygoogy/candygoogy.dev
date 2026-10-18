@@ -232,7 +232,9 @@
 
   /* The timeline as receipt lines: no line, dots or tails; the employer,
      then each role's start year (soft) on its own line above its title,
-     its dates and its detail, tight. */
+     its dates and its detail, tight. Roles sit far enough apart that each
+     year reads with its own title, not the dates above it; groups sit
+     further apart still. */
   .tl .line,
   .tl .dot {
     display: none !important;
@@ -264,7 +266,7 @@
   }
 
   .tl .roles {
-    gap: 1.5mm !important;
+    gap: 2.5mm !important;
   }
 
   /* The total as the plain number, never mid-roll. */
