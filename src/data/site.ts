@@ -120,12 +120,14 @@ export const fixes: Fix[] = [
     project: "distlib",
     url: "https://github.com/pypa/distlib/pull/269",
     merged: "2026-10-15",
+    release: "0.4.4",
     line: "When pip couldn’t write a launcher on Windows, it showed a misleading “file not found” error. Now it shows the real one.",
   },
   {
     project: "Pi-hole",
     url: "https://github.com/pi-hole/pi-hole/pull/6711",
     merged: "2026-10-07",
+    release: "v6.5",
     line: "Pi-hole reset its version file’s permissions on every start, so anyone but root saw every version as N/A. The file now stays readable.",
   },
 ];

@@ -9,6 +9,9 @@ export interface Fix {
   url: string;
   // The day it was merged, e.g. "2026-10-07"; About shows the month.
   merged: string;
+  // The project's first release with the fix in it, e.g. "v6.5"; left
+  // out until there is one.
+  release?: string;
   line: string;
 }
 

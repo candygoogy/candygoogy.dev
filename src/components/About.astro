@@ -185,9 +185,11 @@ const dates = (when: string): [string, string] => {
                   <a href={fix.url}>{fix.project}</a>
                 </h5>
                 <p class="meta">
+                  Merged{" "}
                   <time datetime={fix.merged}>
                     {fmtMonth.format(new Date(`${fix.merged}T00:00:00Z`))}
                   </time>
+                  {fix.release && `, in ${fix.release}`}
                 </p>
                 <p class="detail">{fix.line}</p>
               </li>
