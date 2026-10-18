@@ -29,14 +29,14 @@ images:
   - light: ./fettle/print-light.png
     dark: ./fettle/print-dark.png
     alt: "Fettle’s print preview: the receipt laid out on an A4 page."
-    caption: "Print preview: the pages exactly as they’ll print."
+    caption: "The print preview, on an A4 page."
     phone:
       light: ./fettle/print-light-phone.png
       dark: ./fettle/print-dark-phone.png
   - light: ./fettle/share-light.png
     dark: ./fettle/share-dark.png
     alt: "Fettle’s Share view: keep the link for 7 days, 30 days or a year, and an optional password."
-    caption: "Sharing: choose how long the link lasts, and add a password if you like."
+    caption: "The Share view."
     phone:
       light: ./fettle/share-light-phone.png
       dark: ./fettle/share-dark-phone.png
@@ -63,5 +63,5 @@ page:
     - text: "Copy it as formatted text for a forum, Discord or Reddit, so whoever is helping you sees the same receipt. Or save the full report as JSON, with every number Fettle read."
     - text: "Read it in English or Italian, with light, dark and OLED themes. The app, the PDF and the share page all draw the receipt from the same code, so it reads the same everywhere."
   privacy: "Reports leave out serial numbers, the PC’s name, your username, name and email address, the work or school domain, network addresses and the names of servers on your network. Product keys are never read.\n\nA share link uploads the report behind the receipt you see, with those details taken out, and only when you ask. It’s stored in Cloudflare’s EU data centers, expires when you choose, can have a password (stored only as a hash), and can be deleted with a private link.\n\nFettle sends nothing else on its own except an update check, which you can turn off. Its website uses no cookies, no analytics and no third-party requests."
-  learned: "That a rewrite isn’t finished until it gives the same answers as the code it replaces: running the new Rust engine against the old TypeScript one on 405 test cases is what let me make the switch.\n\nThat hardware rarely says the same thing twice: every SSD maker reports wear its own way, so each one has to be read on its own terms.\n\nAnd that a plain verdict is harder to write than a table of numbers, because it has to be right for someone who can’t check it."
+  learned: "That a rewrite isn’t finished until it gives the same answers as the code it replaces. Comparing the two engines is what let me make the switch.\n\nThat a plain verdict is harder to write than a table of numbers, because it has to be right for someone who can’t check it."
 ---

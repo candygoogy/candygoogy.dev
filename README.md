@@ -19,12 +19,9 @@
   <img alt="Built with Astro" src="https://img.shields.io/badge/built%20with-Astro-3651d4">
 </p>
 
-A small, static site with one job: show what I've made, starting with [Fettle](https://fettle.page), and make it easy to get in touch.
+A small static site that shows what I've made, starting with [Fettle](https://fettle.page), and makes it easy to get in touch.
 
-- **Static.** Every page is plain HTML and CSS, built ahead of time. JavaScript only adds motion and small extras; the content is all there without it.
-- **Private.** No analytics, no trackers, no cookies.
-- **Light and dark themes,** following your system, with your pick remembered.
-- **Accessible.** Built to WCAG 2.2 AA, usable by keyboard alone, and calm when you ask your system for reduced motion.
+Every page is plain HTML and CSS, built ahead of time; JavaScript only adds motion and small extras, and the content is all there without it. There are no analytics, trackers or cookies. Light and dark themes follow your system and remember your pick. It's built to WCAG 2.2 AA, works by keyboard alone, and keeps still when your system asks for reduced motion.
 
 ## How it's built
 
