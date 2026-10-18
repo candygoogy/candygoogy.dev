@@ -18,7 +18,8 @@ Steps:
 2. Newsreader (headings): pin the optical size to one value (--opsz,
    default 36), limit the weight to 500..700. Upright only: the italics
    are a separate upstream file, never downloaded.
-   Schibsted Grotesk (body and wordmark): limit the weight to 400..700.
+   Schibsted Grotesk (body and wordmark): limit the weight to 400 up to
+   the wordmark's weight (--fw-heavy in src/styles/tokens.css).
 3. Trim tnum to the digits 0-9 (upstream it also covers punctuation),
    subset both to Google Fonts' "latin" range plus EXTRA (codepoints this
    site and the experiments use beyond it), keep the default layout features plus
@@ -78,7 +79,7 @@ FAMILIES = [
         "sha256": "6ceeadf6be8e1fd7687011c7fa38ed0edd1abe967a0b73d97caec183552e823d",
         "license": "ofl/schibstedgrotesk/OFL.txt",
         "license_sha256": "3b4f3063b6ac7c1e403e2c4a5e8ef3a58190ff83ed7b15af66511858699139ce",
-        "axes": lambda opsz: {"wght": (400, 700)},
+        "axes": lambda _opsz: {"wght": (400, 800)},
         "out": "SchibstedGrotesk.woff2",
         "out_license": "OFL-SchibstedGrotesk.txt",
     },
@@ -115,7 +116,7 @@ def check_license(name, text):
     # The OFL's own text defines the term; a family that reserves a name
     # declares it in the copyright lines above the license.
     head = text.split("This Font Software is licensed", 1)[0]
-    if re.search(r"reserved\s+font\s+name", head, re.I):
+    if re.search(r"reserved\s+font\s+name", head, re.IGNORECASE):
         sys.exit(
             f"make-fonts: {name} declares a Reserved Font Name; a subset "
             "would have to be renamed. Stopping."
@@ -219,14 +220,15 @@ def build(family, opsz, out_dir, wanted, used):
     check_tnum(font, family["name"])
 
     out = out_dir / family["out"]
-    font.flavor = "woff2"
+    # fontTools' stubs type flavor as None; "woff2" is its documented value.
+    font.flavor = "woff2"  # pyright: ignore[reportAttributeAccessIssue]
     font.save(out)
     (out_dir / family["out_license"]).write_bytes(license_text)
     print(f"make-fonts: {out} {out.stat().st_size} B")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n", 1)[0])
     parser.add_argument("--opsz", type=float, default=36, help="Newsreader optical size")
     parser.add_argument("--out", type=Path, default=ROOT / "src" / "fonts")
     args = parser.parse_args()

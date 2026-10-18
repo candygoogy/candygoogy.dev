@@ -298,7 +298,7 @@ test(
 );
 
 test(
-  "/fettle: each fact has a dotted leader on a wide screen, none on a phone",
+  "/fettle: each fact's leader runs up to its value on the right edge, none on a phone",
   OPTIONS,
   async () => {
     const leaders = async (width) => {
@@ -306,23 +306,67 @@ test(
         viewport: { width, height: 900 },
       });
       try {
-        const rows = await page.evaluate(() =>
-          [...document.querySelectorAll("dl.facts > div")].map((row) => {
+        const rows = await page.evaluate(() => {
+          const edge = document
+            .querySelector("dl.facts")
+            .getBoundingClientRect().right;
+          const dotted = (s) =>
+            s.display !== "none" && s.borderBottomStyle === "dotted";
+          return [...document.querySelectorAll("dl.facts > div")].map((row) => {
             const dt = row.querySelector("dt");
             const dd = row.querySelector("dd");
-            const lead = getComputedStyle(dt, "::after");
+            // The value's text only (the links' padding reaches past their
+            // words), and the Live dot, which comes first.
+            const boxes = [...dd.querySelectorAll(".live")].flatMap((el) => [
+              ...el.getClientRects(),
+            ]);
+            const text = document.createTreeWalker(dd, NodeFilter.SHOW_TEXT);
+            while (text.nextNode()) {
+              const range = document.createRange();
+              range.selectNodeContents(text.currentNode);
+              boxes.push(...[...range.getClientRects()].filter((r) => r.width));
+            }
+            const top = Math.min(...boxes.map((r) => r.top));
+            const glyph = Math.min(
+              ...boxes.filter((r) => r.top - top < 2).map((r) => r.left),
+            );
+            // The dots: drawn after the label (base.css), or back from the
+            // value's first letter and cut off at the value's box.
+            const after = getComputedStyle(dt, "::after");
+            const value = dd.querySelector(".value");
+            const before = value && getComputedStyle(value, "::before");
+            let from = 0;
+            let to = 0;
+            if (dotted(after)) {
+              to =
+                dt.getBoundingClientRect().right -
+                parseFloat(after.marginRight);
+              from = to - parseFloat(after.width);
+            } else if (before && dotted(before)) {
+              to = glyph - parseFloat(before.marginRight);
+              from = dd.getBoundingClientRect().left;
+            }
+            const label = document.createRange();
+            label.selectNodeContents(dt);
             return {
-              shown:
-                lead.display !== "none" &&
-                lead.borderBottomStyle === "dotted" &&
-                parseFloat(lead.width) >= 20,
+              name: dt.textContent.trim(),
+              shown: to - from >= 20,
+              // The dots start after the label.
+              after: from >= label.getBoundingClientRect().right,
               // The value under its label, not beside it.
               below:
                 dd.getBoundingClientRect().top >=
                 dt.getBoundingClientRect().bottom - 1,
+              wrapped:
+                dd.getBoundingClientRect().height >
+                1.5 * parseFloat(getComputedStyle(dd).lineHeight),
+              // From the last dot to the value's first letter.
+              reach: glyph - to,
+              // How far the value's last letter is from the list's edge.
+              short: edge - Math.max(...boxes.map((r) => r.right)),
             };
-          }),
-        );
+          });
+        });
         assert.ok(rows.length >= 3, "the facts are there");
         return rows;
       } finally {
@@ -330,15 +374,105 @@ test(
         assert.deepEqual(problems, [], "the page reported problems");
       }
     };
-    const wide = await leaders(1440);
-    assert.ok(
-      wide.every((r) => r.shown && !r.below),
-      "1440: a leader beside every value",
-    );
+    let wrapped = 0;
+    for (const width of [1440, 900]) {
+      const rows = await leaders(width);
+      for (const r of rows) {
+        assert.ok(
+          r.shown && r.after && !r.below,
+          `${width}: a leader between ${r.name} and its value`,
+        );
+        // Every value ends on the list's right edge, wrapped or not.
+        assert.ok(
+          Math.abs(r.short) <= 1,
+          `${width}: ${r.name} ends ${r.short}px from the edge`,
+        );
+        // The dots stop a step short of the value's first letter, as on a
+        // printed receipt, without running into it.
+        assert.ok(
+          r.reach >= 0 && r.reach <= 14,
+          `${width}: ${r.name}'s leader stops ${r.reach}px from its value`,
+        );
+      }
+      wrapped += rows.filter((r) => r.wrapped).length;
+    }
+    assert.ok(wrapped > 0, "a value wraps (Built with) at 1440 or 900");
     const phone = await leaders(390);
     assert.ok(
       phone.every((r) => !r.shown && r.below),
       "390: no leaders, each value under its label",
     );
+  },
+);
+
+test(
+  "/idiff: the project's name breaks between words only",
+  OPTIONS,
+  async () => {
+    for (const width of [1024, 320]) {
+      const { context, page, problems } = await open("/idiff", {
+        viewport: { width, height: 800 },
+      });
+      try {
+        const r = await page.evaluate(() => ({
+          words: [...document.querySelectorAll(".band .title .word")].map(
+            (word) => {
+              const tops = [...word.querySelectorAll(".l")].map(
+                (l) => l.getBoundingClientRect().top,
+              );
+              return tops.every((top) => Math.abs(top - tops[0]) <= 1);
+            },
+          ),
+          overflow:
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+        }));
+        assert.ok(r.words.length >= 2, `${width}: the name's words are there`);
+        assert.deepEqual(
+          r,
+          { words: r.words.map(() => true), overflow: false },
+          `${width}: a word split across lines, or the page scrolls sideways`,
+        );
+      } finally {
+        await context.close();
+      }
+      assert.deepEqual(problems, [], "the page reported problems");
+    }
+  },
+);
+
+test(
+  "Tab past the last link wraps to the skip link, and it shows in the window",
+  OPTIONS,
+  async () => {
+    const { context, page, problems } = await open("/");
+    try {
+      await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+      const bottom = await page.evaluate(() => scrollY);
+      await page.locator("footer a").last().focus();
+      // Past the last link focus may stop on the document itself first.
+      for (let i = 0; i < 3; i++) {
+        await page.keyboard.press("Tab");
+        if (
+          await page
+            .locator(".skip")
+            .evaluate((a) => a === document.activeElement)
+        )
+          break;
+      }
+      const skip = await page.locator(".skip").evaluate((a) => {
+        const r = a.getBoundingClientRect();
+        return {
+          focused: a === document.activeElement,
+          inside: r.top >= 0 && r.bottom <= innerHeight,
+          // It comes to the reader; the page doesn't jump to its top.
+          stayed: scrollY,
+        };
+      });
+      assert.deepEqual(skip, { focused: true, inside: true, stayed: bottom });
+    } finally {
+      await context.close();
+    }
+    assert.deepEqual(problems, [], "the page reported problems");
   },
 );

@@ -21,6 +21,14 @@ const Sub = page ? "h2" : "h3";
 const { data } = project;
 const shot = data.images[0];
 const version = latestVersion(data.repo, data.version);
+// The name's words, each letter with its index in the whole name (the
+// spaces count), so a word's letters can be kept on one line together.
+let at = 0;
+const words = data.name.split(" ").map((word) => {
+  const letters = [...word].map((ch, j) => ({ ch, i: at + j }));
+  at += [...word].length + 1;
+  return letters;
+});
 // Without a screenshot the band is text only (.bare): the story sits
 // further from the lede, so the name and its line read as the header, and
 // the facts start at the lede's edge, so the right side has one edge.
@@ -38,15 +46,18 @@ const version = latestVersion(data.repo, data.version);
       aria-label={data.name}
       {...vtAttr(project.id)}
     >
-      {[...data.name].map((ch, i) =>
-        ch === " " ? (
-          " "
-        ) : (
-          <span class="l" aria-hidden="true" data-i={i}>
-            <span>{ch}</span>
+      {words.map((letters, w) => (
+        <>
+          {w > 0 && " "}
+          <span class="word">
+            {letters.map(({ ch, i }) => (
+              <span class="l" aria-hidden="true" data-i={i}>
+                <span>{ch}</span>
+              </span>
+            ))}
           </span>
-        ),
-      )}
+        </>
+      ))}
     </Heading>
     <p class="lede rv" data-d="260">
       <Keep text={data.summary} />
@@ -153,6 +164,12 @@ const version = latestVersion(data.repo, data.version);
      the display face's capitals and ascenders reach about 0.06em above
      each letter's box and its descenders 0.05em below it, and the f's
      hook overhangs its advance by about 0.15em on the right. */
+  /* A line breaks between words only, never between a word's letters
+     ("Insta / ll diff"). */
+  .title .word {
+    white-space: nowrap;
+  }
+
   .title .l {
     display: inline-block;
     clip-path: inset(-0.1em -0.18em -0.1em -0.06em);

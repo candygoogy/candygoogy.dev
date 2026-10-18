@@ -364,9 +364,9 @@ export default function init(root: HTMLElement) {
     };
     const addr = button.closest(".mail")?.querySelector(".addr");
     // Copying by hand: the keys to press, or none on a phone with no
-    // keyboard (iPadOS reports itself as a Mac).
+    // keyboard, iPhone or Android (iPadOS reports itself as a Mac).
     const ua = navigator.userAgent;
-    const hint = /iPhone|iPod/.test(ua)
+    const hint = /iPhone|iPod|Android/.test(ua)
       ? ", ready to copy."
       : `. Press ${/Mac|iPad/.test(ua) ? "Cmd" : "Ctrl"}+C to copy.`;
     // The live region is emptied first, so the same words twice in a row

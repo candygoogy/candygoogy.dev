@@ -17,68 +17,79 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 ---
 
 <dl class="facts leaders rv-line" data-line="band-line">
-  <div>
-    <dt class="rv" data-i="0">
-      Status
+  <div class="rv" data-i="0">
+    <dt>
+      <span>Status</span>
     </dt>
-    <dd class="rv" data-i="0">
-      <span class:list={[{ live: data.status === "live" }]}>{status}</span>
-      {version && `, version ${version}`}
+    <dd>
+      <span class="value">
+        <span class:list={[{ live: data.status === "live" }]}>{status}</span>
+        {version && `, version ${version}`}
+      </span>
     </dd>
   </div>
-  <div>
-    <dt class="rv" data-i="1">
-      Built with
+  <div class="rv" data-i="1">
+    <dt>
+      <span>Built with</span>
     </dt>
-    <dd class="rv" data-i="1">
-      {data.stack.join(", ")}
+    <dd>
+      <span class="value">{data.stack.join(", ")}</span>
     </dd>
   </div>
   {data.runsOn && (
-    <div>
-      <dt class="rv" data-i="2">
-        Runs on
+    <div class="rv" data-i="2">
+      <dt>
+        <span>Runs on</span>
       </dt>
-      <dd class="rv" data-i="2">
-        <Keep text={data.runsOn} />
+      <dd>
+        <span class="value">
+          <Keep text={data.runsOn} />
+        </span>
       </dd>
     </div>
   )}
   {data.command && (
-    <div>
-      <dt class="rv" data-i="3">
-        Command
+    <div class="rv" data-i="3">
+      <dt>
+        <span>Command</span>
       </dt>
-      <dd class="rv" data-i="3">
-        {data.command}
+      <dd>
+        <span class="value">{data.command}</span>
       </dd>
     </div>
   )}
   {data.license && (
-    <div>
-      <dt class="rv" data-i="4">
-        License
+    <div class="rv" data-i="4">
+      <dt>
+        <span>License</span>
       </dt>
-      <dd class="rv" data-i="4">
-        {data.license}
+      <dd>
+        <span class="value">{data.license}</span>
       </dd>
     </div>
   )}
-  <div>
-    <dt class="rv" data-i="5">
-      Links
+  <div class="links rv" data-i="5">
+    <dt>
+      <span>Links</span>
     </dt>
-    <dd class="links rv" data-i="5">
-      {data.links.live && <a href={data.links.live}>{host(data.links.live)}</a>}
-      {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
+    <dd>
+      <span class="value">
+        {data.links.live && (
+          <a href={data.links.live}>{host(data.links.live)}</a>
+        )}
+        {data.links.source && <a href={data.links.source}>Source on GitHub</a>}
+      </span>
     </dd>
   </div>
 </dl>
 
 <style>
-  /* One line per fact, as on a receipt: the label, a dotted leader
-     (base.css) and the value at the right edge. A long value wraps
-     under itself, the leader on its first line only. */
+  /* One line per fact, as on a receipt: the label, a dotted leader up to
+     the value, and the value on the list's right edge. A long value wraps
+     into balanced lines set right under its first, the leader on the
+     first line only. Stacked (phones), each value sits under its label,
+     on the left (the rows' stacking is base.css's). Each row rises as one,
+     its leader with it. */
   .facts {
     --leader: var(--band-line);
     display: grid;
@@ -89,36 +100,27 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
   }
 
   .facts > div {
-    display: flex;
-    align-items: baseline;
+    row-gap: var(--sp-1);
   }
 
   dt {
-    flex: 1 0 auto;
     font-size: var(--fs-meta);
     color: var(--band-soft);
   }
 
+  dt > span {
+    font-size: var(--fs-meta);
+  }
+
   dd {
-    min-width: 0;
-    margin: 0;
     font-weight: var(--fw-medium);
     font-variant-numeric: tabular-nums;
-    text-align: right;
+    text-wrap: balance;
   }
 
   /* The dot and its word stay together. */
   .live {
     white-space: nowrap;
-  }
-
-  /* Wrapped onto two lines (narrow phones), the links sit far enough apart
-     that their touch targets meet halfway without overlapping. */
-  .links {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: var(--sp-4) var(--sp-5);
   }
 
   /* Each link has a 44px tall touch target, laid over the line without
@@ -165,20 +167,86 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
     vertical-align: 0.12em;
   }
 
-  /* Phones: each value under its label, on the left, with no leader. */
+  /* Wrapped onto two lines, the links sit far enough apart that their
+     touch targets meet halfway without overlapping. */
   @media (max-width: 32.5rem) {
+    .links .value {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-4) var(--sp-5);
+    }
+  }
+
+  /* Side by side, a row is set as text, as a printed receipt is. The
+     label floats left, in the value's size (its words in their own), so
+     its line and the value's first line share a baseline, and the value
+     takes the rest of the row beside it, set right, within its 28ch. The
+     leader runs back from the value's first letter, however the value
+     wraps, and is cut off where the label ends. */
+  @media (width > 32.5rem) {
     .facts > div {
-      flex-direction: column;
-      align-items: start;
-      gap: var(--sp-1);
+      display: flow-root;
     }
 
+    .facts dt {
+      display: block;
+      float: left;
+      margin-right: var(--sp-3);
+      font-size: inherit;
+      white-space: nowrap;
+    }
+
+    .facts dt::after {
+      display: none;
+    }
+
+    /* Clipped on the left only, so focus rings and touch targets keep
+       their room on the other sides. */
     dd {
-      text-align: left;
+      display: flow-root;
+      max-width: none;
+      text-align: right;
+      clip-path: inset(-100vh -100vw -100vh 0);
+    }
+
+    .value {
+      display: inline-block;
+      max-width: 28ch;
+      vertical-align: top;
+    }
+
+    /* The dots, at the height of base.css's leader: as wide as the window
+       and taking no room, a step before the value's first letter. Inline,
+       so a line never breaks between them and that letter. */
+    .value::before {
+      content: "\a0";
+      content: "\a0" / "";
+      margin-inline: -100vw var(--sp-3);
+      padding-left: 100vw;
+      font-family: var(--ff-text);
+      font-size: var(--fs-meta);
+      font-weight: var(--fw-regular);
+      line-height: 0;
+      vertical-align: 0.45em;
+      border-bottom: var(--rule) dotted var(--leader);
+    }
+
+    /* Links break between each other only. Wrapped onto two lines, they
+       sit far enough apart that their touch targets meet halfway without
+       overlapping: the row's lines are taller by the gap, and the row
+       gives the extra back above and below. */
+    .links a {
+      display: inline-block;
+      line-height: var(--lh-body);
+    }
+
+    .links a + a {
+      margin-inline-start: calc(var(--sp-5) - 0.2em);
     }
 
     .links {
-      justify-content: flex-start;
+      margin-block: calc(var(--sp-4) / -2);
+      line-height: calc(var(--lh-body) * 1em + var(--sp-4));
     }
   }
 

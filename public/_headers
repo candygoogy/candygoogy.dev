@@ -12,8 +12,10 @@
 # Each page carries its own Content-Security-Policy in a <meta>, with the
 # hashes of its own scripts and styles (scripts/csp.mjs). This one adds
 # what a <meta> can't: no other site may frame these pages. Both apply.
+# No page opens or is opened by another site's window either.
 /*
   Content-Security-Policy: frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'none';
+  Cross-Origin-Opener-Policy: same-origin
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()

@@ -65,7 +65,7 @@ export default defineConfig({
         variants: [
           {
             src: ["./src/fonts/SchibstedGrotesk.woff2"],
-            weight: "400 700",
+            weight: "400 800",
             style: "normal",
           },
         ],

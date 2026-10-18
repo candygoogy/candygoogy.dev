@@ -124,8 +124,9 @@ const [, rest = lineAfter, lastPair = ""] =
   }
 
   /* The hero stacks earlier than the site's other two-column layouts
-     (53.75rem): below about 63rem the index's minimum width leaves the
-     headline too narrow a column, and it breaks into five lines. */
+     (53.75rem): below about 63.5rem the index's minimum width leaves the
+     headline (at --fw-d-bold) too narrow a column, and it breaks into
+     five lines. */
   @media (max-width: 65rem) {
     .hero {
       grid-template-columns: 1fr;

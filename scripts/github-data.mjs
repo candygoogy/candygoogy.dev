@@ -14,7 +14,9 @@
 // DATA_STRICT=1 (the daily CI run) it still writes that data, then exits
 // with code 1 if there was any warning. On Workers Builds (WORKERS_CI=1) it
 // also exits with 1 when the calendar fetch fails and the kept days are
-// missing or over a week old, rather than deploy a stale heatmap.
+// missing or over a week old, rather than deploy a stale heatmap, and when
+// any release, release list or the project list fails to fetch, rather
+// than deploy the snapshot's older versions and feed.
 //   node scripts/github-data.mjs [--snapshot]
 
 import { existsSync } from "node:fs";
@@ -26,6 +28,7 @@ import {
   parseReleases,
   productRepo,
   staleDeploy,
+  staleReleases,
   validDays,
 } from "./github-days.mjs";
 
@@ -211,6 +214,14 @@ if (
 ) {
   console.error(
     "github: failing: the contributions didn't fetch on Workers Builds and the kept ones are missing or over 7 days old. Refresh the snapshot with `node scripts/github-data.mjs --snapshot` and commit it.",
+  );
+  process.exitCode = 1;
+}
+if (
+  staleReleases({ workersBuilds: WORKERS_BUILDS, repos, versions, releases })
+) {
+  console.error(
+    "github: failing: a release, release list or the project list didn't fetch on Workers Builds, so the committed snapshot's would ship. The last good deploy stays live; retry the build.",
   );
   process.exitCode = 1;
 }

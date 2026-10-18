@@ -12,10 +12,31 @@
 type Init = (root: HTMLElement) => unknown;
 const modules = import.meta.glob<{ default: Init }>("./motion/*.ts");
 
+// A module whose file couldn't be fetched (Chrome and Firefox; Safari):
+// most likely a deploy since this page loaded removed it. Tested in
+// tests/unit/loader.test.mjs.
+const MISSING = /dynamically imported module|Importing a module script failed/;
+
 // Each module is on its own: one that fails to load or to start is
-// reported and skipped, and never stops the others.
-const report = (what: string) => (error: unknown) =>
+// reported and skipped, and never stops the others. One whose file is gone
+// reloads the page instead, for the current files: once per session, so it
+// can never loop, and never offline, where a reload would lose the page.
+const report = (what: string) => (error: unknown) => {
+  try {
+    if (
+      MISSING.test(String(error)) &&
+      navigator.onLine &&
+      !sessionStorage.getItem("stale-reload")
+    ) {
+      sessionStorage.setItem("stale-reload", "1");
+      location.reload();
+      return;
+    }
+  } catch {
+    // No sessionStorage (blocked): reported below.
+  }
   console.error(`Motion: ${what} didn't start.`, error);
+};
 
 import("./reveal").catch(report("the scroll reveals"));
 import("./selection").catch(report("the selection"));

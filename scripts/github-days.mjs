@@ -1,6 +1,6 @@
 // The pure parts of github-data.mjs: the frontmatter read, the contribution
 // calendar parse and check, the release list read, the merge with the last
-// good data and the stale deploy check. Kept apart from github-data.mjs (which fetches as soon as it
+// good data and the stale deploy checks. Kept apart from github-data.mjs (which fetches as soon as it
 // is imported) so the tests can load them on their own.
 
 const DAY = 86_400_000;
@@ -160,3 +160,16 @@ export function staleDeploy({ fetched, workersBuilds, contributions, now }) {
   // Missing or unreadable days count as stale too.
   return !(today - newest <= 7 * DAY);
 }
+
+// Likewise for the releases, at any age: on Workers Builds a project list,
+// latest release or release list that didn't fetch would ship the
+// snapshot's, which can show an older version and miss feed entries. A
+// failed build leaves the last good deploy live, which is fresher. Takes
+// mergeData's parts.
+export const staleReleases = ({ workersBuilds, repos, versions, releases }) =>
+  workersBuilds &&
+  (repos === null ||
+    repos.some(
+      (repo) =>
+        !Object.hasOwn(versions, repo) || !Object.hasOwn(releases, repo),
+    ));

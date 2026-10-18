@@ -266,17 +266,45 @@ a:not(
    sheets and the homelab tree: a hairline dotted border under a box set
    in the body face at the label's size, lifted 0.3em. The list lays out
    its rows so a label's box reaches its value; --leader colours the dots
-   (the page's chip hairline by default). Phones put the label above its
-   value, with no leader. The zero-width space gives the box a baseline;
-   screen readers get nothing. */
-.leaders dt {
-  display: flex;
+   (the page's chip hairline by default). A no-break space gives the box
+   a baseline (one both faces have: neither has a zero-width space, so
+   that would leave the choice of font to the browser); screen readers
+   get nothing.
+
+   Each row (a div) is a grid of two columns: the label's, which takes
+   the room left over, and the value's, as wide as the value up to 28ch.
+   Short of room, the two share it equally, so the value wraps before the
+   label does, and a long unbroken label wraps too rather than pushing the
+   value out. A value that fits sits at the right edge; one that wraps
+   reads from the left, from where the leader ends. Components can align
+   or widen their values, or lay the row out their own way; these rules
+   are kept weak (:where) for that. The experiments' copy
+   (shared/base.css) differs on purpose: it takes any row and its first
+   and last child, since the tools' lists are ols of spans too, and keeps
+   a container query that drops the leader in a list narrower than
+   16.5rem, which no list here needs. */
+:where(.leaders) > div {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, max-content);
   align-items: baseline;
 }
 
-.leaders dt::after {
-  content: "\200b";
-  content: "\200b" / "";
+:where(.leaders) dt {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:where(.leaders) dd {
+  max-width: 28ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+:where(.leaders) dt::after {
+  content: "\a0";
+  content: "\a0" / "";
   flex: 1 0 var(--sp-5);
   margin-inline: var(--sp-3);
   overflow: hidden;
@@ -287,13 +315,22 @@ a:not(
   transform: translateY(-0.3em);
 }
 
+/* Phones: no leader, each value under its label. */
 @media (max-width: 32.5rem) {
-  .leaders dt {
+  :where(.leaders) > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.leaders) dt {
     display: block;
   }
 
-  .leaders dt::after {
+  :where(.leaders) dt::after {
     display: none;
+  }
+
+  :where(.leaders) dd {
+    max-width: none;
   }
 }
 
@@ -304,8 +341,11 @@ a:not(
   padding-inline: var(--gutter);
 }
 
+/* Fixed, not absolute: focus can reach the link from the bottom of the
+   page (Tab past the last link wraps round to it), and it should show in
+   the window wherever the page is scrolled, not at the page's top. */
 .skip {
-  position: absolute;
+  position: fixed;
   top: var(--sp-3);
   left: var(--sp-3);
   z-index: 10;

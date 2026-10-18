@@ -8,6 +8,7 @@ import {
   parseContributions,
   productRepo,
   staleDeploy,
+  staleReleases,
   validDays,
 } from "../../scripts/github-days.mjs";
 import {
@@ -317,6 +318,30 @@ test("staleDeploy: recent days, a fetch or a local build passes", () => {
       workersBuilds: true,
       contributions: old,
       now: TODAY,
+    }),
+    false,
+  );
+});
+
+test("staleReleases: on Workers Builds any release part that didn't fetch fails", () => {
+  const repos = ["a/b", "c/d"];
+  const all = { "a/b": 1, "c/d": 1 };
+  const run = { workersBuilds: true, repos, versions: all, releases: all };
+  assert.equal(staleReleases({ ...run, repos: null }), true);
+  assert.equal(staleReleases({ ...run, versions: { "a/b": 1 } }), true);
+  assert.equal(staleReleases({ ...run, releases: { "c/d": 1 } }), true);
+});
+
+test("staleReleases: everything fetched, or a local build, passes", () => {
+  const all = { "a/b": 1 };
+  const run = { repos: ["a/b"], versions: all, releases: all };
+  assert.equal(staleReleases({ ...run, workersBuilds: true }), false);
+  assert.equal(
+    staleReleases({
+      workersBuilds: false,
+      repos: null,
+      versions: {},
+      releases: {},
     }),
     false,
   );

@@ -170,11 +170,11 @@ const hops = [
   /* The decorative "404": the display face at its heaviest. Each digit
      rises out of its own clip, like the intro's wordmark. */
   /* Trimmed to the cap height and the baseline (where supported), so the
-     panel beside it starts level with the digits' tops. The figures stand
-     0.022em taller than the face's cap-height metric, the trim's edge:
-     the top margin brings their tops level with the panel's. */
+     panel beside it starts level with the digits' tops. The 4's flat top
+     stands 0.019em above the face's cap-height metric, the trim's edge
+     (at --fw-d-heavy): the top margin brings it level with the panel's. */
   .code {
-    margin: 0.022em 0 var(--sp-6);
+    margin: 0.019em 0 var(--sp-6);
     text-box: trim-both cap alphabetic;
     font: var(--fw-d-heavy) clamp(6rem, 2.5rem + 15vw, 14rem) / 0.82
       var(--ff-display);
