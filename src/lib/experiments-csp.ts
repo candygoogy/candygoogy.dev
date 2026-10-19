@@ -73,16 +73,20 @@ function label(iso: string): string {
   return day.format(date) + (year === thisYear ? "" : `, ${year}`);
 }
 
+// The warnings already given: each page that asks (the lede, the colophon,
+// the card) asks for the same tools, and the build says it once.
+const warned = new Set<string>();
+
 /** The day of the oldest check across the listed tools ("Oct 16"), for the
  * lede; undefined when any tool is unchecked or allows more than the lede
- * says, or mail isn't listed (the build warns, and the lede leaves the
- * policies out). */
+ * says, or mail isn't listed (the build warns, once, and the lede leaves
+ * the policies out). */
 export function policyChecked(ids: string[]): string | undefined {
   const { checked, failing } = oldestCheck(ids, checks);
-  if (failing.length) {
-    console.warn(
-      `experiments-csp: WARNING ${failing.join(", ")} unchecked, unlisted or allowing more than described: no policy sentences in the lede`,
-    );
+  const warning = `experiments-csp: WARNING ${failing.join(", ")} unchecked, unlisted or allowing more than described: no policy sentences in the lede`;
+  if (failing.length && !warned.has(warning)) {
+    warned.add(warning);
+    console.warn(warning);
   }
   return checked && label(checked);
 }
