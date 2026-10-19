@@ -19,8 +19,11 @@ const MISSING = /dynamically imported module|Importing a module script failed/;
 
 // Each module is on its own: one that fails to load or to start is
 // reported and skipped, and never stops the others. One whose file is gone
-// reloads the page instead, for the current files: once per session, so it
-// can never loop, and never offline, where a reload would lose the page.
+// reloads the page instead, for the current files: once, so it can never
+// loop, and never offline, where a reload would lose the page. Once every
+// module this page asks for has loaded (and so this file, which Base.astro
+// guards the same way), the files are current again and the next deploy
+// may reload it once more; a page where any of them failed keeps the flag.
 const report = (what: string) => (error: unknown) => {
   try {
     if (
@@ -38,11 +41,19 @@ const report = (what: string) => (error: unknown) => {
   console.error(`Motion: ${what} didn't start.`, error);
 };
 
-import("./reveal").catch(report("the scroll reveals"));
-import("./selection").catch(report("the selection"));
-import("./marker").catch(report("the link marker"));
+// Every module's file as it's asked for, to clear the flag once all of
+// them have loaded (at the end).
+const loading: Promise<unknown>[] = [];
+const track = <T>(file: Promise<T>) => {
+  loading.push(file);
+  return file;
+};
+
+track(import("./reveal")).catch(report("the scroll reveals"));
+track(import("./selection")).catch(report("the selection"));
+track(import("./marker")).catch(report("the link marker"));
 if (document.querySelector("[data-preview]")) {
-  import("./previews").catch(report("the hover previews"));
+  track(import("./previews")).catch(report("the hover previews"));
 }
 
 // The motion setting changed during the visit (either way): the one-time
@@ -108,7 +119,7 @@ for (const el of document.querySelectorAll<HTMLElement>("[data-motion]")) {
 for (const [name, els] of roots) {
   const load = modules[`./motion/${name}.ts`];
   if (!load) continue;
-  load()
+  track(load())
     .then(({ default: init }) => {
       for (const el of els) {
         try {
@@ -120,3 +131,16 @@ for (const [name, els] of roots) {
     })
     .catch(report(`"${name}"`));
 }
+
+Promise.all(loading).then(
+  () => {
+    try {
+      sessionStorage.removeItem("stale-reload");
+    } catch {
+      // No sessionStorage: there's no flag to clear.
+    }
+  },
+  () => {
+    // One failed: reported above, and the flag stays.
+  },
+);

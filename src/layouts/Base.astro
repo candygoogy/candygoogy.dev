@@ -404,8 +404,10 @@ const speculation = {
           script.type = "module";
           script.src = tag.dataset.src;
           // Its file gone, most likely a deploy since this page loaded:
-          // reload for the current one, once per session, as loader.ts
-          // does for its own modules (and with the same key).
+          // reload for the current one, once, as loader.ts does for its
+          // own modules (and with the same key). loader.ts clears it once
+          // it and all its modules have loaded; clearing it here, on load,
+          // could loop if one of those keeps failing.
           script.onerror = () => {
             try {
               if (navigator.onLine && !sessionStorage.getItem("stale-reload")) {
