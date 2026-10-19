@@ -113,6 +113,13 @@ test("productRepo skips side projects and drafts", () => {
   );
 });
 
+test("productRepo reads a file that starts with a byte order mark", () => {
+  assert.equal(
+    productRepo("\uFEFF---\r\nkind: product\r\nrepo: a/b\r\n---"),
+    "a/b",
+  );
+});
+
 // Shaped like GitHub's logged-out calendar: <td> cells with an id, date and
 // level, and the counts in <tool-tip>s that point at a cell's id.
 const CALENDAR = `

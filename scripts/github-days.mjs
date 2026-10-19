@@ -6,9 +6,10 @@
 
 const DAY = 86_400_000;
 
-// A Markdown file's frontmatter block, or "" without one.
+// A Markdown file's frontmatter block, or "" without one. A file saved with
+// a UTF-8 byte order mark still has one.
 export const frontmatter = (text) =>
-  /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? "";
+  /^\uFEFF?---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? "";
 
 // A top-level frontmatter key's value: one word without quotes, spaces or
 // "#", optionally quoted, optionally followed by a "# comment". Anything
