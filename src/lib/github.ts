@@ -26,7 +26,8 @@ export interface Release {
 
 interface GithubData {
   fetchedAt: string;
-  versions: Record<string, string>;
+  // null: the repo has no published release yet.
+  versions: Record<string, string | null>;
   // Each product's last releases, newest first.
   releases: Record<string, Release[]>;
   contributions: { source: string; days: Day[] } | null;
@@ -161,7 +162,7 @@ export function higherVersion(
 export function latestVersion(
   repo: string | undefined,
   fallback: string | undefined,
-  versions: Record<string, string> = github.versions,
+  versions: Record<string, string | null> = github.versions,
 ): string | undefined {
-  return higherVersion(repo ? versions[repo] : undefined, fallback);
+  return higherVersion((repo && versions[repo]) || undefined, fallback);
 }
