@@ -406,6 +406,31 @@ test("/api/presence answers from the cache without asking Lanyard", async () => 
   assert.equal(stored.length, 0);
 });
 
+// The zone's Browser Cache TTL rewrites a cached copy's Cache-Control to 4
+// hours; a hit goes out with a miss's, so browsers don't keep it that long.
+for (const [body, maxAge] of [
+  ['{"status":"online"}', 30],
+  ['{"status":null}', 15],
+]) {
+  test(`/api/presence from the cache keeps ${body} ${maxAge}s, as a miss would`, async () => {
+    globalThis.caches.default.match = async () =>
+      new Response(body, {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "public, max-age=14400",
+        },
+      });
+    const res = await worker.fetch(
+      new Request("https://candygoogy.dev/api/presence"),
+      {},
+      ctx(),
+    );
+    assert.equal(await res.text(), body);
+    assert.equal(res.headers.get("Cache-Control"), `public, max-age=${maxAge}`);
+    assert.equal(res.headers.get("X-Content-Type-Options"), "nosniff");
+  });
+}
+
 test("/api/presence answers only GET and HEAD", async () => {
   globalThis.fetch = async () => assert.fail("Lanyard was called");
   for (const method of ["POST", "PUT", "DELETE"]) {

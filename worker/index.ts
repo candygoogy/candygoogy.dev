@@ -31,7 +31,12 @@ async function presence(request: Request, ctx: ExecutionContext) {
   const cache = caches.default;
   const key = new Request(new URL("/api/presence", request.url).toString());
   const hit = await cache.match(key);
-  if (hit) return hit;
+  // A hit comes back with the zone's Browser Cache TTL (4 hours) as its
+  // Cache-Control, so it is answered afresh from its status, as a miss is.
+  if (hit) {
+    const { status } = (await hit.json()) as { status: string | null };
+    return answer(status);
+  }
 
   let status: string | null = null;
   try {
@@ -50,7 +55,14 @@ async function presence(request: Request, ctx: ExecutionContext) {
     // Timeout or network error: report no status.
   }
 
-  const response = new Response(JSON.stringify({ status }), {
+  const response = answer(status);
+  ctx.waitUntil(cache.put(key, response.clone()));
+  return response;
+}
+
+// The presence response, the same from Lanyard or from the cache.
+function answer(status: string | null) {
+  return new Response(JSON.stringify({ status }), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       // A failed lookup is kept briefly too, so a Lanyard outage costs one
@@ -59,8 +71,6 @@ async function presence(request: Request, ctx: ExecutionContext) {
       "X-Content-Type-Options": "nosniff",
     },
   });
-  ctx.waitUntil(cache.put(key, response.clone()));
-  return response;
 }
 
 // The pages with a plain-text card for terminals: `curl candygoogy.dev`
