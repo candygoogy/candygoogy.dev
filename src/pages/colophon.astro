@@ -169,13 +169,32 @@ const weights = [
           </p>
         </dd>
       </div>
+      <div class="row rv rv-line" data-i="6" data-line="line">
+        <dt>Credits</dt>
+        <dd>
+          <p>
+            My profile picture is by <a href={credit}>@dark_night1109</a>.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" data-i="7" data-line="line">
+        <dt>Source</dt>
+        <dd>
+          <p>
+            The source is <a href={site.source}>on GitHub</a>, and the footer
+            shows the commit this version was{" "}
+            <span class="nobr">built from.</span>
+          </p>
+        </dd>
+      </div>
       <!-- This visit's numbers, read from the page's own response: hidden
            until the script below has them (never without JavaScript, in
-           development or on a browser that doesn't pass them on). -->
+           development or on a browser that doesn't pass them on). Last, so
+           nothing under it moves when it appears. -->
       <div
         id="delivery"
         class="row rv rv-line"
-        data-i="6"
+        data-i="8"
         data-line="line"
         hidden
       >
@@ -200,24 +219,6 @@ const weights = [
               <dd></dd>
             </div>
           </dl>
-        </dd>
-      </div>
-      <div class="row rv rv-line" data-i="7" data-line="line">
-        <dt>Credits</dt>
-        <dd>
-          <p>
-            My profile picture is by <a href={credit}>@dark_night1109</a>.
-          </p>
-        </dd>
-      </div>
-      <div class="row rv rv-line" data-i="8" data-line="line">
-        <dt>Source</dt>
-        <dd>
-          <p>
-            The source is <a href={site.source}>on GitHub</a>, and the footer
-            shows the commit this version was{" "}
-            <span class="nobr">built from.</span>
-          </p>
         </dd>
       </div>
     </dl>

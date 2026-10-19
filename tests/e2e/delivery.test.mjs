@@ -72,6 +72,25 @@ test(
   },
 );
 
+// It shows after the page has drawn, so it's the last row: the rows
+// above it stay where they were.
+test("the row is last, so showing it moves no other row", OPTIONS, async () => {
+  const sourceTop = async (timing) => {
+    const { context, page } = await colophon(timing);
+    const last = await page.$eval(".rows > .row:last-child", (el) => el.id);
+    const top = await page
+      .locator(".rows > .row:not(#delivery)")
+      .last()
+      .evaluate((el) => el.getBoundingClientRect().top + scrollY);
+    await context.close();
+    return { last, top };
+  };
+  const hidden = await sourceTop(null);
+  const shown = await sourceTop('edge;desc="Milan", rtt;dur=12');
+  assert.equal(shown.last, "delivery");
+  assert.equal(shown.top, hidden.top);
+});
+
 test("a missing round trip leaves its line out", OPTIONS, async () => {
   const { context, page } = await colophon('edge;desc="Milan"');
   assert.deepEqual(await lines(page), [
