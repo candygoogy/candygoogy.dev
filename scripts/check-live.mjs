@@ -5,8 +5,9 @@
 //  - the heatmap's newest day is more than 3 days old, as when the build
 //    went through but kept old GitHub data;
 //  - the commit in the live footer's stamp isn't the tip of the deploy
-//    branch, and that tip is more than 2 hours old: a push that never
-//    deployed (Workers Builds missed it). A younger tip may still be
+//    branch, and deploy moved there more than 2 hours ago (timed from the
+//    CI run that moved it, or the commit's date without one): a push that
+//    never deployed (Workers Builds missed it). A younger tip may still be
 //    deploying, and when GitHub can't be asked this only warns;
 //  - an experiment's live security policy lets it connect to more than
 //    /experiments says (scripts/experiments-policy.mjs), or it can't be
@@ -104,8 +105,8 @@ export function liveCommit(html) {
 
 // One line per check, each passed or not; a warning passes, but says why
 // its check didn't run. A parse error fails its check without stopping the
-// others. tip is the deploy branch's newest commit, with its date, or why
-// GitHub couldn't be asked for it.
+// others. tip is the deploy branch's newest commit, with its date and when
+// deploy moved there (deployTip), or why GitHub couldn't be asked for it.
 export function checkLive(securityTxt, home, now, tip) {
   const lines = [];
   try {
@@ -158,17 +159,22 @@ export function checkLive(securityTxt, home, now, tip) {
     } else if (live === tip.sha.toLowerCase()) {
       lines.push({ ok: true, text: `live is deploy's tip, ${short(live)}` });
     } else {
-      const age = now - Date.parse(tip.date);
+      // Timed from when deploy moved there; without that, from the commit,
+      // which may be hours older than its push.
+      const age = now - Date.parse(tip.moved ?? tip.date);
       const hours = (age / HOUR).toFixed(1);
+      const since = tip.moved
+        ? `moved there ${hours} hours ago`
+        : `committed ${hours} hours ago (${tip.why ?? "no CI run moved deploy there"}, so timed from the commit)`;
       if (!(age <= MAX_DEPLOY_WAIT)) {
         lines.push({
           ok: false,
-          text: `${was}, deploy's tip is ${short(tip.sha)}, committed ${hours} hours ago (over ${MAX_DEPLOY_WAIT / HOUR}): the push didn't deploy, check Workers Builds (a manual build of deploy ships it)`,
+          text: `${was}, deploy's tip is ${short(tip.sha)}, ${since}, over ${MAX_DEPLOY_WAIT / HOUR}: the push didn't deploy, check Workers Builds (a manual build of deploy ships it)`,
         });
       } else {
         lines.push({
           ok: true,
-          text: `${was}, deploy's tip ${short(tip.sha)} is ${hours} hours old: may still be deploying`,
+          text: `${was}, deploy's tip ${short(tip.sha)} ${since}: may still be deploying`,
         });
       }
     }
@@ -431,8 +437,14 @@ async function liveTools() {
   );
 }
 
-// The deploy branch's newest commit and its date, from GitHub's API. With
-// GITHUB_TOKEN set (CI passes its built-in one) the request carries it:
+// The deploy branch's newest commit and its date, and when deploy moved
+// there, from GitHub's API. The release job in ci.yml moves deploy, so
+// that's when the CI run on the commit, from its push, finished; a commit
+// made hours before its push would otherwise read as hours late. moved is
+// undefined when there's no such run (deploy moved some other way) or it
+// couldn't be asked, with why in the second case.
+//
+// With GITHUB_TOKEN set (CI passes its built-in one) the requests carry it:
 // shared runners share their address, so the limit for asking without one
 // is often used up. A token the API rejects is dropped, as in
 // github-data.mjs. The tests pass their own fetch and env.
@@ -441,27 +453,49 @@ export async function deployTip({
   env = process.env,
 } = {}) {
   let token = env.GITHUB_TOKEN;
-  const ask = () =>
-    fetch(`https://api.github.com/repos/${REPO}/commits/deploy`, {
-      headers: {
-        ...UA,
-        Accept: "application/vnd.github+json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-  let res = await ask();
-  if (res.status === 401 && token) {
-    token = undefined;
-    res = await ask();
-  }
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const { sha, commit } = await res.json();
+  const api = async (path) => {
+    const ask = () =>
+      fetch(`https://api.github.com/repos/${REPO}${path}`, {
+        headers: {
+          ...UA,
+          Accept: "application/vnd.github+json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        signal: AbortSignal.timeout(15_000),
+      });
+    let res = await ask();
+    if (res.status === 401 && token) {
+      token = undefined;
+      res = await ask();
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+  const { sha, commit } = await api("/commits/deploy");
   const date = commit?.committer?.date;
   if (typeof sha !== "string" || !SHA.test(sha) || !Date.parse(date)) {
     throw new Error("no commit and date in the reply");
   }
-  return { sha, date };
+  try {
+    const { workflow_runs: runs } = await api(
+      `/actions/workflows/ci.yml/runs?head_sha=${sha}&event=push&status=success`,
+    );
+    // With more than one, the first to finish moved deploy.
+    const ends = (Array.isArray(runs) ? runs : [])
+      .map((run) => Date.parse(run?.updated_at))
+      .filter((t) => !Number.isNaN(t));
+    const moved = ends.length
+      ? new Date(Math.min(...ends)).toISOString()
+      : undefined;
+    return { sha, date, moved };
+  } catch (error) {
+    return {
+      sha,
+      date,
+      moved: undefined,
+      why: `couldn't ask GitHub when deploy moved: ${error.message}`,
+    };
+  }
 }
 
 async function get(path) {

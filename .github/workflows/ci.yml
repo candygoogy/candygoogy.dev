@@ -88,6 +88,10 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      # actions: the CI run that moved deploy, for when it moved.
+      actions: read
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -98,5 +102,6 @@ jobs:
       # Built-ins only: no npm ci.
       - run: node scripts/check-live.mjs
         env:
-          # Sent only to the GitHub REST API, for the deploy branch's tip.
+          # Sent only to the GitHub REST API, for the deploy branch's tip
+          # and the run that moved it there.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

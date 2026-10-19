@@ -99,7 +99,34 @@ test("checkLive: a deploy tip under 2 hours old may still be deploying", () => {
   assert.equal(line.warn, undefined);
   assert.match(
     line.text,
-    /tip 1a2b3c4 is 1\.5 hours old: may still be deploying$/,
+    /tip 1a2b3c4 committed 1\.5 hours ago \(no CI run moved deploy there, so timed from the commit\): may still be deploying$/,
+  );
+});
+
+// Committed 12 hours before the check, pushed just before it.
+const PUSHED = { ...NEWER, date: "2026-10-15T18:17:00Z" };
+
+test("checkLive: an old commit pushed 10 minutes ago may still be deploying", () => {
+  const [, , line] = checkLive(SECURITY_TXT, HOME, at("2026-10-16T06:17:00Z"), {
+    ...PUSHED,
+    moved: "2026-10-16T06:07:00Z",
+  });
+  assert.equal(line.ok, true);
+  assert.match(
+    line.text,
+    /tip 1a2b3c4 moved there 0\.2 hours ago: may still be deploying$/,
+  );
+});
+
+test("checkLive: a deploy that moved 3 hours ago and isn't live fails", () => {
+  const [, , line] = checkLive(SECURITY_TXT, HOME, at("2026-10-16T06:17:00Z"), {
+    ...PUSHED,
+    moved: "2026-10-16T03:17:00Z",
+  });
+  assert.equal(line.ok, false);
+  assert.match(
+    line.text,
+    /tip is 1a2b3c4, moved there 3\.0 hours ago, over 2: the push didn't deploy/,
   );
 });
 
@@ -151,6 +178,27 @@ test("deployTip: sends GITHUB_TOKEN when set, and nothing without it", async () 
   assert.equal(asked[0].headers.Authorization, "Bearer t0k");
   await deployTip({ fetch, env: {} });
   assert.equal(asked.at(-1).headers.Authorization, undefined);
+});
+
+test("deployTip: deploy moved when the CI run on its push finished", async () => {
+  const runs = `/actions/workflows/ci.yml/runs?head_sha=${TIP.sha}&event=push&status=success`;
+  const { fetch } = github({
+    "/commits/deploy": COMMIT,
+    [runs]: { workflow_runs: [{ updated_at: "2026-10-16T05:02:00Z" }] },
+  });
+  assert.deepEqual(await deployTip({ fetch, env: {} }), {
+    ...TIP,
+    moved: "2026-10-16T05:02:00.000Z",
+  });
+  // No such run: no time, and checkLive says it timed from the commit.
+  const none = github({
+    "/commits/deploy": COMMIT,
+    [runs]: { workflow_runs: [] },
+  });
+  assert.equal(
+    (await deployTip({ fetch: none.fetch, env: {} })).moved,
+    undefined,
+  );
 });
 
 test("newestDay: counts on from the first day, and throws without one", () => {
