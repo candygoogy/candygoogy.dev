@@ -34,28 +34,46 @@ let warnings = 0;
 
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
-// The live avatar and its original file's hash, or the committed one. A
-// meta that isn't for this JPEG (an avatar.mjs run cut off between its two
-// renames, or a meta from before jpegSha256) can't vouch for the original,
-// so its hash is dropped and no known crop applies.
+/** The live avatar and its original file's hash, or the committed one
+ * (read only when it's needed). live and meta are the live files' contents,
+ * undefined when either is missing. A meta that isn't for this JPEG (an
+ * avatar.mjs run cut off between its two renames, or a meta from before
+ * jpegSha256) can't vouch for the original, so its hash is dropped and no
+ * known crop applies: unvouched says so. Exported for the tests.
+ * @param {{ live?: Buffer, meta?: string, committed: () => Promise<Buffer> }} files */
+export async function pickSource({ live, meta, committed }) {
+  if (live && meta !== undefined) {
+    const { sha256, jpegSha256 } = JSON.parse(meta);
+    if (jpegSha256 === hash(live)) {
+      return { image: live, sha256, name: "the GitHub avatar" };
+    }
+    return {
+      image: live,
+      sha256: undefined,
+      name: "the GitHub avatar",
+      unvouched: true,
+    };
+  }
+  const image = await committed();
+  return { image, sha256: hash(image), name: "src/assets/avatar.jpg" };
+}
+
 async function source() {
   const live = join(assets, "avatar.live.jpg");
   const meta = join(assets, "avatar.live.json");
-  if (!snapshot && existsSync(live) && existsSync(meta)) {
-    const image = await readFile(live);
-    const { sha256, jpegSha256 } = JSON.parse(await readFile(meta, "utf8"));
-    if (jpegSha256 === hash(image)) {
-      return { image, sha256, name: "the GitHub avatar" };
-    }
+  const both = !snapshot && existsSync(live) && existsSync(meta);
+  const found = await pickSource({
+    live: both ? await readFile(live) : undefined,
+    meta: both ? await readFile(meta, "utf8") : undefined,
+    committed: () => readFile(join(assets, "avatar.jpg")),
+  });
+  if (found.unvouched) {
     warnings++;
     console.warn(
       "icons: WARNING avatar.live.json isn't for avatar.live.jpg: treating the avatar as new",
     );
-    return { image, sha256: undefined, name: "the GitHub avatar" };
   }
-  const image = await readFile(join(assets, "avatar.jpg"));
-  const sha256 = hash(image);
-  return { image, sha256, name: "src/assets/avatar.jpg" };
+  return found;
 }
 
 // The configured crop for the picture it was set for; the whole (centred
@@ -111,39 +129,42 @@ function ico(images) {
   return Buffer.concat([head, ...images.map(([, data]) => data)]);
 }
 
-try {
-  const { image, sha256, name } = await source();
-  const { width, height } = await sharp(image).metadata();
-  const crop = region(width, height, sha256);
-  const small = await Promise.all(
-    [16, 32, 48].map(async (size) => [
-      size,
-      await sharp(image)
-        .extract(crop)
-        .resize(size, size, { kernel: "lanczos3" })
-        .png({ compressionLevel: 9, adaptiveFiltering: true })
-        .toBuffer(),
-    ]),
-  );
-  const touch = await sharp(image)
-    .resize(180, 180, { fit: "cover", kernel: "lanczos3" })
-    .png({ compressionLevel: 9, palette: true, quality: 95 })
-    .toBuffer();
+// Only running the file builds anything; the tests import pickSource.
+if (process.argv[1] === import.meta.filename) {
+  try {
+    const { image, sha256, name } = await source();
+    const { width, height } = await sharp(image).metadata();
+    const crop = region(width, height, sha256);
+    const small = await Promise.all(
+      [16, 32, 48].map(async (size) => [
+        size,
+        await sharp(image)
+          .extract(crop)
+          .resize(size, size, { kernel: "lanczos3" })
+          .png({ compressionLevel: 9, adaptiveFiltering: true })
+          .toBuffer(),
+      ]),
+    );
+    const touch = await sharp(image)
+      .resize(180, 180, { fit: "cover", kernel: "lanczos3" })
+      .png({ compressionLevel: 9, palette: true, quality: 95 })
+      .toBuffer();
 
-  await mkdir(out, { recursive: true });
-  await writeFile(join(out, "favicon.ico"), ico(small));
-  await writeFile(join(out, "apple-touch-icon.png"), touch);
-  console.log(`icons: favicon.ico and apple-touch-icon.png from ${name}`);
-} catch (error) {
-  if (snapshot) throw error;
-  warnings++;
-  console.warn(`icons: WARNING using the committed fallback icons: ${error}`);
-  for (const file of FILES) {
-    await copyFile(join(fallback, file), join(pub, file));
+    await mkdir(out, { recursive: true });
+    await writeFile(join(out, "favicon.ico"), ico(small));
+    await writeFile(join(out, "apple-touch-icon.png"), touch);
+    console.log(`icons: favicon.ico and apple-touch-icon.png from ${name}`);
+  } catch (error) {
+    if (snapshot) throw error;
+    warnings++;
+    console.warn(`icons: WARNING using the committed fallback icons: ${error}`);
+    for (const file of FILES) {
+      await copyFile(join(fallback, file), join(pub, file));
+    }
   }
-}
 
-if (process.env.DATA_STRICT === "1" && warnings) {
-  console.error("icons: failing because DATA_STRICT=1");
-  process.exitCode = 1;
+  if (process.env.DATA_STRICT === "1" && warnings) {
+    console.error("icons: failing because DATA_STRICT=1");
+    process.exitCode = 1;
+  }
 }

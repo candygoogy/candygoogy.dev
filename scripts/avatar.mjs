@@ -40,11 +40,11 @@ async function writeLive(jpeg, meta) {
   await rename(`${LIVE_META}.tmp`, LIVE_META);
 }
 
-try {
-  const res = await fetch(SOURCE, {
-    headers: { "User-Agent": "candygoogy.dev-build" },
-    signal: AbortSignal.timeout(10_000),
-  });
+/** GitHub's answer as the live avatar: the JPEG to write, its meta and its
+ * size. Throws when the answer isn't a picture this can use, so the last
+ * good one is kept. Exported for the tests; only running the file fetches.
+ * @param {Response} res */
+export async function checkedAvatar(res) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const type = res.headers.get("content-type") ?? "";
   if (!type.startsWith("image/")) throw new Error(`not an image (${type})`);
@@ -59,23 +59,37 @@ try {
   if (Math.min(info.width, info.height) < 64) {
     throw new Error(`only ${info.width}×${info.height}`);
   }
+  return {
+    jpeg: data,
+    meta: { sha256: hash(bytes), jpegSha256: hash(data) },
+    info,
+  };
+}
 
-  await writeLive(data, { sha256: hash(bytes), jpegSha256: hash(data) });
-  console.log(`avatar: ${info.width}×${info.height} from GitHub`);
-} catch (error) {
-  console.warn(
-    `avatar: WARNING kept the last good avatar (or the committed one): ${error}`,
-  );
-  // The committed file is GitHub's original, unchanged, so both hashes are
-  // its own (and the icon crop in src/data/avatar.ts applies).
-  if (!existsSync(LIVE)) {
-    const committed = await readFile(COMMITTED);
-    const sha256 = hash(committed);
-    await writeLive(committed, { sha256, jpegSha256: sha256 });
-    console.log("avatar: copied the committed avatar.jpg to avatar.live.jpg");
-  }
-  if (process.env.DATA_STRICT === "1") {
-    console.error("avatar: failing because DATA_STRICT=1");
-    process.exitCode = 1;
+if (process.argv[1] === import.meta.filename) {
+  try {
+    const res = await fetch(SOURCE, {
+      headers: { "User-Agent": "candygoogy.dev-build" },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const { jpeg, meta, info } = await checkedAvatar(res);
+    await writeLive(jpeg, meta);
+    console.log(`avatar: ${info.width}×${info.height} from GitHub`);
+  } catch (error) {
+    console.warn(
+      `avatar: WARNING kept the last good avatar (or the committed one): ${error}`,
+    );
+    // The committed file is GitHub's original, unchanged, so both hashes are
+    // its own (and the icon crop in src/data/avatar.ts applies).
+    if (!existsSync(LIVE)) {
+      const committed = await readFile(COMMITTED);
+      const sha256 = hash(committed);
+      await writeLive(committed, { sha256, jpegSha256: sha256 });
+      console.log("avatar: copied the committed avatar.jpg to avatar.live.jpg");
+    }
+    if (process.env.DATA_STRICT === "1") {
+      console.error("avatar: failing because DATA_STRICT=1");
+      process.exitCode = 1;
+    }
   }
 }
