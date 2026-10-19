@@ -1,6 +1,6 @@
 // The pure parts of github-data.mjs: the frontmatter read, the contribution
 // calendar parse and check, the release list read, the merge with the last
-// good data and the stale deploy checks. Kept apart from github-data.mjs (which fetches as soon as it
+// good data, the stale deploy checks and the HTTP error's wording. Kept apart from github-data.mjs (which fetches as soon as it
 // is imported) so the tests can load them on their own.
 
 const DAY = 86_400_000;
@@ -159,6 +159,25 @@ export function staleDeploy({ fetched, workersBuilds, contributions, now }) {
   const today = Math.floor(now.getTime() / DAY) * DAY;
   // Missing or unreadable days count as stale too.
   return !(today - newest <= 7 * DAY);
+}
+
+// A failed answer's error message. GitHub's REST API rate limit (a 403 or
+// 429 with none of the hour's requests left, or one saying when to retry)
+// says so, and how to lift it: without a token the API allows 60 requests
+// an hour. withToken is whether the request sent one.
+export function httpError(url, status, headers, withToken) {
+  const message = `${url}: HTTP ${status}`;
+  const limited =
+    url.startsWith("https://api.github.com/") &&
+    (status === 403 || status === 429) &&
+    (headers.get("x-ratelimit-remaining") === "0" ||
+      headers.has("retry-after"));
+  if (!limited) return message;
+  return `${message}, GitHub's rate limit: ${
+    withToken
+      ? "the GITHUB_TOKEN's is used up too"
+      : "a GITHUB_TOKEN build variable avoids it"
+  }`;
 }
 
 // Likewise for the releases, at any age: on Workers Builds a project list,

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   frontmatterKey,
+  httpError,
   mergeData,
   parseContributions,
   productRepo,
@@ -355,4 +356,37 @@ test("productRepo reads draft as YAML does: True and TRUE are drafts too", () =>
       draft,
     );
   }
+});
+
+test("httpError: GitHub's API rate limit names itself and the token", () => {
+  const api = "https://api.github.com/repos/a/b/releases/latest";
+  const limited =
+    /HTTP (403|429), GitHub's rate limit: a GITHUB_TOKEN build variable avoids it$/;
+  for (const [status, headers] of [
+    [403, { "x-ratelimit-remaining": "0" }],
+    [429, { "x-ratelimit-remaining": "0" }],
+    [403, { "retry-after": "60" }],
+    [429, { "retry-after": "60" }],
+  ]) {
+    assert.match(
+      httpError(api, status, new Headers(headers), false),
+      limited,
+      `${status} ${JSON.stringify(headers)}`,
+    );
+  }
+  assert.match(
+    httpError(api, 403, new Headers({ "x-ratelimit-remaining": "0" }), true),
+    /rate limit: the GITHUB_TOKEN's is used up too$/,
+  );
+  // A 403 with requests left is a refusal, and the profile page takes no
+  // token: both stay plain.
+  assert.equal(
+    httpError(api, 403, new Headers({ "x-ratelimit-remaining": "42" }), false),
+    `${api}: HTTP 403`,
+  );
+  const profile = "https://github.com/users/candygoogy/contributions";
+  assert.equal(
+    httpError(profile, 429, new Headers({ "retry-after": "60" }), false),
+    `${profile}: HTTP 429`,
+  );
 });

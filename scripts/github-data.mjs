@@ -23,6 +23,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  httpError,
   mergeData,
   parseContributions,
   parseReleases,
@@ -57,9 +58,11 @@ async function get(url, init = {}) {
     signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) {
-    throw Object.assign(new Error(`${url}: HTTP ${res.status}`), {
-      status: res.status,
-    });
+    const withToken = Boolean(init.headers?.Authorization);
+    throw Object.assign(
+      new Error(httpError(url, res.status, res.headers, withToken)),
+      { status: res.status },
+    );
   }
   return res;
 }
