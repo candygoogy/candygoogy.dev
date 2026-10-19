@@ -21,7 +21,7 @@ const current = (href: string) => (path === href ? "page" : undefined);
             {" from "}
             <a
               href={`${site.source}/commit/${commit}`}
-              aria-label={`commit ${commit.slice(0, 7)}${dirty ? ", with uncommitted changes" : ""}`}
+              aria-label={`commit ${shortCommit}${dirty ? ", with uncommitted changes" : ""}`}
             >
               {shortCommit}
             </a>
