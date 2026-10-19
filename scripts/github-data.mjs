@@ -16,7 +16,9 @@
 // also exits with 1 when the calendar fetch fails and the kept days are
 // missing or over a week old, rather than deploy a stale heatmap, and when
 // any release, release list or the project list fails to fetch, rather
-// than deploy the snapshot's older versions and feed.
+// than deploy the snapshot's older versions and feed. A product with no
+// published release yet isn't a failed fetch: it's written with no version
+// (null), and the page shows its frontmatter version, if any.
 //   node scripts/github-data.mjs [--snapshot]
 
 import { existsSync } from "node:fs";
@@ -24,6 +26,7 @@ import { readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   httpError,
+  latestRelease,
   mergeData,
   parseContributions,
   parseReleases,
@@ -91,12 +94,6 @@ async function api(path) {
   return res.json();
 }
 
-async function latestRelease(repo) {
-  const { tag_name: tag } = await api(`/repos/${repo}/releases/latest`);
-  if (typeof tag !== "string" || !tag) throw new Error(`${repo}: no tag`);
-  return tag.replace(/^v/, "");
-}
-
 const releaseList = async (repo) =>
   parseReleases(await api(`/repos/${repo}/releases?per_page=10`));
 
@@ -158,8 +155,12 @@ const versions = {};
 const releases = {};
 for (const repo of repos ?? []) {
   try {
-    versions[repo] = await latestRelease(repo);
-    console.log(`github: ${repo} latest release ${versions[repo]}`);
+    versions[repo] = await latestRelease(api, repo);
+    console.log(
+      versions[repo] === null
+        ? `github: ${repo} has no release yet`
+        : `github: ${repo} latest release ${versions[repo]}`,
+    );
   } catch (error) {
     warn(`${repo} release kept as before: ${error}`);
   }

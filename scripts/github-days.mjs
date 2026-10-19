@@ -1,7 +1,8 @@
 // The pure parts of github-data.mjs: the frontmatter read, the contribution
-// calendar parse and check, the release list read, the merge with the last
-// good data, the stale deploy checks and the HTTP error's wording. Kept apart from github-data.mjs (which fetches as soon as it
-// is imported) so the tests can load them on their own.
+// calendar parse and check, the latest release and release list reads, the
+// merge with the last good data, the stale deploy checks and the HTTP
+// error's wording. Kept apart from github-data.mjs (which fetches as soon as
+// it is imported) so the tests can load them on their own.
 
 const DAY = 86_400_000;
 
@@ -78,6 +79,23 @@ export function validDays(days) {
   return days;
 }
 
+// A repo's latest release version, without its "v", or null when it has no
+// published release yet: releases/latest answers 404 then, and that is an
+// answer, not a failure. api is the REST getter; anything else it throws
+// (network, 5xx, 403) is thrown on, so the last good version is kept.
+export async function latestRelease(api, repo) {
+  let release;
+  try {
+    release = await api(`/repos/${repo}/releases/latest`);
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
+  const tag = release?.tag_name;
+  if (typeof tag !== "string" || !tag) throw new Error(`${repo}: no tag`);
+  return tag.replace(/^v/, "");
+}
+
 // A repo's published releases, newest first, from the API's release list:
 // each one's tag, name, page and publish time (no notes: the feed shows
 // none). Drafts and pre-releases are left out, as releases/latest leaves
@@ -126,8 +144,8 @@ function byRepo(old, fresh, repos) {
 
 // Merges this run's parts into the last good data. repos is null when the
 // project list couldn't be read, versions and releases hold only the repos
-// whose latest release and release list fetched, contributions is null when
-// the calendar didn't.
+// whose latest release and release list fetched (a version of null: no
+// release yet), contributions is null when the calendar didn't.
 export function mergeData(
   old,
   { repos, versions, releases, contributions },

@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   frontmatterKey,
   httpError,
+  latestRelease,
   mergeData,
   parseContributions,
   productRepo,
@@ -345,6 +346,47 @@ test("staleReleases: everything fetched, or a local build, passes", () => {
       releases: {},
     }),
     false,
+  );
+});
+
+// A REST getter that fails as get() does: an error carrying the status.
+const failing = (status) => async () => {
+  throw Object.assign(new Error(`HTTP ${status}`), { status });
+};
+
+test("latestRelease: a 404 is no release yet, which isn't stale", async () => {
+  assert.equal(await latestRelease(failing(404), "a/b"), null);
+  const run = {
+    workersBuilds: true,
+    repos: ["a/b"],
+    versions: { "a/b": null },
+    releases: { "a/b": [] },
+  };
+  assert.equal(staleReleases(run), false);
+  // The page falls back to the frontmatter version, or shows none.
+  assert.equal(latestVersion("a/b", "0.1.0", run.versions), "0.1.0");
+  assert.equal(latestVersion("a/b", undefined, run.versions), undefined);
+  assert.equal(
+    await latestRelease(async () => ({ tag_name: "v1.2.0" }), "a/b"),
+    "1.2.0",
+  );
+});
+
+test("latestRelease: any other failure throws, so it counts as stale", async () => {
+  for (const status of [403, 500]) {
+    await assert.rejects(latestRelease(failing(status), "a/b"), {
+      status,
+    });
+  }
+  // The run leaves a version that threw out, as github-data.mjs does.
+  assert.equal(
+    staleReleases({
+      workersBuilds: true,
+      repos: ["a/b"],
+      versions: {},
+      releases: { "a/b": [] },
+    }),
+    true,
   );
 });
 
