@@ -80,7 +80,8 @@ const weights = [
           </p>
         </dd>
       </div>
-      <div class="row rv rv-line" data-i="3" data-line="line">
+      <!-- The footer's "No trackers, no cookies" links here. -->
+      <div id="privacy" class="row rv rv-line" data-i="3" data-line="line">
         <dt>Privacy</dt>
         <dd>
           <p>
@@ -88,6 +89,12 @@ const weights = [
             server. Your browser remembers two things, on your device only: the
             theme you picked, and that you’ve already seen the intro this
             session.
+          </p>
+          <p>
+            To check it yourself, open your browser’s developer tools:
+            Application › Cookies is empty, and the Network tab shows every
+            request going to candygoogy.dev. The page’s security policy
+            (connect-src 'self') wouldn’t let it go anywhere else.
           </p>
         </dd>
       </div>
