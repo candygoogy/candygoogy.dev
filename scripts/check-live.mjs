@@ -4,6 +4,10 @@
 //  - the live build is more than a day and a half old;
 //  - the heatmap's newest day is more than 3 days old, as when the build
 //    went through but kept old GitHub data;
+//  - the commit in the live footer's stamp isn't the tip of the deploy
+//    branch, and that tip is more than 2 hours old: a push that never
+//    deployed (Workers Builds missed it). A younger tip may still be
+//    deploying, and when GitHub can't be asked this only warns;
 //  - an experiment's live security policy lets it connect to more than
 //    /experiments says (scripts/experiments-policy.mjs), or it can't be
 //    checked. The build only warns about that, so the daily rebuild still
@@ -40,6 +44,12 @@ const EXPIRES_AFTER = 180 * DAY;
 // A daily rebuild, plus room for one that ran late.
 const MAX_BUILD_AGE = 36 * HOUR;
 const MAX_DATA_DAYS = 3;
+// How long a push to deploy may take to go live: Workers Builds takes
+// minutes, so past this it isn't coming.
+const MAX_DEPLOY_WAIT = 2 * HOUR;
+const SHA = /^[0-9a-f]{40}$/i;
+// "https://github.com/owner/repo" -> "owner/repo", as src/lib/build.ts.
+const REPO = new URL(site.source).pathname.slice(1);
 // A browser's, since the Worker answers curl-like agents on "/" with a
 // plain-text card instead of the page.
 const UA = { "User-Agent": "Mozilla/5.0 (compatible; candygoogy.dev-check)" };
@@ -77,9 +87,26 @@ export function daysOld(iso, now) {
   return Math.round((today - Date.parse(`${iso}T00:00:00Z`)) / DAY);
 }
 
-// One line per check, each passed or not. A parse error fails its check
-// without stopping the other.
-export function checkLive(securityTxt, home, now) {
+// The commit the live footer's stamp links to (src/components/Footer.astro),
+// or undefined when the stamp shows only the date: the build found none.
+export function liveCommit(html) {
+  const stamp = /<span\b[^>]*\bclass="stamp"[^>]*>([\s\S]*?)<\/span>/.exec(
+    html,
+  )?.[1];
+  if (stamp === undefined) throw new Error("no build stamp on the page");
+  const link = `${site.source}/commit/`;
+  for (const [, href] of stamp.matchAll(/\shref="([^"]*)"/g)) {
+    const sha = href.startsWith(link) ? href.slice(link.length) : "";
+    if (SHA.test(sha)) return sha.toLowerCase();
+  }
+  return undefined;
+}
+
+// One line per check, each passed or not; a warning passes, but says why
+// its check didn't run. A parse error fails its check without stopping the
+// others. tip is the deploy branch's newest commit, with its date, or why
+// GitHub couldn't be asked for it.
+export function checkLive(securityTxt, home, now, tip) {
   const lines = [];
   try {
     const age = buildAge(securityTxt, now);
@@ -115,6 +142,38 @@ export function checkLive(securityTxt, home, now) {
     }
   } catch (error) {
     lines.push({ ok: false, text: `data age: ${error.message}` });
+  }
+  try {
+    const live = liveCommit(home);
+    const short = (sha) => sha?.slice(0, 7);
+    const was = live
+      ? `live is ${short(live)}`
+      : "the live footer has no commit";
+    if ("error" in tip) {
+      lines.push({
+        ok: true,
+        warn: true,
+        text: `${was}, deploy's tip unchecked: couldn't ask GitHub: ${tip.error}`,
+      });
+    } else if (live === tip.sha.toLowerCase()) {
+      lines.push({ ok: true, text: `live is deploy's tip, ${short(live)}` });
+    } else {
+      const age = now - Date.parse(tip.date);
+      const hours = (age / HOUR).toFixed(1);
+      if (!(age <= MAX_DEPLOY_WAIT)) {
+        lines.push({
+          ok: false,
+          text: `${was}, deploy's tip is ${short(tip.sha)}, committed ${hours} hours ago (over ${MAX_DEPLOY_WAIT / HOUR}): the push didn't deploy, check Workers Builds (a manual build of deploy ships it)`,
+        });
+      } else {
+        lines.push({
+          ok: true,
+          text: `${was}, deploy's tip ${short(tip.sha)} is ${hours} hours old: may still be deploying`,
+        });
+      }
+    }
+  } catch (error) {
+    lines.push({ ok: false, text: `live commit: ${error.message}` });
   }
   return lines;
 }
@@ -372,6 +431,25 @@ async function liveTools() {
   );
 }
 
+// The deploy branch's newest commit and its date, from GitHub's API
+// (public, no token: one request a day is far below its limit).
+async function deployTip() {
+  const res = await fetch(
+    `https://api.github.com/repos/${REPO}/commits/deploy`,
+    {
+      headers: { ...UA, Accept: "application/vnd.github+json" },
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const { sha, commit } = await res.json();
+  const date = commit?.committer?.date;
+  if (typeof sha !== "string" || !SHA.test(sha) || !Date.parse(date)) {
+    throw new Error("no commit and date in the reply");
+  }
+  return { sha, date };
+}
+
 async function get(path) {
   const res = await fetch(`${SITE}${path}`, {
     headers: UA,
@@ -383,8 +461,10 @@ async function get(path) {
 
 if (process.argv[1] === import.meta.filename) {
   const report = (lines) => {
-    for (const { ok, text } of lines) {
-      if (ok) {
+    for (const { ok, warn, text } of lines) {
+      if (warn) {
+        console.warn(`check-live: WARNING ${text}`);
+      } else if (ok) {
         console.log(`check-live: ${text}`);
       } else {
         console.error(`check-live: FAIL ${text}`);
@@ -395,12 +475,13 @@ if (process.argv[1] === import.meta.filename) {
   // Each part on its own, so one that can't run doesn't hide the others.
   let home;
   try {
-    let securityTxt;
-    [securityTxt, home] = await Promise.all([
+    let securityTxt, tip;
+    [securityTxt, home, tip] = await Promise.all([
       get("/.well-known/security.txt"),
       get("/"),
+      deployTip().catch((error) => ({ error })),
     ]);
-    report(checkLive(securityTxt, home, Date.now()));
+    report(checkLive(securityTxt, home, Date.now(), tip));
   } catch (error) {
     console.error(`check-live: FAIL couldn't fetch the site: ${error}`);
     process.exitCode = 1;

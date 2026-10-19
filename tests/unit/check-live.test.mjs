@@ -4,13 +4,15 @@ import {
   checkIndexes,
   checkLive,
   checkPolicies,
+  liveCommit,
   menuIndex,
   newestDay,
 } from "../../scripts/check-live.mjs";
 
 // Shaped like the built page and security.txt: a build at 2026-10-16
 // 05:20 UTC, with the heatmap ending that day: three days from
-// October 14.
+// October 14, and the footer's stamp from commit 3f9df20, the deploy
+// branch's tip (committed an hour before the build).
 const SECURITY_TXT = [
   "Contact: mailto:hello@candygoogy.dev",
   "Expires: 2027-04-14T05:20:00Z",
@@ -20,20 +22,26 @@ const SECURITY_TXT = [
 const HOME = `<div class="heatmap" data-motion="heatmap" data-start="2026-10-14"><table role="grid"><tbody>
 <tr><th scope="row" class="dn"><span></span></th><td role="gridcell" tabindex="-1" aria-label="15 contributions on Saturday, October 3, 2026" data-level="1"><span></span></td><td class="pad"><span></span></td></tr>
 <tr><th scope="row" class="dn"><span>Fri</span></th><td role="gridcell" tabindex="0" aria-label="19 contributions on Friday, October 16, 2026" data-level="1"><span></span></td><td role="gridcell" tabindex="-1" aria-label="No contributions on Friday, October 9, 2026" data-level="0"><span></span></td></tr>
-</tbody></table></div>`;
+</tbody></table></div>
+<footer class="wrap"><p class="notes"><span class="stamp" data-astro-cid-jo6i4kqk>Built <time datetime="2026-10-16" data-astro-cid-jo6i4kqk>Oct 16, 2026</time> from <a href="https://github.com/candygoogy/candygoogy.dev/commit/3f9df203bd2fab060e1c4a356bbe67841eb736df" aria-label="commit 3f9df20" data-astro-cid-jo6i4kqk>3f9df20</a></span></p></footer>`;
+const TIP = {
+  sha: "3f9df203bd2fab060e1c4a356bbe67841eb736df",
+  date: "2026-10-16T04:20:00Z",
+};
 const at = (iso) => Date.parse(iso);
 
 test("checkLive: a fresh build and heatmap pass", () => {
-  const lines = checkLive(SECURITY_TXT, HOME, at("2026-10-16T06:17:00Z"));
+  const lines = checkLive(SECURITY_TXT, HOME, at("2026-10-16T06:17:00Z"), TIP);
   assert.deepEqual(lines, [
     { ok: true, text: "build is 0.9 hours old" },
     { ok: true, text: "heatmap ends 2026-10-16" },
+    { ok: true, text: "live is deploy's tip, 3f9df20" },
   ]);
 });
 
 test("checkLive: a build over 36 hours old fails", () => {
   // 37 hours after the build; the heatmap alone would still pass.
-  const lines = checkLive(SECURITY_TXT, HOME, at("2026-10-17T18:20:00Z"));
+  const lines = checkLive(SECURITY_TXT, HOME, at("2026-10-17T18:20:00Z"), TIP);
   assert.equal(lines[0].ok, false);
   assert.match(lines[0].text, /build is 37\.0 hours old/);
   assert.equal(lines[1].ok, true);
@@ -42,10 +50,79 @@ test("checkLive: a build over 36 hours old fails", () => {
 test("checkLive: a heatmap over 3 days old fails, on its own", () => {
   // A fresh build that kept old data: newest day 4 days before today.
   const stale = HOME.replace("2026-10-14", "2026-10-10");
-  const lines = checkLive(SECURITY_TXT, stale, at("2026-10-16T06:17:00Z"));
+  const lines = checkLive(SECURITY_TXT, stale, at("2026-10-16T06:17:00Z"), TIP);
   assert.equal(lines[0].ok, true);
   assert.equal(lines[1].ok, false);
   assert.match(lines[1].text, /heatmap ends 2026-10-12, 4 days ago/);
+});
+
+// A push to deploy after the live build: 1a2b3c4, committed at 06:00.
+const NEWER = { sha: "1a2b3c4".padEnd(40, "0"), date: "2026-10-16T06:00:00Z" };
+
+test("checkLive: a deploy tip over 2 hours old that isn't live fails", () => {
+  const lines = checkLive(
+    SECURITY_TXT,
+    HOME,
+    at("2026-10-16T08:30:00Z"),
+    NEWER,
+  );
+  assert.equal(lines[2].ok, false);
+  assert.match(
+    lines[2].text,
+    /^live is 3f9df20, deploy's tip is 1a2b3c4, committed 2\.5 hours ago .*didn't deploy/,
+  );
+  // A stamp without a commit isn't the tip either.
+  const bare = HOME.replace(/ from <a[^]*?<\/a>/, "");
+  assert.equal(liveCommit(bare), undefined);
+  const [, , line] = checkLive(
+    SECURITY_TXT,
+    bare,
+    at("2026-10-16T08:30:00Z"),
+    NEWER,
+  );
+  assert.equal(line.ok, false);
+  assert.match(
+    line.text,
+    /^the live footer has no commit, deploy's tip is 1a2b3c4/,
+  );
+});
+
+test("checkLive: a deploy tip under 2 hours old may still be deploying", () => {
+  const [, , line] = checkLive(
+    SECURITY_TXT,
+    HOME,
+    at("2026-10-16T07:30:00Z"),
+    NEWER,
+  );
+  assert.equal(line.ok, true);
+  assert.equal(line.warn, undefined);
+  assert.match(
+    line.text,
+    /tip 1a2b3c4 is 1\.5 hours old: may still be deploying$/,
+  );
+});
+
+test("checkLive: GitHub not answering warns, and no stamp fails", () => {
+  const now = at("2026-10-16T06:17:00Z");
+  const [, , line] = checkLive(SECURITY_TXT, HOME, now, {
+    error: new Error("HTTP 403"),
+  });
+  assert.equal(line.ok, true);
+  assert.equal(line.warn, true);
+  assert.match(
+    line.text,
+    /^live is 3f9df20, deploy's tip unchecked: .*HTTP 403/,
+  );
+  const lines = checkLive(
+    SECURITY_TXT,
+    HOME.replace('class="stamp"', 'class="note"'),
+    now,
+    TIP,
+  );
+  assert.deepEqual(lines[2], {
+    ok: false,
+    text: "live commit: no build stamp on the page",
+  });
 });
 
 test("newestDay: counts on from the first day, and throws without one", () => {
