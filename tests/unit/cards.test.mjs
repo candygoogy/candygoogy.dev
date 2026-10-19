@@ -6,10 +6,11 @@ import worker from "../../worker/index.ts";
 const ROOT = new URL("../../", import.meta.url);
 const read = (path) => readFileSync(new URL(path, ROOT), "utf8");
 
-// A product's terminal card lives in four places: the page: block in
-// src/content/projects/<id>.md, CARDS in worker/index.ts, run_worker_first
-// in wrangler.jsonc and src/pages/<id>.txt.ts. Only comments tie them
-// together, so these tests check each against the others, both ways.
+// A product's terminal card lives in three places: the page: block in
+// src/content/projects/<id>.md, CARDS in worker/index.ts and
+// run_worker_first in wrangler.jsonc. Only comments tie them together, so
+// these tests check each against the others, both ways. The card itself
+// comes from src/pages/[product].txt.ts, for every published product.
 
 // The products with a page of their own: a top-level page: key in the
 // entry's frontmatter.
@@ -49,10 +50,11 @@ const firstPages = (() => {
     .filter((path) => !path.includes("*"));
 })();
 
-// The product card pages; card.txt.ts is the site's own card, served on /.
-const txtPages = readdirSync(new URL("src/pages/", ROOT))
-  .filter((name) => name.endsWith(".txt.ts") && name !== "card.txt.ts")
-  .map((name) => name.slice(0, -".txt.ts".length));
+// The card pages: card.txt.ts is the site's own card, served on /, and
+// [product].txt.ts every product's.
+const txtPages = readdirSync(new URL("src/pages/", ROOT)).filter((name) =>
+  name.endsWith(".txt.ts"),
+);
 
 test("the products with a page are found: fettle and idiff at least", () => {
   // Guards the frontmatter reading: if it found nothing, the tests below
@@ -65,7 +67,6 @@ test("every product with a page has its card in all three places", async () => {
   for (const id of products) {
     assert.equal(cards.get(`/${id}`), `/${id}.txt`, `CARDS has /${id}`);
     assert.ok(firstPages.includes(`/${id}`), `run_worker_first has /${id}`);
-    assert.ok(txtPages.includes(id), `src/pages/${id}.txt.ts exists`);
     // And the Worker really answers curl on /<id> with /<id>.txt.
     const calls = [];
     const ASSETS = {
@@ -86,7 +87,7 @@ test("every product with a page has its card in all three places", async () => {
   }
 });
 
-test("every card, worker-first page and .txt page belongs to such a product", () => {
+test("every card and worker-first page belongs to such a product", () => {
   for (const [path, card] of cards) {
     if (path === "/") {
       assert.equal(card, "/card.txt", "/ serves the site's own card");
@@ -105,10 +106,19 @@ test("every card, worker-first page and .txt page belongs to such a product", ()
       `run_worker_first ${path} is a product with a page`,
     );
   }
-  for (const id of txtPages) {
-    assert.ok(
-      products.includes(id),
-      `src/pages/${id}.txt.ts is for a product with a page`,
-    );
-  }
+});
+
+// A draft product has no page, so it has no card either: curl on it gets
+// the 404 page, as a browser does (the Worker falls back when the card
+// isn't there). The cards are one route over the same published projects
+// the pages are made from, with no card file of a product's own beside it.
+test("the product cards are one route over the published products", () => {
+  assert.deepEqual(txtPages.toSorted(), ["[product].txt.ts", "card.txt.ts"]);
+  const route = read("src/pages/[product].txt.ts");
+  assert.match(route, /await orderedProjects\(\)/);
+  assert.match(route, /kind === "product"/);
+  assert.match(
+    read("src/lib/projects.ts"),
+    /getCollection\("projects", \(\{ data \}\) => !data\.draft\)/,
+  );
 });
