@@ -34,6 +34,7 @@ import {
   looser,
   policyOf,
 } from "./experiments-policy.mjs";
+import { isMain } from "./is-main.mjs";
 
 const SITE = "https://candygoogy.dev";
 const HOUR = 60 * 60 * 1000;
@@ -507,7 +508,7 @@ async function get(path) {
   return res.text();
 }
 
-if (process.argv[1] === import.meta.filename) {
+if (isMain(import.meta.filename)) {
   const report = (lines) => {
     for (const { ok, warn, text } of lines) {
       if (warn) {

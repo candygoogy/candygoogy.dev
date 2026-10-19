@@ -20,6 +20,7 @@ import { existsSync } from "node:fs";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
+import { isMain } from "./is-main.mjs";
 
 const SOURCE = "https://github.com/candygoogy.png?size=460";
 const ASSETS = join(import.meta.dirname, "..", "src", "assets");
@@ -66,7 +67,7 @@ export async function checkedAvatar(res) {
   };
 }
 
-if (process.argv[1] === import.meta.filename) {
+if (isMain(import.meta.filename)) {
   try {
     const res = await fetch(SOURCE, {
       headers: { "User-Agent": "candygoogy.dev-build" },

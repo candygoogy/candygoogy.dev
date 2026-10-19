@@ -22,6 +22,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import { avatarCrop } from "../src/data/avatar.ts";
+import { isMain } from "./is-main.mjs";
 
 const root = join(import.meta.dirname, "..");
 const assets = join(root, "src", "assets");
@@ -130,7 +131,7 @@ function ico(images) {
 }
 
 // Only running the file builds anything; the tests import pickSource.
-if (process.argv[1] === import.meta.filename) {
+if (isMain(import.meta.filename)) {
   try {
     const { image, sha256, name } = await source();
     const { width, height } = await sharp(image).metadata();
