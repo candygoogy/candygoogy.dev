@@ -1,8 +1,7 @@
-// Importing src/lib/build.ts reads this checkout's commit once, as a build
-// does; the tests then pass each source in themselves.
+// commitSha, given stand-ins for each source of the build's commit.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { commitSha } from "../../src/lib/build.ts";
+import { commitSha } from "../../src/lib/commit.ts";
 
 const ENV = "a".repeat(40);
 const GIT = "b".repeat(40);
