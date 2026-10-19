@@ -473,11 +473,12 @@ test("/api/presence answers only GET and HEAD", async () => {
   }
 });
 
-// The hello is written three times: the card's x-hello (the Worker), the
-// pages' x-hello (public/_headers) and the comment atop every page
-// (src/layouts/Base.astro). The card's is the one to match. Read from its
-// response, as the Worker may export nothing but its handlers.
-test("the hello is the same on the card, the pages' headers and their HTML", async () => {
+// The hello is written four times: the card's x-hello (the Worker), the
+// pages' x-hello (public/_headers), the comment atop every page
+// (src/layouts/Base.astro) and the console's (src/scripts/loader.ts). The
+// card's is the one to match. Read from its response, as the Worker may
+// export nothing but its handlers.
+test("the hello is the same on the card, the pages' headers, HTML and console", async () => {
   const ASSETS = assets({ "/card.txt": () => new Response("the card\n") });
   const res = await worker.fetch(
     new Request("https://candygoogy.dev/", {
@@ -495,6 +496,8 @@ test("the hello is the same on the card, the pages' headers and their HTML", asy
   );
   const base = await readFile(new URL("src/layouts/Base.astro", ROOT), "utf8");
   assert.deepEqual(base.match(/<!-- Hi\..*?-->/g), [`<!-- ${hello} -->`]);
+  const loader = await readFile(new URL("src/scripts/loader.ts", ROOT), "utf8");
+  assert.deepEqual(loader.match(/"Hi\..*?"/g), [`"${hello}"`]);
 });
 
 test("scheduled() without DEPLOY_HOOK_URL asks for nothing", async (t) => {
