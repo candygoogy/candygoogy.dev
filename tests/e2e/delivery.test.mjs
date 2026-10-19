@@ -23,9 +23,10 @@ after(async () => {
 
 const OPTIONS = { timeout: 60_000 };
 
-async function colophon(timing) {
+async function colophon(timing, options = {}) {
   const context = await browser.newContext({
     viewport: { width: 1280, height: 800 },
+    ...options,
   });
   const problems = [];
   headers["/colophon"] = timing ? { "Server-Timing": timing } : {};
@@ -73,10 +74,13 @@ test(
 );
 
 // It shows after the page has drawn, so it's the last row: the rows
-// above it stay where they were.
+// above it stay where they were. Under reduced motion, so the scroll
+// reveal's rise isn't part of where a row is.
 test("the row is last, so showing it moves no other row", OPTIONS, async () => {
   const sourceTop = async (timing) => {
-    const { context, page } = await colophon(timing);
+    const { context, page } = await colophon(timing, {
+      reducedMotion: "reduce",
+    });
     const last = await page.$eval(".rows > .row:last-child", (el) => el.id);
     const top = await page
       .locator(".rows > .row:not(#delivery)")
