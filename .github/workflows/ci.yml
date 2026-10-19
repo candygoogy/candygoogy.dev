@@ -89,8 +89,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      # actions: the CI run that moved deploy, for when it moved.
-      actions: read
+      # actions: the CI run that moved deploy, for when it moved, and
+      # turning this workflow back on (the last step).
+      actions: write
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,3 +106,12 @@ jobs:
           # Sent only to the GitHub REST API, for the deploy branch's tip
           # and the run that moved it there.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GitHub turns off a public repo's scheduled workflows after 60 days
+      # without activity, which would stop this daily check without a word.
+      # Turning the workflow on again every day keeps the schedule running
+      # through quiet months; when it's already on, this changes nothing.
+      # Runs after a failed check too, so the alarm stays on.
+      - if: ${{ !cancelled() }}
+        run: gh api -X PUT repos/${{ github.repository }}/actions/workflows/ci.yml/enable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
