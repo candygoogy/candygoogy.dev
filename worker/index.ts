@@ -1,13 +1,18 @@
 // The site is static assets (served before this Worker runs). The Worker
-// does two small jobs:
+// does a few small jobs:
 //  - GET /api/presence: candygoogy's Discord status, read server-side from
 //    Lanyard and reduced to one field, so visitors' browsers only ever talk
 //    to candygoogy.dev.
+//  - Plain-text cards for terminals on /, /fettle and /idiff.
+//  - On /colophon, a Server-Timing header saying which Cloudflare city
+//    served the page and the round trip to it, for the Delivery row.
 //  - A daily Cron Trigger that asks Workers Builds to rebuild the site, so
 //    the heatmap and the Fettle version stay fresh.
 //
 // DEPLOY_HOOK_URL is a runtime secret (`wrangler secret put DEPLOY_HOOK_URL`),
 // never in wrangler.jsonc or the repo.
+
+import { COLOS } from "./colos.ts";
 
 interface Env {
   ASSETS: Fetcher;
@@ -105,17 +110,57 @@ async function page(request: Request, env: Env, cardPath: string) {
   return response;
 }
 
+// Where this response comes from, for the colophon's Delivery row: the
+// city of the Cloudflare data center that answered (request.cf.colo, an
+// airport code), Cloudflare's own measure of the round trip to the
+// visitor, and the HTTP version they came in on, as a Server-Timing header
+// the page reads as it arrives. (The browser knows the version too, but
+// not on a revalidated page.) Nothing about the visitor themselves
+// (request.cf.city would be where they are), and nothing kept. The city is
+// percent-encoded: "São Paulo" isn't ASCII.
+const PROTOCOL = /^HTTP\/[0-9.]+$/;
+
+function delivery(cf: Request["cf"]) {
+  const colo = typeof cf?.colo === "string" ? cf.colo : "";
+  if (!/^[A-Z]{3}$/.test(colo)) return null;
+  const city = COLOS[colo] ?? colo;
+  const timing = [`edge;desc="${encodeURIComponent(city)}"`];
+  // TCP's round trip, or QUIC's on HTTP/3 (0 when it's the other one).
+  const quic = (cf as { clientQuicRtt?: unknown } | undefined)?.clientQuicRtt;
+  const rtt = [cf?.clientTcpRtt, quic].find(
+    (ms): ms is number => typeof ms === "number" && ms > 0,
+  );
+  if (rtt !== undefined) timing.push(`rtt;dur=${Math.round(rtt)}`);
+  const protocol = cf?.httpProtocol;
+  if (typeof protocol === "string" && PROTOCOL.test(protocol)) {
+    timing.push(`proto;desc="${protocol}"`);
+  }
+  return timing.join(", ");
+}
+
+// The colophon, as built, plus the header. A 304 (a returning visitor's
+// browser revalidating) carries it too, so the row shows this visit.
+async function colophon(request: Request, env: Env) {
+  const page = await env.ASSETS.fetch(request);
+  const timing = delivery(request.cf);
+  if (!timing) return page;
+  const response = new Response(page.body, page);
+  response.headers.set("Server-Timing", timing);
+  return response;
+}
+
 export default {
   // Matching static assets never reach the Worker, except the pages with
   // a card ("/", /fettle, /idiff), which run the Worker first
   // (run_worker_first in wrangler.jsonc) so terminals can get their
-  // plain-text card. Anything else goes back to the assets (which serve
-  // the 404 page).
+  // plain-text card, and /colophon, for its Delivery header. Anything else
+  // goes back to the assets (which serve the 404 page).
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     if (pathname === "/api/presence") {
       return presence(request, ctx);
     }
+    if (pathname === "/colophon") return colophon(request, env);
     const card = CARDS.get(pathname);
     if (card) return page(request, env, card);
     return env.ASSETS.fetch(request);

@@ -17,6 +17,7 @@
     "format": "prettier --write .",
     "shots": "node scripts/shots.mjs",
     "wordmark": "node scripts/wordmark.mjs",
+    "colos": "node scripts/colos.mjs",
     "data": "node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs"
   },
   "dependencies": {

@@ -193,15 +193,17 @@ test("a page without a card goes to the assets, even for curl", async () => {
   assert.equal(res.headers.get("Vary"), null);
 });
 
-// A page run_worker_first sends to the Worker without a card would cost
-// every visit a Worker run for nothing (and a card the list leaves out is
-// never served: the assets answer first).
+// A page run_worker_first sends to the Worker without a job there would
+// cost every visit a Worker run for nothing (and a card the list leaves
+// out is never served: the assets answer first). The jobs: a card, or
+// the colophon's Delivery numbers.
 test("every page run_worker_first sends to the Worker has a card", async () => {
   const config = await readFile(new URL("wrangler.jsonc", ROOT), "utf8");
   const list = JSON.parse(
     config.match(/"run_worker_first":\s*(\[[^\]]*\])/)[1],
   );
-  const pages = list.filter((p) => !p.startsWith("/api/"));
+  assert.ok(list.includes("/colophon"));
+  const pages = list.filter((p) => !p.startsWith("/api/") && p !== "/colophon");
   assert.ok(pages.includes("/fettle") && pages.includes("/idiff"));
   for (const path of pages) {
     const ASSETS = assets({});
@@ -213,6 +215,132 @@ test("every page run_worker_first sends to the Worker has a card", async () => {
       ctx(),
     );
     assert.match(new URL(ASSETS.calls[0]).pathname, /\.txt$/, path);
+  }
+});
+
+// The colophon's Delivery row reads where the page was served from out of
+// the response's Server-Timing header.
+const COLOPHON = "<!doctype html><p>colophon";
+
+function visit(cf, init) {
+  const request = new Request("https://candygoogy.dev/colophon", init);
+  if (cf) Object.defineProperty(request, "cf", { value: cf });
+  return request;
+}
+
+const colophonAssets = (init) =>
+  assets({ "/colophon": () => new Response(COLOPHON, init) });
+
+test("/colophon says which city served it, the round trip and HTTP version", async () => {
+  const ASSETS = colophonAssets({ headers: { ETag: '"c"' } });
+  const request = visit({
+    colo: "MXP",
+    clientTcpRtt: 12,
+    httpProtocol: "HTTP/2",
+  });
+  const res = await worker.fetch(request, { ASSETS }, ctx());
+  assert.equal(res.status, 200);
+  assert.equal(
+    res.headers.get("Server-Timing"),
+    'edge;desc="Milan", rtt;dur=12, proto;desc="HTTP/2"',
+  );
+  // The page itself is the built file, untouched.
+  assert.deepEqual(ASSETS.calls, [request]);
+  assert.equal(res.headers.get("ETag"), '"c"');
+  assert.equal(await res.text(), COLOPHON);
+});
+
+test("/colophon over HTTP/3 takes the QUIC round trip", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(
+    visit({ colo: "MXP", clientTcpRtt: 0, clientQuicRtt: 8.6 }),
+    { ASSETS },
+    ctx(),
+  );
+  assert.equal(
+    res.headers.get("Server-Timing"),
+    'edge;desc="Milan", rtt;dur=9',
+  );
+});
+
+test("/colophon without a round trip names the city alone", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(visit({ colo: "MXP" }), { ASSETS }, ctx());
+  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="Milan"');
+});
+
+test("/colophon encodes a city that isn't plain ASCII", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(visit({ colo: "GRU" }), { ASSETS }, ctx());
+  assert.equal(
+    res.headers.get("Server-Timing"),
+    'edge;desc="S%C3%A3o%20Paulo"',
+  );
+});
+
+test("/colophon passes on only a well-formed HTTP version", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(
+    visit({ colo: "MXP", httpProtocol: 'HTTP/3", x;desc="y' }),
+    { ASSETS },
+    ctx(),
+  );
+  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="Milan"');
+});
+
+test("/colophon from a data center the list doesn't know gives its code", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(visit({ colo: "QQQ" }), { ASSETS }, ctx());
+  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="QQQ"');
+});
+
+// A returning visitor's browser revalidates the page: the 304 carries the
+// header too, so the row shows this visit, not the first one.
+test("/colophon revalidated is still a 304, with this visit's header", async () => {
+  const ASSETS = assets({
+    "/colophon": () => new Response(null, { status: 304 }),
+  });
+  const res = await worker.fetch(
+    visit(
+      { colo: "FCO", clientTcpRtt: 20 },
+      { headers: { "If-None-Match": '"c"' } },
+    ),
+    { ASSETS },
+    ctx(),
+  );
+  assert.equal(res.status, 304);
+  assert.equal(
+    res.headers.get("Server-Timing"),
+    'edge;desc="Rome", rtt;dur=20',
+  );
+});
+
+test("/colophon with no Cloudflare data (local) has no header", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(visit(undefined), { ASSETS }, ctx());
+  assert.equal(res.headers.get("Server-Timing"), null);
+  assert.equal(await res.text(), COLOPHON);
+});
+
+test("/colophon never passes on where the visitor is", async () => {
+  const ASSETS = colophonAssets();
+  const res = await worker.fetch(
+    visit({ colo: "MXP", city: "Lipari", country: "IT", region: "Sicily" }),
+    { ASSETS },
+    ctx(),
+  );
+  const all = [...res.headers].join("\n");
+  assert.doesNotMatch(all, /Lipari|Sicily|IT\b/);
+});
+
+test("the data center list is codes and city names", async () => {
+  const { COLOS } = await import("../../worker/colos.ts");
+  const entries = Object.entries(COLOS);
+  assert.ok(entries.length > 200);
+  assert.equal(COLOS.MXP, "Milan");
+  for (const [code, city] of entries) {
+    assert.match(code, /^[A-Z]{3}$/);
+    assert.ok(city && !city.includes(",") && !city.includes('"'), code);
   }
 });
 

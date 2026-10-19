@@ -34,8 +34,11 @@ function find(pathname) {
   return undefined;
 }
 
-/** Serves dist/; resolves to { url, close }. */
-export async function serve() {
+/** Serves dist/; resolves to { url, close }. `headers` adds response
+ * headers by path, as the Worker does for some pages ({ "/colophon":
+ * { "Server-Timing": … } }); it's read on every request, so a test can
+ * change it between pages. */
+export async function serve({ headers = {} } = {}) {
   if (!isFile(join(ROOT, "index.html"))) {
     throw new Error("dist/index.html is missing: run `npm run build` first");
   }
@@ -55,6 +58,7 @@ export async function serve() {
     const path = file ?? join(ROOT, "404.html");
     res.writeHead(status, {
       "Content-Type": TYPES[extname(path)] ?? "application/octet-stream",
+      ...headers[pathname],
     });
     res.end(req.method === "HEAD" ? undefined : await readFile(path));
   });

@@ -51,8 +51,9 @@ const weights = [
             Astro builds every page ahead of time as plain HTML, and the
             interactive parts are small scripts in plain TypeScript, loaded only
             on the pages that use them. Cloudflare serves it, and a small Worker
-            of my own handles the three things that can’t be static: the Discord
-            status, a daily rebuild and a plain-text page for terminals.
+            of my own handles the four things that can’t be static: the Discord
+            status, a daily rebuild, a plain-text page for terminals and the
+            Delivery numbers below.
           </p>
         </dd>
       </div>
@@ -161,7 +162,40 @@ const weights = [
           </p>
         </dd>
       </div>
-      <div class="row rv rv-line" data-i="6" data-line="line">
+      <!-- This visit's numbers, read from the page's own response: hidden
+           until the script below has them (never without JavaScript, in
+           development or on a browser that doesn't pass them on). -->
+      <div
+        id="delivery"
+        class="row rv rv-line"
+        data-i="6"
+        data-line="line"
+        hidden
+      >
+        <dt>Delivery</dt>
+        <dd>
+          <p>
+            Cloudflare runs this site from data centers around the world, and
+            the nearest one answers. This is how this page reached you, read
+            from its own response as it arrived. None of it is kept.
+          </p>
+          <dl class="weights leaders">
+            <div data-delivery="city">
+              <dt>Served from</dt>
+              <dd></dd>
+            </div>
+            <div data-delivery="rtt">
+              <dt>Round trip</dt>
+              <dd></dd>
+            </div>
+            <div data-delivery="protocol">
+              <dt>Protocol</dt>
+              <dd></dd>
+            </div>
+          </dl>
+        </dd>
+      </div>
+      <div class="row rv rv-line" data-i="7" data-line="line">
         <dt>Credits</dt>
         <dd>
           <p>
@@ -169,7 +203,7 @@ const weights = [
           </p>
         </dd>
       </div>
-      <div class="row rv rv-line" data-i="7" data-line="line">
+      <div class="row rv rv-line" data-i="8" data-line="line">
         <dt>Source</dt>
         <dd>
           <p>
@@ -182,6 +216,54 @@ const weights = [
     </dl>
   </section>
 </Base>
+
+<script>
+  // The Delivery row: how this page reached the reader. The Worker names
+  // the Cloudflare city that answered, the round trip to it and the HTTP
+  // version in the page's Server-Timing header (worker/index.ts); the
+  // browser's own idea of the version stands in when there's none. The
+  // row shows only once it has the city; a number it doesn't have leaves
+  // its line out.
+  const row = document.getElementById("delivery");
+  const nav = performance.getEntriesByType("navigation")[0] as
+    PerformanceNavigationTiming | undefined;
+  const timing = new Map(
+    (nav?.serverTiming ?? []).map((entry) => [entry.name, entry]),
+  );
+  const PROTOCOLS: Record<string, string> = {
+    h3: "HTTP/3",
+    h2: "HTTP/2",
+    "http/1.1": "HTTP/1.1",
+  };
+
+  const decoded = (text = "") => {
+    try {
+      return decodeURIComponent(text);
+    } catch {
+      return "";
+    }
+  };
+  // A no-break space keeps the number with its unit.
+  const NBSP = String.fromCharCode(0xa0);
+  const rtt = timing.get("rtt")?.duration ?? 0;
+  const values: Record<string, string> = {
+    city: decoded(timing.get("edge")?.description),
+    rtt: rtt > 0 ? `${Math.round(rtt)}${NBSP}ms` : "",
+    protocol:
+      timing.get("proto")?.description ||
+      (PROTOCOLS[nav?.nextHopProtocol ?? ""] ?? ""),
+  };
+
+  if (row && values.city) {
+    for (const line of row.querySelectorAll<HTMLElement>("[data-delivery]")) {
+      const value = values[line.dataset.delivery ?? ""];
+      const slot = line.querySelector("dd");
+      if (value && slot) slot.textContent = value;
+      else line.remove();
+    }
+    row.hidden = false;
+  }
+</script>
 
 <style>
   .colophon {
@@ -214,6 +296,11 @@ const weights = [
     row-gap: var(--sp-3);
     align-items: baseline;
     padding-block: var(--sp-6);
+  }
+
+  /* The Delivery row until it has its numbers. */
+  .row[hidden] {
+    display: none;
   }
 
   .row > dt {
