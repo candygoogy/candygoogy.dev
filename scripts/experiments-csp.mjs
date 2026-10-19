@@ -16,9 +16,8 @@
 // like the other data scripts.
 //   node scripts/experiments-csp.mjs [--snapshot]
 
-import { existsSync } from "node:fs";
-import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { previous, writeJson } from "./data-files.mjs";
 import {
   allows,
   classify,
@@ -38,27 +37,10 @@ function warn(message) {
   console.warn(`experiments-csp: WARNING ${message}`);
 }
 
-async function previous() {
-  for (const file of [OUT, SNAPSHOT]) {
-    if (!existsSync(file)) continue;
-    try {
-      const data = JSON.parse(await readFile(file, "utf8"));
-      if (data && typeof data === "object" && !Array.isArray(data)) {
-        return data;
-      }
-      warn(`ignoring ${file}: not an object`);
-    } catch (error) {
-      warn(`ignoring unreadable ${file}: ${error}`);
-    }
-  }
-  return {};
-}
-
 // Each list of sources on one line where it fits, as Prettier writes it
-// (the snapshot is committed). Written aside and renamed, so a cut-off
-// write never leaves a broken file.
-async function writeJson(file, data) {
-  const text = JSON.stringify(data, null, 2).replace(
+// (the snapshot is committed).
+const listsOnOneLine = (text) =>
+  text.replace(
     /^( *"(?:connect|elsewhere)": )\[\n([^\]]*)\n *\]/gm,
     (whole, key, items) => {
       const line = `${key}[${items
@@ -68,12 +50,9 @@ async function writeJson(file, data) {
       return line.length < 80 ? line : whole;
     },
   );
-  await writeFile(`${file}.tmp`, `${text}\n`);
-  await rename(`${file}.tmp`, file);
-}
 
 try {
-  const old = await previous();
+  const old = await previous([OUT, SNAPSHOT], {}, warn);
   let tools = null;
   try {
     tools = await livePolicies();
@@ -107,9 +86,9 @@ try {
     results,
     new Date().toISOString().slice(0, 10),
   );
-  await writeJson(OUT, data);
+  await writeJson(OUT, data, listsOnOneLine);
   if (process.argv.includes("--snapshot")) {
-    await writeJson(SNAPSHOT, data);
+    await writeJson(SNAPSHOT, data, listsOnOneLine);
     console.log("experiments-csp: snapshot updated");
   }
 } catch (error) {

@@ -21,9 +21,9 @@
 // (null), and the page shows its frontmatter version, if any.
 //   node scripts/github-data.mjs [--snapshot]
 
-import { existsSync } from "node:fs";
-import { readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { previous, writeJson } from "./data-files.mjs";
 import {
   failures,
   httpError,
@@ -95,32 +95,11 @@ async function productRepos() {
   return repos;
 }
 
-async function previous() {
-  for (const file of [OUT, SNAPSHOT]) {
-    if (!existsSync(file)) continue;
-    // A corrupt file (or one that isn't an object) falls through to the next
-    // one rather than failing the build.
-    try {
-      const data = JSON.parse(await readFile(file, "utf8"));
-      if (data && typeof data === "object" && !Array.isArray(data)) {
-        return data;
-      }
-      warn(`ignoring ${file}: not an object`);
-    } catch (error) {
-      warn(`ignoring unreadable ${file}: ${error}`);
-    }
-  }
-  return { fetchedAt: "", versions: {}, releases: {}, contributions: null };
-}
-
-// Written aside and renamed, so a cut-off write never leaves a broken file
-// for the build to read.
-async function writeJson(file, data) {
-  await writeFile(`${file}.tmp`, JSON.stringify(data, null, 2) + "\n");
-  await rename(`${file}.tmp`, file);
-}
-
-const old = await previous();
+const old = await previous(
+  [OUT, SNAPSHOT],
+  { fetchedAt: "", versions: {}, releases: {}, contributions: null },
+  warn,
+);
 
 let repos = null;
 try {
