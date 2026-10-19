@@ -20,26 +20,20 @@ links:
   source: https://github.com/fettle-page/fettle
 images:
   - light: ./fettle/receipt-light.png
-    dark: ./fettle/receipt-dark.png
     alt: "Fettle’s window. On the left, a receipt for an older laptop that says Needs attention, with three next steps and a storage line marked Watch. On the right, the main verdict, a Deep check offer and the Share, Print, Save and Copy buttons."
     caption: "The receipt: a plain verdict on every line, with the next steps at the top."
     phone:
       light: ./fettle/receipt-light-phone.png
-      dark: ./fettle/receipt-dark-phone.png
   - light: ./fettle/print-light.png
-    dark: ./fettle/print-dark.png
     alt: "Fettle’s print preview: the receipt laid out on an A4 page."
     caption: "The print preview, on an A4 page."
     phone:
       light: ./fettle/print-light-phone.png
-      dark: ./fettle/print-dark-phone.png
   - light: ./fettle/share-light.png
-    dark: ./fettle/share-dark.png
     alt: "Fettle’s Share view: keep the link for 7 days, 30 days or a year, and an optional password."
     caption: "The Share view."
     phone:
       light: ./fettle/share-light-phone.png
-      dark: ./fettle/share-dark-phone.png
 page:
   checks:
     - name: Storage

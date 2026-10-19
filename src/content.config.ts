@@ -55,18 +55,17 @@ const projects = defineCollection({
           live: link().optional(),
           source: link().optional(),
         }),
-        // Screenshots in light and dark; the page shows the one that matches
-        // the theme.
+        // Screenshots, each in its light version, shown in both themes
+        // (components/Shot.astro).
         images: z
           .array(
             z.object({
               light: image(),
-              dark: image(),
               alt: z.string().min(1),
               caption: z.string().min(1),
-              // Optional phone crop (light and dark): a readable detail
-              // of the shot, served on narrow screens instead.
-              phone: z.object({ light: image(), dark: image() }).optional(),
+              // Optional phone crop: a readable detail of the shot, served
+              // on narrow screens instead.
+              phone: z.object({ light: image() }).optional(),
             }),
           )
           .default([]),
