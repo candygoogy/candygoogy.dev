@@ -75,7 +75,8 @@ function answer(status: string | null) {
 
 // The pages with a plain-text card for terminals: `curl candygoogy.dev`
 // (and Wget, HTTPie, xh) gets /card.txt, and `curl candygoogy.dev/idiff`
-// the product's own card, all built with the site (src/lib/card.ts).
+// the product's own card, all built with the site (src/lib/card.ts); a
+// draft product has none, so terminals get its 404 page.
 // Browsers get the page, untouched. Both carry Vary: User-Agent, so caches
 // keep them apart. Each path here is also in run_worker_first
 // (wrangler.jsonc), or the assets would answer it without the Worker.
@@ -113,6 +114,9 @@ async function page(request: Request, env: Env, cardPath: string) {
         },
       });
     }
+    // No card: its 404 is let go, and the terminal gets the page, as a
+    // browser does.
+    await card.body?.cancel();
   }
   const page = await env.ASSETS.fetch(request);
   const response = new Response(page.body, page);

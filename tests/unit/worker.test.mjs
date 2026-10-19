@@ -110,6 +110,35 @@ test("/ for curl without a card falls back to the page", async () => {
   assert.equal(await res.text(), "<!doctype html><p>hi");
 });
 
+// A draft product has no card (src/pages/[product].txt.ts), so curl gets
+// the 404 page a browser gets; the card's own 404 is let go, not left open.
+test("a product without a card is its 404 page for curl too", async () => {
+  let cancelled = false;
+  const missing = new ReadableStream({
+    start: (c) => c.enqueue(new TextEncoder().encode("not found")),
+    cancel: () => {
+      cancelled = true;
+    },
+  });
+  const ASSETS = assets({
+    "/idiff.txt": () => new Response(missing, { status: 404 }),
+    "/idiff": () =>
+      new Response("<!doctype html><p>404", {
+        status: 404,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+  });
+  const request = new Request("https://candygoogy.dev/idiff", {
+    headers: { "User-Agent": "curl/8.0" },
+  });
+  const res = await worker.fetch(request, { ASSETS }, ctx());
+  assert.ok(cancelled);
+  assert.equal(ASSETS.calls[1], request);
+  assert.equal(res.status, 404);
+  assert.equal(res.headers.get("Content-Type"), "text/html; charset=utf-8");
+  assert.equal(await res.text(), "<!doctype html><p>404");
+});
+
 test("/ for a browser is the page from the assets, untouched", async () => {
   const ASSETS = assets({
     "/": () =>
