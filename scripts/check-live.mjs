@@ -18,15 +18,13 @@
 //
 // The parse and checks are exported for the tests; only running the file
 // directly fetches anything.
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { site } from "../src/data/site.ts";
 import {
   allows,
   classify,
   EXPECTED,
-  EXPERIMENTS,
   expected,
-  listedUrl,
+  listedTools,
   livePolicies,
   looser,
   policyOf,
@@ -357,19 +355,7 @@ export function checkIndexes(home, tools) {
 // Every experiment /experiments lists, with its live page, or why it
 // couldn't be fetched. The same list livePolicies() reads.
 async function liveTools() {
-  const tools = [];
-  for (const file of (await readdir(EXPERIMENTS)).sort()) {
-    if (!file.endsWith(".md")) continue;
-    let url;
-    try {
-      url = listedUrl(await readFile(join(EXPERIMENTS, file), "utf8"));
-    } catch (error) {
-      throw new Error(`src/content/experiments/${file}: ${error.message}`, {
-        cause: error,
-      });
-    }
-    if (url) tools.push({ id: file.slice(0, -".md".length), url });
-  }
+  const tools = await listedTools();
   return Promise.all(
     tools.map(async ({ id, url }) => {
       try {

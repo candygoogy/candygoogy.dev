@@ -2,7 +2,8 @@
 // connect to and load from, sorting that into what /experiments can say
 // about it, and keeping the last good check when one fails. Shared by
 // scripts/experiments-csp.mjs (at build time), scripts/check-live.mjs (the
-// daily CI run) and the experiments page. Only livePolicies() fetches.
+// daily CI run) and the experiments page. Only livePolicies() fetches;
+// listedTools() reads the experiment files.
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -203,12 +204,11 @@ export const EXPERIMENTS = join(
 );
 const UA = { "User-Agent": "candygoogy.dev-build" };
 
-/** Every experiment /experiments lists, with its live policy header (null
- * without one) or why it couldn't be fetched. Throws only when the list
- * can't be read. The build and the daily live check both ask through this,
- * so they see the same tools the same way.
- * @returns {Promise<({ id: string, header: string | null } | { id: string, error: unknown })[]>} */
-export async function livePolicies() {
+/** Every experiment /experiments lists, with its address, by file name.
+ * Throws when the list, or a file's url, can't be read. The build and the
+ * daily live checks all ask through this, so they see the same tools.
+ * @returns {Promise<{ id: string, url: string }[]>} */
+export async function listedTools() {
   const tools = [];
   for (const file of (await readdir(EXPERIMENTS)).sort()) {
     if (!file.endsWith(".md")) continue;
@@ -223,6 +223,16 @@ export async function livePolicies() {
     // The file's name, as the content loader names it.
     if (url) tools.push({ id: file.slice(0, -".md".length), url });
   }
+  return tools;
+}
+
+/** Every experiment /experiments lists, with its live policy header (null
+ * without one) or why it couldn't be fetched. Throws only when the list
+ * can't be read. The build and the daily live check both ask through this,
+ * so they see the same tools the same way.
+ * @returns {Promise<({ id: string, header: string | null } | { id: string, error: unknown })[]>} */
+export async function livePolicies() {
+  const tools = await listedTools();
   return Promise.all(
     tools.map(async ({ id, url }) => {
       try {
