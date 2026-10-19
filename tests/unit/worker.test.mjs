@@ -197,7 +197,7 @@ test("a page without a card goes to the assets, even for curl", async () => {
 // cost every visit a Worker run for nothing (and a card the list leaves
 // out is never served: the assets answer first). The jobs: a card, or
 // the colophon's Delivery numbers.
-test("every page run_worker_first sends to the Worker has a card", async () => {
+test("every page run_worker_first sends to the Worker has a job there", async () => {
   const config = await readFile(new URL("wrangler.jsonc", ROOT), "utf8");
   const list = JSON.parse(
     config.match(/"run_worker_first":\s*(\[[^\]]*\])/)[1],
@@ -294,8 +294,9 @@ test("/colophon from a data center the list doesn't know gives its code", async 
   assert.equal(res.headers.get("Server-Timing"), 'edge;desc="QQQ"');
 });
 
-// A returning visitor's browser revalidates the page: the 304 carries the
-// header too, so the row shows this visit, not the first one.
+// Should the page ever be revalidated (today's responses carry no ETag or
+// Last-Modified, so browsers don't), the 304 carries the header too, so
+// the row shows this visit, not the first one.
 test("/colophon revalidated is still a 304, with this visit's header", async () => {
   const ASSETS = assets({
     "/colophon": () => new Response(null, { status: 304 }),
@@ -330,7 +331,7 @@ test("/colophon never passes on where the visitor is", async () => {
     ctx(),
   );
   const all = [...res.headers].join("\n");
-  assert.doesNotMatch(all, /Lipari|Sicily|IT\b/);
+  assert.doesNotMatch(all, /Lipari|Sicily|\bIT\b/);
 });
 
 test("the data center list is codes and city names", async () => {
