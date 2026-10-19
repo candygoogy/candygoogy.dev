@@ -4,6 +4,14 @@
 // hairlines between).
 import { site } from "../data/site";
 import Base from "../layouts/Base.astro";
+import { listedExperiments, policyChecked } from "../lib/experiments-csp";
+
+// The Privacy row speaks for the experiments too (each tool's footer links
+// to it), but only while every tool's live security policy reads as it
+// says, the same check as the /experiments lede.
+const toolsChecked = policyChecked(
+  (await listedExperiments()).map(({ id }) => id),
+);
 
 const credit = "https://x.com/dark_night1109/status/2104328383211737219";
 
@@ -80,7 +88,8 @@ const weights = [
           </p>
         </dd>
       </div>
-      <!-- The footer's "No trackers, no cookies" links here. -->
+      <!-- The footer's "No trackers, no cookies" links here, and so does
+           every experiment's privacy line. -->
       <div id="privacy" class="row rv rv-line" data-i="3" data-line="line">
         <dt>Privacy</dt>
         <dd>
@@ -96,6 +105,14 @@ const weights = [
             request going to candygoogy.dev. The page’s security policy
             (connect-src 'self') wouldn’t let it go anywhere else.
           </p>
+          {toolsChecked && (
+            <p>
+              The experiments go further: each tool’s policy is connect-src
+              'none', so nothing you give one can leave the page. Mail check’s
+              lookups to cloudflare-dns.com are the one exception. Load a tool,
+              go offline, and it still works.
+            </p>
+          )}
         </dd>
       </div>
       <div class="row rv rv-line" data-i="4" data-line="line">
