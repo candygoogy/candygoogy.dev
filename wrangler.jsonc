@@ -2,9 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "candygoogy-dev",
   "compatibility_date": "2026-10-06",
-  // Static assets, plus a small Worker for one daily Cron Trigger that
-  // rebuilds the site (fresh heatmap and Fettle version). Its deploy hook
-  // URL is a runtime secret and never lives in this file.
+  // Static assets, plus a small Worker: a daily Cron Trigger that rebuilds
+  // the site (fresh heatmap and Fettle version), the terminal cards, the
+  // Discord status and the colophon's Delivery header. The deploy hook URL
+  // is a runtime secret and never lives in this file.
   "main": "./worker/index.ts",
   "triggers": { "crons": ["17 5 * * *"] },
   "assets": {

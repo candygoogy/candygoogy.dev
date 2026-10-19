@@ -45,7 +45,7 @@ wrangler.jsonc        Cloudflare config (no account details)
 
 ## Develop
 
-Requires Node 22.18 or newer (Workers Builds and CI use the version in `.node-version`).
+Requires Node 22.22 or newer (Workers Builds and CI use the version in `.node-version`).
 
 ```sh
 npm ci
