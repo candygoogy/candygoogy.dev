@@ -140,6 +140,8 @@ function delivery(cf: Request["cf"]) {
   const city = COLOS[colo] ?? colo;
   const timing = [`edge;desc="${encodeURIComponent(city)}"`];
   // TCP's round trip, or QUIC's on HTTP/3 (0 when it's the other one).
+  // clientQuicRtt is documented but not yet in the types, hence the cast:
+  // https://developers.cloudflare.com/workers/runtime-apis/request/#incomingrequestcfproperties
   const quic = (cf as { clientQuicRtt?: unknown } | undefined)?.clientQuicRtt;
   const rtt = [cf?.clientTcpRtt, quic].find(
     (ms): ms is number => typeof ms === "number" && ms > 0,
