@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.22.0"
   },
   "scripts": {
     "dev": "node scripts/github-data.mjs && node scripts/experiments-csp.mjs && node scripts/avatar.mjs && node scripts/icons.mjs && astro dev",
@@ -21,24 +21,24 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
-    "astro": "7.3.8",
+    "astro": "7.4.1",
     "sharp": "0.35.5"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.10",
-    "@axe-core/playwright": "4.13.0",
-    "@cloudflare/workers-types": "5.20261011.1",
+    "@astrojs/check": "0.9.11",
+    "@axe-core/playwright": "4.14.0",
+    "@cloudflare/workers-types": "5.20261019.1",
     "@eslint/js": "10.0.1",
-    "eslint": "10.0.1",
+    "eslint": "10.13.0",
     "eslint-plugin-astro": "3.2.1",
     "eslint-plugin-jsx-a11y-x": "0.2.0",
     "globals": "17.13.0",
-    "playwright": "1.64.0",
+    "playwright": "1.64.1",
     "prettier": "3.9.10",
     "prettier-plugin-astro": "1.1.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1",
+    "typescript-eslint": "8.71.2",
     "vite": "8.3.4",
-    "wrangler": "4.149.0"
+    "wrangler": "4.151.2"
   }
 }
