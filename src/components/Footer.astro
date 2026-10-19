@@ -126,16 +126,13 @@ const current = (href: string) => (path === href ? "page" : undefined);
     margin: 0;
   }
 
-  /* Phones: the links first, on one row (wrapping at the rows' gap where
-     they don't fit), then the notes under them, one per line, all on the
-     page's left edge. */
+  /* Phones: the notes first, one per line, then the links under them on
+     one row (wrapping at the rows' gap where they don't fit), all on the
+     page's left edge. That's the markup's order, so Tab goes the way the
+     page reads. */
   @media (max-width: 32.5rem) {
     footer {
       margin-top: var(--sp-7);
-    }
-
-    .inner > a {
-      order: -1;
     }
 
     .notes {

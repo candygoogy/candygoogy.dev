@@ -255,7 +255,7 @@ test(
 );
 
 test(
-  "the footer links the source once, and on a phone its links come first",
+  "the footer links the source once, and on a phone its notes come first, in the markup's order",
   OPTIONS,
   async () => {
     const { context, page, problems } = await open("/", {
@@ -269,14 +269,36 @@ test(
         const notes = [...footer.querySelectorAll(".notes > span")].map(
           (span) => span.getBoundingClientRect(),
         );
+        // A link's target: its text box, or 44px centred on it where the
+        // text is shorter (the ::after in Footer.astro).
+        const target = (a) => {
+          const b = a.getBoundingClientRect();
+          const middle = b.top + b.height / 2;
+          return {
+            top: Math.min(b.top, middle - 22),
+            bottom: Math.max(b.bottom, middle + 22),
+          };
+        };
+        const noteLinks = [...footer.querySelectorAll(".notes a")];
         return {
           // The repo is linked from the build stamp's commit and from
           // /colophon, not again on its own.
           source: links.some((a) => /source/i.test(a.textContent)),
+          // The notes come before the links in the markup, and nothing
+          // reorders them, so Tab follows what you see.
+          notesFirst:
+            footer.querySelector(".inner > :first-child")?.className ===
+            "notes",
+          reordered: links.some((a) => getComputedStyle(a).order !== "0"),
           oneRow: tops.every((top) => Math.abs(top - tops[0]) < 1),
-          above:
-            Math.max(...links.map((a) => a.getBoundingClientRect().bottom)) <=
-            notes[0].top,
+          below:
+            Math.min(...links.map((a) => a.getBoundingClientRect().top)) >=
+            notes.at(-1).bottom,
+          // The last note's link (the commit, or the claim) keeps its
+          // target off the links' under it.
+          clear:
+            Math.max(...noteLinks.map((a) => target(a).bottom)) <=
+            Math.min(...links.map((a) => target(a).top)),
           // One note per line, all on one left edge.
           stacked: notes.every(
             (n, i) =>
@@ -288,8 +310,11 @@ test(
       });
       assert.deepEqual(r, {
         source: false,
+        notesFirst: true,
+        reordered: false,
         oneRow: true,
-        above: true,
+        below: true,
+        clear: true,
         stacked: true,
       });
     } finally {
