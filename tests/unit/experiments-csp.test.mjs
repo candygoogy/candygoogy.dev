@@ -48,6 +48,29 @@ test("another way out makes a policy unknown", () => {
   }
 });
 
+test("a reporting directive, with any value, makes a policy unknown", () => {
+  for (const [extra, why] of [
+    [
+      "; report-uri https://example.com/csp",
+      "report-uri https://example.com/csp",
+    ],
+    ["; report-uri /csp", "report-uri /csp"],
+    ["; report-to csp-endpoint", "report-to csp-endpoint"],
+    ["; Report-To", "report-to"],
+    // In a second policy, its reports still go out.
+    [", connect-src 'none'; report-to csp", "report-to csp"],
+  ]) {
+    const header = policy("'none'") + extra;
+    assert.equal(read("photo", header), "unknown", why);
+    assert.equal(
+      read("mail", policy("https://cloudflare-dns.com") + extra),
+      "unknown",
+      why,
+    );
+    assert.deepEqual(elsewhereSources(header), [why], why);
+  }
+});
+
 test("a check from before the other directives were read is unknown", () => {
   assert.equal(classify("photo", ["'none'"], undefined), "unknown");
   assert.deepEqual(

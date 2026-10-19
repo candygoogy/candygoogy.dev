@@ -83,11 +83,18 @@ const local = (source) =>
   source === "data:" ||
   (source.startsWith("'") && source !== "'strict-dynamic'");
 
+// The directives that send the browser's reports of what a policy blocked
+// to an address (report-to through a Reporting-Endpoints header): with
+// either, whatever its value, something can leave.
+const REPORTS = ["report-uri", "report-to"];
+
 /** What else a Content-Security-Policy header lets a page load from or send
  * to outside its own site, beyond connect-src: "<directive> <source>" for
  * each such source, sorted; [] when there's none. A directive the policy
  * doesn't have (nor its fallbacks) allows anything, written "*". Of several
- * policies (joined by commas), one that keeps a directive local wins.
+ * policies (joined by commas), one that keeps a directive local wins. A
+ * report-uri or report-to in any of them counts too, with its value, or
+ * alone without one: each policy sends its own reports.
  * @param {string | null | undefined} header
  * @returns {string[]} */
 export function elsewhereSources(header) {
@@ -103,6 +110,12 @@ export function elsewhereSources(header) {
     );
     const kept = outside.find((l) => !l.length) ?? outside[0];
     out.push(...kept.map((s) => `${name} ${s}`));
+  }
+  for (const p of policies) {
+    for (const name of REPORTS) {
+      const to = directive(p, name);
+      if (to) out.push(...(to.length ? to.map((s) => `${name} ${s}`) : [name]));
+    }
   }
   return out.sort();
 }
