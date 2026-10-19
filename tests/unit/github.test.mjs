@@ -3,12 +3,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  failures,
   frontmatterKey,
   httpError,
   latestRelease,
   mergeData,
   parseContributions,
   productRepo,
+  restApi,
   staleDeploy,
   staleReleases,
   validDays,
@@ -437,5 +439,62 @@ test("httpError: GitHub's API rate limit names itself and the token", () => {
   assert.equal(
     httpError(profile, 429, new Headers({ "retry-after": "60" }), false),
     `${profile}: HTTP 429`,
+  );
+});
+
+// A get() that answers 401 to a request with a token and 200 without,
+// keeping what each request sent.
+function tokenRejected() {
+  const sent = [];
+  const get = async (url, init) => {
+    sent.push(init.headers.Authorization);
+    if (init.headers.Authorization) {
+      throw Object.assign(new Error(`${url}: HTTP 401`), { status: 401 });
+    }
+    return { json: async () => ({ tag_name: "v1.0.0" }) };
+  };
+  return { get, sent };
+}
+
+test("restApi: a rejected token is dropped, asked again without it once", async () => {
+  const { get, sent } = tokenRejected();
+  const warned = [];
+  const api = restApi({ get, token: "old", warn: (m) => warned.push(m) });
+  assert.deepEqual(await api("/repos/a/b/releases/latest"), {
+    tag_name: "v1.0.0",
+  });
+  assert.deepEqual(sent, ["Bearer old", undefined]);
+  // The next request doesn't send it again, and the warning came once.
+  await api("/repos/c/d/releases/latest");
+  assert.deepEqual(sent, ["Bearer old", undefined, undefined]);
+  assert.deepEqual(warned, [
+    "GITHUB_TOKEN rejected (HTTP 401), asking without it",
+  ]);
+  // Without a token a 401 is just a failure.
+  await assert.rejects(
+    restApi({ get: failing(401), token: undefined, warn: () => {} })("/x"),
+    { status: 401 },
+  );
+});
+
+test("failures: strict with warnings fails, and so does either stale part", () => {
+  const passing = {
+    strict: false,
+    warnings: 2,
+    contributionsStale: false,
+    releasesStale: false,
+  };
+  assert.deepEqual(failures(passing), []);
+  assert.deepEqual(failures({ ...passing, strict: true, warnings: 0 }), []);
+  assert.deepEqual(failures({ ...passing, strict: true }), [
+    "github: failing because DATA_STRICT=1",
+  ]);
+  assert.match(
+    failures({ ...passing, contributionsStale: true }).join(),
+    /contributions didn't fetch/,
+  );
+  assert.match(
+    failures({ ...passing, releasesStale: true }).join(),
+    /release list or the project list didn't fetch/,
   );
 });

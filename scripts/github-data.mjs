@@ -25,12 +25,14 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  failures,
   httpError,
   latestRelease,
   mergeData,
   parseContributions,
   parseReleases,
   productRepo,
+  restApi,
   staleDeploy,
   staleReleases,
   validDays,
@@ -45,8 +47,6 @@ const UA = { "User-Agent": "candygoogy.dev-build" };
 const STRICT = process.env.DATA_STRICT === "1";
 // Set by Workers Builds on every build.
 const WORKERS_BUILDS = process.env.WORKERS_CI === "1";
-// Dropped once the API rejects it.
-let token = process.env.GITHUB_TOKEN;
 
 let warnings = 0;
 function warn(message) {
@@ -70,29 +70,7 @@ async function get(url, init = {}) {
   return res;
 }
 
-// A REST API path's JSON, with the token when there is one.
-async function api(path) {
-  const url = `https://api.github.com${path}`;
-  const headers = { Accept: "application/vnd.github+json" };
-  let res;
-  try {
-    res = await get(url, {
-      headers: {
-        ...headers,
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-    });
-  } catch (error) {
-    // An expired or revoked token shouldn't cost the releases: the API
-    // answers without one, at a lower rate limit. Dropped for the rest of
-    // the run, so the warning comes once.
-    if (!token || error.status !== 401) throw error;
-    warn("GITHUB_TOKEN rejected (HTTP 401), asking without it");
-    token = undefined;
-    res = await get(url, { headers });
-  }
-  return res.json();
-}
+const api = restApi({ get, token: process.env.GITHUB_TOKEN, warn });
 
 const releaseList = async (repo) =>
   parseReleases(await api(`/repos/${repo}/releases?per_page=10`));
@@ -204,28 +182,21 @@ if (process.argv.includes("--snapshot")) {
   await writeJson(SNAPSHOT, data);
   console.log("github: snapshot updated");
 }
-if (STRICT && warnings) {
-  console.error("github: failing because DATA_STRICT=1");
-  process.exitCode = 1;
-}
-if (
-  staleDeploy({
+const failing = failures({
+  strict: STRICT,
+  warnings,
+  contributionsStale: staleDeploy({
     fetched: contributions !== null,
     workersBuilds: WORKERS_BUILDS,
     contributions: data.contributions,
     now: new Date(),
-  })
-) {
-  console.error(
-    "github: failing: the contributions didn't fetch on Workers Builds and the kept ones are missing or over 7 days old. Refresh the snapshot with `node scripts/github-data.mjs --snapshot` and commit it.",
-  );
-  process.exitCode = 1;
-}
-if (
-  staleReleases({ workersBuilds: WORKERS_BUILDS, repos, versions, releases })
-) {
-  console.error(
-    "github: failing: a release, release list or the project list didn't fetch on Workers Builds, so the committed snapshot's would ship. The last good deploy stays live; retry the build.",
-  );
-  process.exitCode = 1;
-}
+  }),
+  releasesStale: staleReleases({
+    workersBuilds: WORKERS_BUILDS,
+    repos,
+    versions,
+    releases,
+  }),
+});
+for (const line of failing) console.error(line);
+if (failing.length) process.exitCode = 1;

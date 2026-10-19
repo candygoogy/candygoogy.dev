@@ -1,8 +1,9 @@
 // The pure parts of github-data.mjs: the frontmatter read, the contribution
 // calendar parse and check, the latest release and release list reads, the
-// merge with the last good data, the stale deploy checks and the HTTP
-// error's wording. Kept apart from github-data.mjs (which fetches as soon as
-// it is imported) so the tests can load them on their own.
+// merge with the last good data, the stale deploy checks, the HTTP error's
+// wording, the REST API getter and the decision to fail. Kept apart from
+// github-data.mjs (which fetches as soon as it is imported) so the tests can
+// load them on their own.
 
 const DAY = 86_400_000;
 
@@ -211,3 +212,55 @@ export const staleReleases = ({ workersBuilds, repos, versions, releases }) =>
       (repo) =>
         !Object.hasOwn(versions, repo) || !Object.hasOwn(releases, repo),
     ));
+
+// The REST API getter: a path's JSON, with the token when there is one. get
+// fetches a URL with the given init and throws an error carrying the HTTP
+// status on a failed answer; warn takes a warning line.
+export function restApi({ get, token, warn }) {
+  return async function api(path) {
+    const url = `https://api.github.com${path}`;
+    const headers = { Accept: "application/vnd.github+json" };
+    let res;
+    try {
+      res = await get(url, {
+        headers: {
+          ...headers,
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+    } catch (error) {
+      // An expired or revoked token shouldn't cost the releases: the API
+      // answers without one, at a lower rate limit. Dropped for the rest of
+      // the run, so the warning comes once.
+      if (!token || error.status !== 401) throw error;
+      warn("GITHUB_TOKEN rejected (HTTP 401), asking without it");
+      token = undefined;
+      res = await get(url, { headers });
+    }
+    return res.json();
+  };
+}
+
+// Why the run fails, one line each, or none when it passes: any warning
+// with DATA_STRICT=1, and on Workers Builds the stale contributions or
+// releases (staleDeploy's and staleReleases' answers).
+export function failures({
+  strict,
+  warnings,
+  contributionsStale,
+  releasesStale,
+}) {
+  const lines = [];
+  if (strict && warnings) lines.push("github: failing because DATA_STRICT=1");
+  if (contributionsStale) {
+    lines.push(
+      "github: failing: the contributions didn't fetch on Workers Builds and the kept ones are missing or over 7 days old. Refresh the snapshot with `node scripts/github-data.mjs --snapshot` and commit it.",
+    );
+  }
+  if (releasesStale) {
+    lines.push(
+      "github: failing: a release, release list or the project list didn't fetch on Workers Builds, so the committed snapshot's would ship. The last good deploy stays live; retry the build.",
+    );
+  }
+  return lines;
+}
