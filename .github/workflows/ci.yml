@@ -97,3 +97,6 @@ jobs:
           node-version-file: .node-version
       # Built-ins only: no npm ci.
       - run: node scripts/check-live.mjs
+        env:
+          # Sent only to the GitHub REST API, for the deploy branch's tip.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

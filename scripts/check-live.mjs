@@ -431,16 +431,30 @@ async function liveTools() {
   );
 }
 
-// The deploy branch's newest commit and its date, from GitHub's API
-// (public, no token: one request a day is far below its limit).
-async function deployTip() {
-  const res = await fetch(
-    `https://api.github.com/repos/${REPO}/commits/deploy`,
-    {
-      headers: { ...UA, Accept: "application/vnd.github+json" },
+// The deploy branch's newest commit and its date, from GitHub's API. With
+// GITHUB_TOKEN set (CI passes its built-in one) the request carries it:
+// shared runners share their address, so the limit for asking without one
+// is often used up. A token the API rejects is dropped, as in
+// github-data.mjs. The tests pass their own fetch and env.
+export async function deployTip({
+  fetch = globalThis.fetch,
+  env = process.env,
+} = {}) {
+  let token = env.GITHUB_TOKEN;
+  const ask = () =>
+    fetch(`https://api.github.com/repos/${REPO}/commits/deploy`, {
+      headers: {
+        ...UA,
+        Accept: "application/vnd.github+json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
       signal: AbortSignal.timeout(15_000),
-    },
-  );
+    });
+  let res = await ask();
+  if (res.status === 401 && token) {
+    token = undefined;
+    res = await ask();
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const { sha, commit } = await res.json();
   const date = commit?.committer?.date;

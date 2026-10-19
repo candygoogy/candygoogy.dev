@@ -4,6 +4,7 @@ import {
   checkIndexes,
   checkLive,
   checkPolicies,
+  deployTip,
   liveCommit,
   menuIndex,
   newestDay,
@@ -123,6 +124,33 @@ test("checkLive: GitHub not answering warns, and no stamp fails", () => {
     ok: false,
     text: "live commit: no build stamp on the page",
   });
+});
+
+// GitHub's API as a fetch that answers from paths, and keeps each request's
+// headers. A path it doesn't know answers 404.
+function github(answers) {
+  const asked = [];
+  const fetch = async (url, init) => {
+    const { pathname, search } = new URL(url);
+    asked.push({ path: pathname + search, headers: init.headers });
+    const answer = Object.entries(answers).find(([p]) =>
+      (pathname + search).endsWith(p),
+    )?.[1];
+    return answer
+      ? Response.json(answer)
+      : new Response("Not Found", { status: 404 });
+  };
+  return { fetch, asked };
+}
+const COMMIT = { sha: TIP.sha, commit: { committer: { date: TIP.date } } };
+
+test("deployTip: sends GITHUB_TOKEN when set, and nothing without it", async () => {
+  const { fetch, asked } = github({ "/commits/deploy": COMMIT });
+  const tip = await deployTip({ fetch, env: { GITHUB_TOKEN: "t0k" } });
+  assert.equal(tip.sha, TIP.sha);
+  assert.equal(asked[0].headers.Authorization, "Bearer t0k");
+  await deployTip({ fetch, env: {} });
+  assert.equal(asked.at(-1).headers.Authorization, undefined);
 });
 
 test("newestDay: counts on from the first day, and throws without one", () => {
