@@ -8,7 +8,8 @@ import { listedExperiments, policyChecked } from "../lib/experiments-csp";
 
 // The Privacy row speaks for the experiments too (each tool's footer links
 // to it), but only while every tool's live security policy reads as it
-// says, the same check as the /experiments lede.
+// says, the same check as the /experiments lede. Otherwise it says why it
+// doesn't, since the tools still link here.
 const toolsChecked = policyChecked(
   (await listedExperiments()).map(({ id }) => id),
 );
@@ -106,12 +107,18 @@ const weights = [
             request going to candygoogy.dev. The page’s security policy
             (connect-src 'self') wouldn’t let it go anywhere else.
           </p>
-          {toolsChecked && (
+          {toolsChecked ? (
             <p>
               The experiments go further: each tool’s policy is connect-src
               'none', so nothing you give one can leave the page. Mail check’s
-              lookups to cloudflare-dns.com are the one exception. Load a tool,
-              go offline, and it still works.
+              lookups to cloudflare-dns.com are the one exception. Load any
+              other tool, go offline, and it still works.
+            </p>
+          ) : (
+            <p>
+              The experiments’ own policies are checked against this every day.
+              The last check didn’t pass, so for now this row speaks only for
+              the site.
             </p>
           )}
         </dd>
