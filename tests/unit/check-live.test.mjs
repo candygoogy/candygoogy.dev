@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   checkIndexes,
@@ -332,4 +333,25 @@ test("checkIndexes: a drifted, missing or unfetched index fails by name", () => 
     /^mail: couldn't check its menu index: .*HTTP 503/,
   );
   assert.match(lines[3].text, /matches the site's 3 rows: subnet$/);
+});
+
+// Workers Builds deploys one branch, named in three places: the release
+// job that moves it (ci.yml), the build stamp's fallback that asks GitHub
+// for its tip (src/lib/commit.ts, used by src/lib/build.ts) and this
+// check. A rename in one place alone fails here.
+test("the deploy branch has the same name everywhere", async () => {
+  const read = (path) =>
+    readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+  const named = (path, pattern) =>
+    read(path).then((source) => {
+      const name = pattern.exec(source)?.[1];
+      assert.ok(name, `${path} names no deploy branch`);
+      return name;
+    });
+  const names = await Promise.all([
+    named(".github/workflows/ci.yml", /\sHEAD:refs\/heads\/([\w.-]+)/),
+    named("src/lib/commit.ts", /\/commits\/([\w.-]+)`/),
+    named("scripts/check-live.mjs", /"\/commits\/([\w.-]+)"/),
+  ]);
+  assert.deepEqual(names, Array(3).fill(names[0]));
 });
