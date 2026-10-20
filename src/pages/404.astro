@@ -306,6 +306,26 @@ const hops = [
     }
   }
 
+  /* The narrowest two-column panels (windows of about 860 to 1080px):
+     "candygoogy.dev" needs a third of 362px at 17px, 298px at 14px and
+     277px at 13px (measured), so the labels step down twice more, each
+     with room to spare, and stay on one line with clear space between
+     them. The states step down with them, so the labels still lead.
+     Before the phones' rule below, which sets its own sizes for stacked
+     hops. */
+  @container (max-width: 380px) {
+    .hops {
+      --label: var(--fs-sm);
+      --state: var(--fs-xs);
+    }
+  }
+
+  @container (max-width: 310px) {
+    .hops {
+      --label: var(--fs-xs);
+    }
+  }
+
   .meta {
     border-top: var(--rule) solid var(--chip-line);
   }
