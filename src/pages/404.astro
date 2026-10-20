@@ -6,8 +6,9 @@
 // that tries the oldest IT fix (scripts/motion/notfound.ts).
 import Base from "../layouts/Base.astro";
 
-// Every state a hop can show, stacked in one cell so the status keeps the
-// width of the longest and nothing moves when it changes.
+// Every state a hop can show, stacked in one cell as wide as the hop's
+// settled word (data-settled), so the settled status sits centred under its
+// icon and nothing moves when it changes.
 const states = {
   checking: "Checking…",
   ok: "Working",
@@ -109,7 +110,12 @@ const hops = [
                           </span>
                         </span>
                       ) : (
-                        <span data-is={key}>{text}</span>
+                        <span
+                          data-is={key}
+                          data-settled={key === hop.state ? "" : undefined}
+                        >
+                          {text}
+                        </span>
                       ),
                     )}
                   </span>
@@ -546,9 +552,9 @@ const hops = [
      word can leave upward and the next rise in from under it. */
   .states {
     display: inline-grid;
-    clip-path: inset(0 -0.5em);
-    /* Every word starts right by the dot, whatever its length (the cell
-       keeps the width of the longest, centred with the hop). */
+    /* Room on the right for the passing words (below). */
+    clip-path: inset(0 -4em 0 -0.5em);
+    /* Every word starts right by the dot, whatever its length. */
     text-align: start;
   }
 
@@ -556,6 +562,15 @@ const hops = [
     grid-area: 1 / 1;
     visibility: hidden;
     white-space: nowrap;
+  }
+
+  /* The cell is as wide as the hop's settled word (Working, or Not
+     found), so the settled status, dot and word, sits centred under its
+     icon, and the dot never moves as the words change. The passing words
+     (Checking…, Restarting…) take no width: while they show, they run on
+     past the cell's end. */
+  .states > span:not([data-settled]) {
+    width: 0;
   }
 
   /* An answer reads in ink; the in-between states stay soft. */
