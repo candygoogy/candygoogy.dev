@@ -252,6 +252,13 @@
   }
 }
 
+/* A day swelling a little as its color arrives, then settling. */
+@keyframes cell-swell {
+  40% {
+    transform: scale(1.15);
+  }
+}
+
 /* The busiest day's one ring: an outline that grows 4px as it fades. */
 @keyframes busy-ring {
   from {
@@ -605,52 +612,53 @@
         1.5s, because the job is still going. The bottom tail ("before
         that") is still: the past doesn't move. */
 
-  /* Heatmap: a charge-up, once. Every day starts at level 0 and steps up
-     through the levels to its own, 60ms a step, the weeks starting left
-     to right (22ms apart, so 53 weeks finish within ~1.6s). Then the
-     busiest day rings once. Only for a heatmap that was still off screen
-     when its script started (.charging); one already seen stays as it
-     was painted. */
+  /* Heatmap: a charge-up, once. Every day starts at level 0 and flows up
+     through the levels to its own (280ms for level 1 to 460ms for level
+     4), swelling a little as its color arrives, the weeks starting left
+     to right (14ms apart, so 53 weeks finish within ~1.3s). Then the
+     busiest day rings once. Empty days stay as they are. Only for a
+     heatmap that was still off screen when its script started
+     (.charging); one already seen stays as it was painted. */
   html.motion-ready .heat-draw.charging:not(.is-in) [role="gridcell"] > span {
     background: var(--cell-0);
   }
 
   html.motion-ready .heat-draw.charging.is-in [role="gridcell"] > span {
-    animation-timing-function: steps(1, end);
+    animation-timing-function: var(--ease-out), var(--ease-out);
     animation-fill-mode: backwards;
-    animation-delay: calc(150ms + var(--w, 0) * 22ms);
+    animation-delay: calc(100ms + var(--w, 0) * 14ms);
   }
 
   html.motion-ready
     .heat-draw.charging.is-in
     [role="gridcell"][data-level="1"]
     > span {
-    animation-name: charge-1;
-    animation-duration: 60ms;
+    animation-name: charge-1, cell-swell;
+    animation-duration: 280ms;
   }
 
   html.motion-ready
     .heat-draw.charging.is-in
     [role="gridcell"][data-level="2"]
     > span {
-    animation-name: charge-2;
-    animation-duration: 120ms;
+    animation-name: charge-2, cell-swell;
+    animation-duration: 340ms;
   }
 
   html.motion-ready
     .heat-draw.charging.is-in
     [role="gridcell"][data-level="3"]
     > span {
-    animation-name: charge-3;
-    animation-duration: 180ms;
+    animation-name: charge-3, cell-swell;
+    animation-duration: 400ms;
   }
 
   html.motion-ready
     .heat-draw.charging.is-in
     [role="gridcell"][data-level="4"]
     > span {
-    animation-name: charge-4;
-    animation-duration: 240ms;
+    animation-name: charge-4, cell-swell;
+    animation-duration: 460ms;
   }
 
   html.motion-ready .heat-draw.charging [data-busiest] > span {
@@ -663,7 +671,7 @@
     inset: 0;
     border-radius: 2px;
     opacity: 0;
-    animation: busy-ring 700ms var(--ease-out) 1750ms both;
+    animation: busy-ring 700ms var(--ease-out) 1300ms both;
   }
 
   /* Pointer-only hover details. */
