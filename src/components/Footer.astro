@@ -126,18 +126,27 @@ const current = (href: string) => (path === href ? "page" : undefined);
     margin: 0;
   }
 
-  /* Phones: the notes first, one per line, then the links under them on
-     one row (wrapping at the rows' gap where they don't fit), all on the
-     page's left edge. That's the markup's order, so Tab goes the way the
-     page reads. */
+  /* Phones: the © and the claim side by side (the claim wraps under the
+     © where they don't fit, 24px down), then the links under them on one
+     row, all on the page's left edge. That's the markup's order, so Tab
+     goes the way the page reads. The build stamp is left out: the
+     colophon's Source row states the same build, so the footer stays
+     short. */
   @media (max-width: 32.5rem) {
     footer {
       margin-top: var(--sp-7);
     }
 
+    .inner {
+      padding-block: var(--sp-5);
+    }
+
     .notes {
-      flex-direction: column;
-      align-items: start;
+      column-gap: var(--sp-5);
+    }
+
+    .stamp {
+      display: none;
     }
   }
 

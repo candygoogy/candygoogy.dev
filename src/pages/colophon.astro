@@ -4,6 +4,7 @@
 // hairlines between).
 import { site } from "../data/site";
 import Base from "../layouts/Base.astro";
+import { builtOn, commit, dirty, shortCommit } from "../lib/build";
 import { listedExperiments, policyChecked } from "../lib/experiments-csp";
 
 // The Privacy row speaks for the experiments too (each tool's footer links
@@ -215,10 +216,27 @@ const weights = [
       <div class="row rv rv-line" data-i="8" data-line="line">
         <dt>Source</dt>
         <dd>
+          <!-- The build, as the footer's stamp gives it (the same link and
+               words), since a phone's footer leaves the stamp out. -->
           <p>
-            The source is <a href={site.source}>on GitHub</a>, and the footer
-            shows the commit this version was{" "}
-            <span class="nobr">built from.</span>
+            The source is <a href={site.source}>on GitHub</a>. This version was
+            built on{" "}
+            <time class="nobr" datetime={builtOn.iso}>
+              {builtOn.label}
+            </time>
+            {commit && (
+              <>
+                {" from "}
+                <a
+                  href={`${site.source}/commit/${commit}`}
+                  aria-label={`commit ${shortCommit}${dirty ? ", with uncommitted changes" : ""}`}
+                >
+                  {shortCommit}
+                </a>
+              </>
+            )}
+            . A wider screen shows it in the footer too; on a phone, it’s{" "}
+            <span class="nobr">only here.</span>
           </p>
         </dd>
       </div>

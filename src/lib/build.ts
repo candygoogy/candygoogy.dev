@@ -1,14 +1,15 @@
 import { execSync } from "node:child_process";
 import { commitSha } from "./commit.ts";
 
-// When and from which commit this build was made, for the footer stamp.
-// Build time only. The commit comes from Workers Builds' environment, then
-// from git, then from the latest commit on the deploy branch on GitHub,
-// which Workers Builds builds from (deploy-hook builds carry no commit of
-// their own). Without any of them the stamp shows just the date; the build
-// never fails over it. One log line says which source was used, or why none
-// worked. A commit read from git, in a tree with uncommitted changes, is
-// marked dirty: the build isn't that commit.
+// When and from which commit this build was made, for the footer stamp
+// and the colophon's Source row. Build time only. The commit comes from
+// Workers Builds' environment, then from git, then from the latest commit
+// on the deploy branch on GitHub, which Workers Builds builds from
+// (deploy-hook builds carry no commit of their own). Without any of them
+// the stamp shows just the date; the build never fails over it. One log
+// line says which source was used, or why none worked. A commit read from
+// git, in a tree with uncommitted changes, is marked dirty: the build isn't
+// that commit.
 
 const now = new Date();
 

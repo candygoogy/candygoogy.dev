@@ -258,65 +258,147 @@ test(
   "the footer links the source once, and on a phone its notes come first, in the markup's order",
   OPTIONS,
   async () => {
-    const { context, page, problems } = await open("/", {
+    // What the footer shows at each width: the stamp or not, and how the
+    // © and the claim sit (side by side, or the claim under the ©) with
+    // the gap between them. Phones keep 24px each way.
+    const widths = {
+      1280: { stamp: true, notes: "side", gap: 32 },
+      390: { stamp: false, notes: "side", gap: 24 },
+      360: { stamp: false, notes: "side", gap: 24 },
+      320: { stamp: false, notes: "wrapped", gap: 24 },
+    };
+    for (const [width, expected] of Object.entries(widths)) {
+      const { context, page, problems } = await open("/", {
+        viewport: { width: Number(width), height: 844 },
+      });
+      try {
+        const r = await page.evaluate(() => {
+          const footer = document.querySelector("footer");
+          const inner = footer.querySelector(".inner");
+          const links = [...inner.querySelectorAll(":scope > a")];
+          const tops = links.map((a) => a.getBoundingClientRect().top);
+          const stamp = footer.querySelector(".notes > .stamp");
+          const [copy, claim] = [
+            ...footer.querySelectorAll(".notes > span:not(.stamp)"),
+          ].map((span) => span.getBoundingClientRect());
+          const shown = [...footer.querySelectorAll(".notes > span")]
+            .filter((span) => span.checkVisibility())
+            .map((span) => span.getBoundingClientRect());
+          // A link's target: its text box, or 44px centred on it where the
+          // text is shorter (the ::after in Footer.astro).
+          const target = (a) => {
+            const b = a.getBoundingClientRect();
+            const middle = b.top + b.height / 2;
+            return {
+              top: Math.min(b.top, middle - 22),
+              bottom: Math.max(b.bottom, middle + 22),
+            };
+          };
+          const noteLinks = [...footer.querySelectorAll(".notes a")].filter(
+            (a) => a.checkVisibility(),
+          );
+          const near = (a, b) => Math.abs(a - b) < 1;
+          // The same font on one baseline: the same bottom edge.
+          const side = near(copy.bottom, claim.bottom);
+          const wrapped =
+            claim.top >= copy.bottom && near(claim.left, copy.left);
+          const label = (el) =>
+            el.className.split(" ")[0] || el.textContent.trim();
+          return {
+            // The repo is linked from the build stamp's commit and from
+            // /colophon, not again on its own.
+            source: links.some((a) => /source/i.test(a.textContent)),
+            // The notes come before the links in the markup, and nothing
+            // reorders them, so Tab follows what you see.
+            markup: [...inner.children].map(label),
+            reordered: [...footer.querySelectorAll(".inner *")].some(
+              (el) => getComputedStyle(el).order !== "0",
+            ),
+            stamp: stamp.checkVisibility() && stamp.offsetWidth > 0,
+            notes: side ? "side" : wrapped ? "wrapped" : "neither",
+            gap: Math.round(
+              side ? claim.left - copy.right : claim.top - copy.bottom,
+            ),
+            oneRow: tops.every((top) => Math.abs(top - tops[0]) < 1),
+            // Below every note shown, or level with them on a wide row.
+            below:
+              Math.min(...tops) >= Math.max(...shown.map((n) => n.bottom)) ||
+              tops.every((top) => near(top, shown[0].top)),
+            // The notes' links (the claim, and the commit where it shows)
+            // keep their targets off the links' under them.
+            clear:
+              Math.min(...tops) < shown.at(-1).bottom ||
+              Math.max(...noteLinks.map((a) => target(a).bottom)) <=
+                Math.min(...links.map((a) => target(a).top)),
+          };
+        });
+        assert.deepEqual(
+          r,
+          {
+            source: false,
+            markup: ["notes", "Colophon", "Uses", "Back to top", "printed"],
+            reordered: false,
+            stamp: expected.stamp,
+            notes: expected.notes,
+            gap: expected.gap,
+            oneRow: true,
+            below: true,
+            clear: true,
+          },
+          `at ${width}px`,
+        );
+      } finally {
+        await context.close();
+      }
+      assert.deepEqual(
+        problems,
+        [],
+        `the page reported problems at ${width}px`,
+      );
+    }
+  },
+);
+
+test(
+  "/colophon's Source row names the same build as the footer's stamp",
+  OPTIONS,
+  async () => {
+    const { context, page, problems } = await open("/colophon", {
       viewport: { width: 390, height: 844 },
     });
     try {
       const r = await page.evaluate(() => {
-        const footer = document.querySelector("footer");
-        const links = [...footer.querySelectorAll(".inner > a")];
-        const tops = links.map((a) => a.getBoundingClientRect().top);
-        const notes = [...footer.querySelectorAll(".notes > span")].map(
-          (span) => span.getBoundingClientRect(),
+        const row = [...document.querySelectorAll(".colophon .row")].find(
+          (el) => el.querySelector("dt")?.textContent.trim() === "Source",
         );
-        // A link's target: its text box, or 44px centred on it where the
-        // text is shorter (the ::after in Footer.astro).
-        const target = (a) => {
-          const b = a.getBoundingClientRect();
-          const middle = b.top + b.height / 2;
+        const stamp = document.querySelector("footer .stamp");
+        const build = (el) => {
+          const time = el.querySelector("time");
+          const commit = el.querySelector('a[href*="/commit/"]');
           return {
-            top: Math.min(b.top, middle - 22),
-            bottom: Math.max(b.bottom, middle + 22),
+            datetime: time?.dateTime,
+            date: time?.textContent.trim(),
+            href: commit?.href,
+            label: commit?.getAttribute("aria-label"),
+            commit: commit?.textContent.trim(),
           };
         };
-        const noteLinks = [...footer.querySelectorAll(".notes a")];
         return {
-          // The repo is linked from the build stamp's commit and from
-          // /colophon, not again on its own.
-          source: links.some((a) => /source/i.test(a.textContent)),
-          // The notes come before the links in the markup, and nothing
-          // reorders them, so Tab follows what you see.
-          notesFirst:
-            footer.querySelector(".inner > :first-child")?.className ===
-            "notes",
-          reordered: links.some((a) => getComputedStyle(a).order !== "0"),
-          oneRow: tops.every((top) => Math.abs(top - tops[0]) < 1),
-          below:
-            Math.min(...links.map((a) => a.getBoundingClientRect().top)) >=
-            notes.at(-1).bottom,
-          // The last note's link (the commit, or the claim) keeps its
-          // target off the links' under it.
-          clear:
-            Math.max(...noteLinks.map((a) => target(a).bottom)) <=
-            Math.min(...links.map((a) => target(a).top)),
-          // One note per line, all on one left edge.
-          stacked: notes.every(
-            (n, i) =>
-              i === 0 ||
-              (n.top >= notes[i - 1].bottom &&
-                Math.abs(n.left - notes[0].left) < 1),
-          ),
+          text: row.querySelector("dd p").textContent.replace(/\s+/g, " "),
+          row: build(row),
+          stamp: build(stamp),
         };
       });
-      assert.deepEqual(r, {
-        source: false,
-        notesFirst: true,
-        reordered: false,
-        oneRow: true,
-        below: true,
-        clear: true,
-        stacked: true,
-      });
+      assert.deepEqual(r.row, r.stamp);
+      assert.ok(r.row.date, "the row has no date");
+      // Spaces where Astro could drop them, and the "from" only with a
+      // commit, as the stamp words it.
+      const from = r.row.commit ? ` from ${r.row.commit}` : "";
+      assert.equal(
+        r.text.trim(),
+        `The source is on GitHub. This version was built on ${r.row.date}${from}. ` +
+          "A wider screen shows it in the footer too; on a phone, it’s only here.",
+      );
     } finally {
       await context.close();
     }
