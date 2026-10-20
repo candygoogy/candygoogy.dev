@@ -117,6 +117,12 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 
 export const fixes: Fix[] = [
   {
+    project: "Pi-hole web interface",
+    url: "https://github.com/pi-hole/web/pull/3883",
+    merged: "2026-10-20",
+    line: "Deleting selected messages on Pi-hole’s diagnosis page sent a request and showed a toast for each one, so 40 messages meant 40 toasts. Now it’s one request and one toast.",
+  },
+  {
     project: "distlib",
     url: "https://github.com/pypa/distlib/pull/269",
     merged: "2026-10-15",
