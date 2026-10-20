@@ -169,32 +169,15 @@ const weights = [
           </p>
         </dd>
       </div>
-      <div class="row rv rv-line" data-i="6" data-line="line">
-        <dt>Credits</dt>
-        <dd>
-          <p>
-            My profile picture is by <a href={credit}>@dark_night1109</a>.
-          </p>
-        </dd>
-      </div>
-      <div class="row rv rv-line" data-i="7" data-line="line">
-        <dt>Source</dt>
-        <dd>
-          <p>
-            The source is <a href={site.source}>on GitHub</a>, and the footer
-            shows the commit this version was{" "}
-            <span class="nobr">built from.</span>
-          </p>
-        </dd>
-      </div>
-      <!-- This visit's numbers, read from the page's own response: hidden
-           until the script below has them (never without JavaScript, in
-           development or on a browser that doesn't pass them on). Last, so
-           nothing under it moves when it appears. -->
+      <!-- This visit's numbers, written in by the Worker as the page is
+           sent (worker/delivery.ts): it fills each line, drops a line it
+           has no value for, and shows the row once it has the city. So it
+           is in the page from its first paint, and nothing moves. Without
+           the Worker (in development) it stays hidden. -->
       <div
         id="delivery"
         class="row rv rv-line"
-        data-i="8"
+        data-i="6"
         data-line="line"
         hidden
       >
@@ -202,8 +185,8 @@ const weights = [
         <dd>
           <p>
             Cloudflare runs this site from data centers around the world, and
-            the nearest one answers. This is how this page reached you, read
-            from its own response as it arrived. None of it is kept.
+            the nearest one answers. This is how this page reached you, written
+            into it as it was sent to you. None of it is kept.
           </p>
           <dl class="weights leaders">
             <div data-delivery="city">
@@ -221,57 +204,27 @@ const weights = [
           </dl>
         </dd>
       </div>
+      <div class="row rv rv-line" data-i="7" data-line="line">
+        <dt>Credits</dt>
+        <dd>
+          <p>
+            My profile picture is by <a href={credit}>@dark_night1109</a>.
+          </p>
+        </dd>
+      </div>
+      <div class="row rv rv-line" data-i="8" data-line="line">
+        <dt>Source</dt>
+        <dd>
+          <p>
+            The source is <a href={site.source}>on GitHub</a>, and the footer
+            shows the commit this version was{" "}
+            <span class="nobr">built from.</span>
+          </p>
+        </dd>
+      </div>
     </dl>
   </section>
 </Base>
-
-<script>
-  // The Delivery row: how this page reached the reader. The Worker names
-  // the Cloudflare city that answered, the round trip to it and the HTTP
-  // version in the page's Server-Timing header (worker/index.ts); the
-  // browser's own idea of the version stands in when there's none. The
-  // row shows only once it has the city; a number it doesn't have leaves
-  // its line out.
-  const row = document.getElementById("delivery");
-  const nav = performance.getEntriesByType("navigation")[0] as
-    PerformanceNavigationTiming | undefined;
-  const timing = new Map(
-    (nav?.serverTiming ?? []).map((entry) => [entry.name, entry]),
-  );
-  const PROTOCOLS: Record<string, string> = {
-    h3: "HTTP/3",
-    h2: "HTTP/2",
-    "http/1.1": "HTTP/1.1",
-  };
-
-  const decoded = (text = "") => {
-    try {
-      return decodeURIComponent(text);
-    } catch {
-      return "";
-    }
-  };
-  // A no-break space keeps the number with its unit.
-  const NBSP = String.fromCharCode(0xa0);
-  const rtt = timing.get("rtt")?.duration ?? 0;
-  const values: Record<string, string> = {
-    city: decoded(timing.get("edge")?.description),
-    rtt: rtt > 0 ? `${Math.round(rtt)}${NBSP}ms` : "",
-    protocol:
-      timing.get("proto")?.description ||
-      (PROTOCOLS[nav?.nextHopProtocol ?? ""] ?? ""),
-  };
-
-  if (row && values.city) {
-    for (const line of row.querySelectorAll<HTMLElement>("[data-delivery]")) {
-      const value = values[line.dataset.delivery ?? ""];
-      const slot = line.querySelector("dd");
-      if (value && slot) slot.textContent = value;
-      else line.remove();
-    }
-    row.hidden = false;
-  }
-</script>
 
 <style>
   .colophon {
@@ -306,7 +259,7 @@ const weights = [
     padding-block: var(--sp-6);
   }
 
-  /* The Delivery row until it has its numbers. */
+  /* The Delivery row, until the Worker writes its numbers in. */
   .row[hidden] {
     display: none;
   }

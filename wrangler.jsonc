@@ -4,7 +4,7 @@
   "compatibility_date": "2026-10-06",
   // Static assets, plus a small Worker: a daily Cron Trigger that rebuilds
   // the site (fresh heatmap and Fettle version), the terminal cards, the
-  // Discord status and the colophon's Delivery header. The deploy hook URL
+  // Discord status and the colophon's Delivery row. The deploy hook URL
   // is a runtime secret and never lives in this file.
   "main": "./worker/index.ts",
   "triggers": { "crons": ["17 5 * * *"] },
@@ -14,10 +14,11 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
     // The Worker runs first only for the pages with a terminal card ("/",
-    // /fettle, /idiff: CARDS in worker/index.ts), /colophon (the Delivery
-    // row's Server-Timing header) and /api/* (the presence endpoint, which
-    // no asset matches: with a list, a path outside it never reaches the
-    // Worker). Every other request is served from the assets without it.
+    // /fettle, /idiff: CARDS in worker/index.ts), /colophon (its Delivery
+    // row, written in as the page is sent) and /api/* (the presence
+    // endpoint, which no asset matches: with a list, a path outside it
+    // never reaches the Worker). Every other request is served from the
+    // assets without it.
     "run_worker_first": ["/", "/fettle", "/idiff", "/colophon", "/api/*"],
   },
   // The apex only. www is a redirect owned by the zone, never a second

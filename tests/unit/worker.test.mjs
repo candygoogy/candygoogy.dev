@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { afterEach, beforeEach, test } from "node:test";
+import { lines } from "../../worker/delivery.ts";
 import worker from "../../worker/index.ts";
 
 const ROOT = new URL("../../", import.meta.url);
@@ -40,6 +41,7 @@ beforeEach(() => {
 afterEach(() => {
   globalThis.fetch = realFetch;
   delete globalThis.caches;
+  delete globalThis.HTMLRewriter;
 });
 
 test("/ for curl is the plain-text card", async () => {
@@ -247,9 +249,12 @@ test("every page run_worker_first sends to the Worker has a job there", async ()
   }
 });
 
-// The colophon's Delivery row reads where the page was served from out of
-// the response's Server-Timing header.
+// The colophon's Delivery row: the Worker writes this response's numbers
+// into the page (worker/delivery.ts). The rewrite itself needs workerd's
+// HTMLRewriter, so it's tested in tests/e2e/delivery.test.mjs; here, the
+// numbers and what reaches the assets and the visitor around it.
 const COLOPHON = "<!doctype html><p>colophon";
+const NBSP = String.fromCharCode(0xa0);
 
 function visit(cf, init) {
   const request = new Request("https://candygoogy.dev/colophon", init);
@@ -260,107 +265,132 @@ function visit(cf, init) {
 const colophonAssets = (init) =>
   assets({ "/colophon": () => new Response(COLOPHON, init) });
 
-test("/colophon says which city served it, the round trip and HTTP version", async () => {
-  const ASSETS = colophonAssets({ headers: { ETag: '"c"' } });
-  const request = visit({
-    colo: "MXP",
-    clientTcpRtt: 12,
-    httpProtocol: "HTTP/2",
-  });
-  const res = await worker.fetch(request, { ASSETS }, ctx());
-  assert.equal(res.status, 200);
-  assert.equal(
-    res.headers.get("Server-Timing"),
-    'edge;desc="Milan", rtt;dur=12, proto;desc="HTTP/2"',
-  );
-  // The page itself is the built file, untouched.
-  assert.deepEqual(ASSETS.calls, [request]);
-  assert.equal(res.headers.get("ETag"), '"c"');
-  assert.equal(await res.text(), COLOPHON);
-});
+// A stand-in for workerd's HTMLRewriter that passes the page through and
+// keeps the selectors it was given.
+let selectors;
+function fakeRewriter() {
+  selectors = [];
+  globalThis.HTMLRewriter = class {
+    on(selector) {
+      selectors.push(selector);
+      return this;
+    }
+    transform(response) {
+      return response;
+    }
+  };
+}
 
-test("/colophon over HTTP/3 takes the QUIC round trip", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(
-    visit({ colo: "MXP", clientTcpRtt: 0, clientQuicRtt: 8.6 }),
-    { ASSETS },
-    ctx(),
-  );
-  assert.equal(
-    res.headers.get("Server-Timing"),
-    'edge;desc="Milan", rtt;dur=9',
+test("the Delivery lines: the city, the round trip and the HTTP version", () => {
+  assert.deepEqual(
+    lines({ colo: "MXP", clientTcpRtt: 12.4, httpProtocol: "HTTP/2" }),
+    { city: "Milan", rtt: `12${NBSP}ms`, protocol: "HTTP/2" },
   );
 });
 
-test("/colophon without a round trip names the city alone", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(visit({ colo: "MXP" }), { ASSETS }, ctx());
-  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="Milan"');
-});
-
-test("/colophon encodes a city that isn't plain ASCII", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(visit({ colo: "GRU" }), { ASSETS }, ctx());
-  assert.equal(
-    res.headers.get("Server-Timing"),
-    'edge;desc="S%C3%A3o%20Paulo"',
+test("the Delivery lines over HTTP/3 take the QUIC round trip", () => {
+  assert.deepEqual(
+    lines({ colo: "MXP", clientTcpRtt: 0, clientQuicRtt: 8.6 }),
+    {
+      city: "Milan",
+      rtt: `9${NBSP}ms`,
+      protocol: "",
+    },
   );
 });
 
-test("/colophon passes on only a well-formed HTTP version", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(
-    visit({ colo: "MXP", httpProtocol: 'HTTP/3", x;desc="y' }),
-    { ASSETS },
-    ctx(),
+test("the Delivery lines leave out what isn't well formed", () => {
+  assert.deepEqual(
+    lines({ colo: "MXP", clientTcpRtt: -3, httpProtocol: 'HTTP/3", x' }),
+    { city: "Milan", rtt: "", protocol: "" },
   );
-  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="Milan"');
+  assert.equal(lines({ colo: "mxp" }), null);
+  assert.equal(lines({ colo: "MXP1" }), null);
+  assert.equal(lines(undefined), null);
 });
 
-test("/colophon from a data center the list doesn't know gives its code", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(visit({ colo: "QQQ" }), { ASSETS }, ctx());
-  assert.equal(res.headers.get("Server-Timing"), 'edge;desc="QQQ"');
+test("the Delivery lines give an unknown data center's code, and keep a city's own spelling", () => {
+  assert.equal(lines({ colo: "QQQ" }).city, "QQQ");
+  assert.equal(lines({ colo: "GRU" }).city, "São Paulo");
 });
 
-// Should the page ever be revalidated (today's responses carry no ETag or
-// Last-Modified, so browsers don't), the 304 carries the header too, so
-// the row shows this visit, not the first one.
-test("/colophon revalidated is still a 304, with this visit's header", async () => {
-  const ASSETS = assets({
-    "/colophon": () => new Response(null, { status: 304 }),
+test("the Delivery lines never say where the visitor is", () => {
+  const all = JSON.stringify(
+    lines({ colo: "MXP", city: "Lipari", country: "IT", region: "Sicily" }),
+  );
+  assert.doesNotMatch(all, /Lipari|Sicily|\bIT\b/);
+});
+
+test("/colophon is sent whole and fresh, the row filled in", async () => {
+  fakeRewriter();
+  const ASSETS = colophonAssets({
+    headers: {
+      ETag: '"c"',
+      "Last-Modified": "Mon, 19 Oct 2026 10:00:00 GMT",
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
   const res = await worker.fetch(
     visit(
-      { colo: "FCO", clientTcpRtt: 20 },
-      { headers: { "If-None-Match": '"c"' } },
+      { colo: "MXP", clientTcpRtt: 12 },
+      {
+        headers: {
+          "If-None-Match": '"c"',
+          "If-Modified-Since": "Mon, 19 Oct 2026 10:00:00 GMT",
+          "Accept-Language": "it",
+        },
+      },
     ),
     { ASSETS },
     ctx(),
   );
-  assert.equal(res.status, 304);
-  assert.equal(
-    res.headers.get("Server-Timing"),
-    'edge;desc="Rome", rtt;dur=20',
-  );
-});
-
-test("/colophon with no Cloudflare data (local) has no header", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(visit(undefined), { ASSETS }, ctx());
+  // The assets are asked for the page itself, never whether it changed.
+  const asked = ASSETS.calls[0];
+  assert.equal(asked.headers.get("If-None-Match"), null);
+  assert.equal(asked.headers.get("If-Modified-Since"), null);
+  assert.equal(asked.headers.get("Accept-Language"), "it");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("ETag"), null);
+  assert.equal(res.headers.get("Last-Modified"), null);
+  assert.equal(res.headers.get("Cache-Control"), "private, no-cache");
+  assert.equal(res.headers.get("X-Content-Type-Options"), "nosniff");
   assert.equal(res.headers.get("Server-Timing"), null);
+  // The row, the lines with a value and their values; none for the
+  // missing protocol.
+  assert.deepEqual(selectors, [
+    "#delivery",
+    '#delivery [data-delivery="city"]',
+    '#delivery [data-delivery="city"] > dd',
+    '#delivery [data-delivery="rtt"]',
+    '#delivery [data-delivery="rtt"] > dd',
+    '#delivery [data-delivery="protocol"]',
+  ]);
   assert.equal(await res.text(), COLOPHON);
 });
 
-test("/colophon never passes on where the visitor is", async () => {
-  const ASSETS = colophonAssets();
-  const res = await worker.fetch(
-    visit({ colo: "MXP", city: "Lipari", country: "IT", region: "Sicily" }),
-    { ASSETS },
-    ctx(),
-  );
-  const all = [...res.headers].join("\n");
-  assert.doesNotMatch(all, /Lipari|Sicily|\bIT\b/);
+test("/colophon as a HEAD, or with no Cloudflare data (local), is the assets' own", async () => {
+  fakeRewriter();
+  for (const request of [
+    visit({ colo: "MXP" }, { method: "HEAD" }),
+    visit(undefined, { headers: { "If-None-Match": '"c"' } }),
+  ]) {
+    const page = new Response(COLOPHON, { headers: { ETag: '"c"' } });
+    const ASSETS = assets({ "/colophon": () => page });
+    const res = await worker.fetch(request, { ASSETS }, ctx());
+    assert.deepEqual(ASSETS.calls, [request]);
+    assert.equal(res, page);
+  }
+  assert.deepEqual(selectors, []);
+});
+
+test("/colophon passes on any answer but a 200 as it is", async () => {
+  fakeRewriter();
+  const page = new Response(null, { status: 304 });
+  const ASSETS = assets({ "/colophon": () => page });
+  const res = await worker.fetch(visit({ colo: "MXP" }), { ASSETS }, ctx());
+  assert.equal(res, page);
+  assert.deepEqual(selectors, []);
 });
 
 test("the data center list is codes and city names", async () => {

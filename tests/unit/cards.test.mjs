@@ -98,7 +98,7 @@ test("every card and worker-first page belongs to such a product", () => {
     assert.equal(card, `/${id}.txt`, `CARDS ${path} serves /${id}.txt`);
   }
   for (const path of firstPages) {
-    // /colophon runs the Worker for its Delivery header, not for a card
+    // /colophon runs the Worker for its Delivery row, not for a card
     // (tests/unit/worker.test.mjs).
     if (path === "/" || path === "/colophon") continue;
     assert.ok(
