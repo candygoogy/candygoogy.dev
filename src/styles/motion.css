@@ -191,12 +191,6 @@
   }
 }
 
-@keyframes shown-band {
-  to {
-    clip-path: inset(0 round var(--band-r));
-  }
-}
-
 @keyframes shown-clip {
   to {
     clip-path: none;
@@ -428,8 +422,10 @@
   /* While the intro is on, the page's reveal starts with the curtain's
      lift, and the delays between groups (the hero line, the index title,
      its rows) are halved, so they rise together with the lift instead of
-     queueing after it. The staggers within a group stay as they are. */
-  html.intro-on {
+     queueing after it. The staggers within a group stay as they are.
+     Once .intro-late is set (the curtain's script never ran), the intro
+     counts as over and the delays are whole again. */
+  html.intro-on:not(.intro-late) {
     --d-k: 0.5;
   }
 
@@ -553,11 +549,12 @@
 
   /* While the intro curtain is up, the band waits clipped away to its
      bottom edge: the curtain uncovers a calm page, then the band rises
-     into place once, at full opacity, behind the lifting curtain (and
-     on its own at 2.6s if the curtain's script never runs). */
-  .js.intro-hold .band.rv-band:not(.is-in) {
+     into place once, at full opacity, behind the lifting curtain. If the
+     curtain's script never runs, .intro-late (2.6s) ends the wait like
+     the hero's: the band is shown, or, once scripts/reveal.ts runs, waits
+     closed like on any other visit and opens where it's seen. */
+  .js.intro-hold:not(.intro-late) .band.rv-band:not(.is-in) {
     clip-path: inset(100% 0 0 0 round var(--band-r));
-    animation: shown-band 1ms linear 2600ms forwards;
   }
 
   /* The band's screenshot unrolls top-down at full opacity, like a receipt
@@ -565,7 +562,8 @@
      Its reveal waits for the image to decode (data-decode). The clip sits
      on the inner .tilt, never on the figure the reveal watches, so the
      figure is always measured at its full size. As a failsafe, the clip
-     lifts on its own after 4s whatever happens. */
+     lifts on its own 1.5s after the band has opened, whatever happens
+     (never before: it would show the screenshot inside a closed band). */
   html.motion-ready .band .stage.rv:not(.is-in) {
     opacity: 1;
     transform: none;
@@ -573,7 +571,10 @@
 
   html.motion-ready .band .stage.rv:not(.is-in) > .tilt {
     clip-path: inset(-12% -8% 100% -8%);
-    animation: shown-clip 1ms linear 4000ms forwards;
+  }
+
+  html.motion-ready .band.is-in .stage.rv:not(.is-in) > .tilt {
+    animation: shown-clip 1ms linear 1500ms forwards;
   }
 
   /* 130%: each letter's clip leaves room below for descenders. */
