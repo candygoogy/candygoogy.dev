@@ -190,6 +190,32 @@ const speculation = {
         } catch {
           // Storage blocked: no intro.
         }
+        // A page left partway down notes so as it goes, under its own path
+        // (never the position), so leaving another page doesn't wipe it. If
+        // it comes back with a reload, Back or Forward, the hero starts at
+        // rest (html.hero-rest, motion.css): the browser puts the scroll
+        // back by lining up what sits near the window's top, and the hero's
+        // entrance, still holding it lowered then, would make the page land
+        // too far down. One left at the top plays it as usual, and a page
+        // restored from the back/forward cache never runs this at all.
+        const key = "left-down:" + location.pathname;
+        addEventListener("pagehide", () => {
+          try {
+            if (scrollY > 0) sessionStorage.setItem(key, "1");
+            else sessionStorage.removeItem(key);
+          } catch {
+            // Storage blocked: nothing noted.
+          }
+        });
+        try {
+          const left = sessionStorage.getItem(key);
+          sessionStorage.removeItem(key);
+          const type = performance.getEntriesByType("navigation")[0]?.type;
+          if (left && (type === "reload" || type === "back_forward"))
+            root.classList.add("hero-rest");
+        } catch {
+          // Storage blocked: the hero plays.
+        }
       })();
     </script>
     <script is:inline>
@@ -202,7 +228,9 @@ const speculation = {
       // a screenshot passing by). Arriving with a transition, or
       // coming back, all that's in view is shown settled instead of playing
       // its reveal: the page's slide is its entrance, and the morphs land
-      // on finished elements. A page restored from the back/forward cache
+      // on finished elements. (A reload, Back or Forward that lands partway
+      // down shows the hero at rest, decided earlier in the script above:
+      // it has to be at rest before the scroll is put back.) A page restored from the back/forward cache
       // arrives as it was left, with no transition: Chromium paints the
       // restored page for a frame before the transition's first frame, so
       // one would read as a cut back to the old page and a fade. Registered

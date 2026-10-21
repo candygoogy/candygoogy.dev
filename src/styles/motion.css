@@ -520,6 +520,17 @@
     animation-play-state: paused;
   }
 
+  /* A reload, Back or Forward that lands partway down (html.hero-rest, set
+     by the head script in Base.astro) shows the hero at rest. The browser
+     puts the scroll back by lining up what sits near the window's top, and
+     the entrance would still be holding it lowered then, so the page would
+     land too far down. One at the top plays it as usual. */
+  .js.hero-rest .hero-title .w > span,
+  .js.hero-rest .hero .rv,
+  .js.hero-rest .hero .rv-line::before {
+    animation: none;
+  }
+
   /* Start states for everything else, set only once scripts/reveal.ts
      runs (html.motion-ready). It plays each reveal from these same values
      (Web Animations, fill backwards), then .is-in hands back to the

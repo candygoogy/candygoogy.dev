@@ -164,3 +164,111 @@ test(
     assert.deepEqual(state, shown([1]));
   },
 );
+
+test(
+  "a reload partway down shows the hero settled, and one at the top still plays it",
+  OPTIONS,
+  async (t) => {
+    const page = await home(t, 1366, 600);
+    // The hero's line, every frame for the first 1.5s after a load.
+    await page.context().addInitScript(() => {
+      const frames = [];
+      window.__frames = frames;
+      const tick = () => {
+        const lede = document.querySelector(".hero .statement > p.rv");
+        if (lede) {
+          const style = getComputedStyle(lede);
+          const r = lede.getBoundingClientRect();
+          frames.push({
+            y: scrollY,
+            seen: r.bottom > 0 && r.top < innerHeight,
+            transform: style.transform,
+            opacity: style.opacity,
+            intro: document.documentElement.classList.contains("intro-on"),
+          });
+        }
+        if (performance.now() < 1500) requestAnimationFrame(tick);
+        else window.__done = true;
+      };
+      requestAnimationFrame(tick);
+    });
+    const reload = async () => {
+      await page.reload();
+      await page.waitForFunction(() => window.__done);
+      return page.evaluate(() => window.__frames);
+    };
+    const AT_REST = ["none", "matrix(1, 0, 0, 1, 0, 0)"];
+
+    await scrollTo(page, ".hero .statement > p.rv", 0.1);
+    await page.waitForTimeout(500);
+    const down = (await reload()).filter((f) => f.y > 0);
+    assert.ok(down.length > 0, "the scroll was never restored");
+    assert.ok(
+      down.every((f) => f.seen),
+      "the line was out of the window",
+    );
+    assert.ok(
+      down.every((f) => !f.intro),
+      "the intro curtain played",
+    );
+    const moved = down.filter(
+      (f) => !AT_REST.includes(f.transform) || f.opacity !== "1",
+    );
+    assert.equal(
+      moved.length,
+      0,
+      `the line moved after the scroll came back: ${JSON.stringify(moved[0])}`,
+    );
+
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForTimeout(500);
+    const top = await reload();
+    assert.ok(top.every((f) => f.y === 0));
+    assert.ok(
+      top.some((f) => f.opacity !== "1"),
+      "the hero didn't play its entrance",
+    );
+  },
+);
+
+test(
+  "a reload partway down lands where the page was left",
+  OPTIONS,
+  async (t) => {
+    const page = await home(t, 1567, 780);
+    for (const left of [473, 1200]) {
+      await page.evaluate(
+        (y) => window.scrollTo({ top: y, behavior: "instant" }),
+        left,
+      );
+      await page.waitForTimeout(500);
+      await page.reload();
+      await page.waitForTimeout(2000);
+      const landed = await page.evaluate(() => scrollY);
+      assert.ok(
+        Math.abs(landed - left) <= 2,
+        `left at ${left}, landed at ${landed}`,
+      );
+    }
+  },
+);
+
+test(
+  "coming Back to a page left partway down lands where it was left",
+  OPTIONS,
+  async (t) => {
+    // Playwright's browser has no back/forward cache, so Back loads the
+    // page again, as a browser that missed the cache would.
+    const page = await home(t, 1567, 780);
+    await page.evaluate(() =>
+      window.scrollTo({ top: 473, behavior: "instant" }),
+    );
+    await page.waitForTimeout(500);
+    await page.goto(new URL("/colophon", server.url).href);
+    await page.waitForTimeout(800);
+    await page.goBack();
+    await page.waitForTimeout(2000);
+    const landed = await page.evaluate(() => scrollY);
+    assert.ok(Math.abs(landed - 473) <= 2, `left at 473, landed at ${landed}`);
+  },
+);
