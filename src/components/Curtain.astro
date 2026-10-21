@@ -3,11 +3,12 @@
 // band's ink covers the page from the first paint (the page is fully
 // rendered underneath).
 // "candygoogy", the header's own wordmark scaled up and centred, rises
-// letter by letter; then, with only a short beat after the last letter
-// lands, the panel lifts away while the wordmark glides and shrinks into
-// the header's wordmark, turning to page ink as the panel's edge passes
-// it. The page's reveal starts with the lift, so the headline, the index
-// and the band rise while the panel is still going: one movement.
+// letter by letter; then, as the last letters settle, the panel lifts away
+// while the wordmark glides and shrinks into the header's wordmark,
+// turning to page ink as the panel's edge passes it. The page is let go
+// as the edge reaches the headline, so the headline's words rise as it
+// uncovers them, and what lies below, the band too (still clipped), rises
+// after the edge has passed it: one movement.
 //
 // The head script in Base.astro decides whether it runs (html.intro-on):
 // never without JS, never under reduced motion, only when home is the
@@ -41,6 +42,8 @@ import { site } from "../data/site";
     getComputedStyle(root).getPropertyValue(name).trim() || fallback;
   const OUT = token("--ease-out", "ease-out");
   const INOUT = token("--ease-in-out", "ease-in-out");
+  // The wordmark's glide: it moves from the first frame, with no slow start.
+  const GLIDE = "cubic-bezier(0.33, 0, 0.15, 1)";
   const curtain = document.querySelector<HTMLElement>(".curtain");
 
   if (curtain && root.classList.contains("intro-on")) {
@@ -51,10 +54,12 @@ import { site } from "../data/site";
     const animations: Animation[] = [];
     let done = false;
     let skipped = false;
-    // The last letter starts at 330ms and has visually landed by ~580ms
-    // (the curve is front-loaded), so the lift starts right after. The
-    // glide, the last thing moving, ends at end (lift + 40 + liftDur).
-    const t = { lift: 580, liftDur: 640, end: 1260 };
+    // The last letter starts at 330ms and reads as landed well before its
+    // curve ends (it's front-loaded); the lift starts at 460, overlapping
+    // that landing a little by design. The glide, the last thing moving,
+    // ends at end (lift + 40 + liftDur). release, when the page is let go,
+    // is set in start(), once the headline can be measured.
+    const t = { lift: 460, liftDur: 640, end: 1140, release: 460 };
     let liftTimer = 0;
     let endTimer = 0;
 
@@ -105,9 +110,9 @@ import { site } from "../data/site";
     // Plays the rest at 2x, or faster if 2x would take over 450ms. The
     // animations all started together, so one clock gives where they are:
     // the one that ends last, whose time runs for the whole intro (one that
-    // has ended stops at its end). The lift's timer is brought forward to
-    // match, so the page still rises with the lift, and the curtain goes
-    // when the last one ends.
+    // has ended stops at its end). The release timer is brought forward to
+    // match, so the page is still let go as the edge reaches the headline,
+    // and the curtain goes when the last one ends.
     const endOf = (a: Animation) =>
       Number(a.effect?.getComputedTiming().endTime ?? 0);
     const hurry = () => {
@@ -117,8 +122,8 @@ import { site } from "../data/site";
       for (const a of animations) a.updatePlaybackRate(rate);
       window.clearTimeout(liftTimer);
       window.clearTimeout(endTimer);
-      if (at < t.lift) {
-        liftTimer = window.setTimeout(release, (t.lift - at) / rate);
+      if (at < t.release) {
+        liftTimer = window.setTimeout(release, (t.release - at) / rate);
       } else release();
       // finish() cancels them all; nothing is left to wait for then. The
       // timer is the fallback if a finished promise never settles.
@@ -189,7 +194,7 @@ import { site } from "../data/site";
         fly.animate([{ scale: String(scale) }, { scale: "1" }], {
           duration: t.liftDur - 60,
           delay: t.lift,
-          easing: INOUT,
+          easing: GLIDE,
           fill: "both",
         }),
         fly.animate(
@@ -200,25 +205,28 @@ import { site } from "../data/site";
           {
             duration: t.liftDur,
             delay: t.lift + 40,
-            easing: INOUT,
+            easing: GLIDE,
             fill: "both",
           },
         ),
       );
 
-      // 4. Its colour turns to page ink as the panel's edge passes the
-      //    header: find when the lift's edge reaches the wordmark's bottom
-      //    (smootherstep stands in for the ease-in-out curve), then
-      //    crossfade over 120ms around that moment.
-      let pass = 0.9;
-      for (let k = 0; k <= 100; k++) {
-        const p = k / 100;
-        const eased = p * p * p * (p * (6 * p - 15) + 10);
-        if (H * (1 - eased) <= b.bottom + 4) {
-          pass = p;
-          break;
+      // How far into the lift (0 to 1) its edge has come up to y, with
+      // smootherstep standing in for the ease-in-out curve; `never` if it
+      // doesn't get there (y above the screen).
+      const edgeAt = (y: number, never = 1) => {
+        for (let k = 0; k <= 100; k++) {
+          const p = k / 100;
+          const eased = p * p * p * (p * (6 * p - 15) + 10);
+          if (H * (1 - eased) <= y) return p;
         }
-      }
+        return never;
+      };
+
+      // 4. Its colour turns to page ink as the panel's edge passes the
+      //    header: find when the lift's edge reaches the wordmark's bottom,
+      //    then crossfade over 120ms around that moment.
+      const pass = edgeAt(b.bottom + 4, 0.9);
       animations.push(
         fly.animate([{ color: getComputedStyle(fly).color }, { color: ink }], {
           duration: 120,
@@ -228,10 +236,22 @@ import { site } from "../data/site";
         }),
       );
 
-      // 5. The page rises as the panel starts to lift: the same reveals as
-      //    a normal load (with their group delays halved while the intro
-      //    is on, motion.css), overlapping the lift instead of following it.
-      liftTimer = window.setTimeout(release, t.lift);
+      // 5. The page is let go as the lift's edge reaches the headline's
+      //    bottom, less the 80ms its words wait (motion.css), so they rise
+      //    as the edge uncovers them: the same reveals as a normal load
+      //    (with their group delays halved while the intro is on),
+      //    overlapping the lift instead of following it. Without a
+      //    headline, it goes as the lift starts.
+      const title = document.querySelector(".hero-title");
+      t.release = title
+        ? Math.max(
+            t.lift,
+            t.lift +
+              t.liftDur * edgeAt(title.getBoundingClientRect().bottom) -
+              80,
+          )
+        : t.lift;
+      liftTimer = window.setTimeout(release, t.release);
       endTimer = window.setTimeout(finish, t.end + 20);
       if (skipped) hurry();
     };

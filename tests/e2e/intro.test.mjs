@@ -181,6 +181,48 @@ test(
 );
 
 test(
+  "the curtain lets the page go as its edge reaches the headline",
+  OPTIONS,
+  async (t) => {
+    const { page } = await fresh(t, { viewport: { width: 1440, height: 900 } });
+    // Where the panel's edge and the headline are when the page is let go,
+    // and how far into the intro that is (the panel's clock).
+    await page.addInitScript(() => {
+      addEventListener("intro:release", () => {
+        const panel = document.querySelector(".curtain .panel");
+        const inset = getComputedStyle(panel).clipPath.match(
+          /inset\(\s*\S+\s+\S+\s+([\d.]+)%/,
+        );
+        window.__edge = {
+          inset: inset ? Number(inset[1]) : null,
+          title: document.querySelector(".hero-title").getBoundingClientRect()
+            .bottom,
+          H: innerHeight,
+          at: panel.getAnimations()[0]?.currentTime ?? null,
+        };
+      });
+    });
+    await page.goto(url("/"));
+    await page.waitForFunction(() => window.__edge !== undefined, null, {
+      timeout: 3200,
+    });
+    const e = await page.evaluate(() => window.__edge);
+    assert.ok(
+      e.inset !== null,
+      `no clip-path inset read: ${JSON.stringify(e)}`,
+    );
+    const edge = e.H * (1 - e.inset / 100);
+    const seen = `edge ${edge.toFixed(0)}px, headline bottom ${e.title.toFixed(0)}px, at ${e.at}ms`;
+    // The lift is underway, and its edge hasn't passed the headline yet, so the words don't spend their rise under the panel.
+    assert.ok(
+      e.title < edge && edge < 0.95 * e.H,
+      `the edge wasn't between the headline and the lift's start: ${seen}`,
+    );
+    t.diagnostic(seen);
+  },
+);
+
+test(
   "coming home from another page of the site plays no intro",
   OPTIONS,
   async (t) => {
