@@ -97,7 +97,8 @@ export const skills: { group: string; items: string }[] = [
   },
   {
     group: "Networks",
-    items: "MikroTik, Omada, VLANs, managed switching, WireGuard, Tailscale",
+    items:
+      "MikroTik, UniFi, Omada, VLANs, managed switching, WireGuard, Tailscale",
   },
   {
     group: "Code",
