@@ -16,9 +16,16 @@ const states = {
   restarting: "Restarting…",
 };
 
+// The host is also the map's one door: a link as quiet as the last hop's
+// egg (https://map.candygoogy.dev, its own repo).
 const hops = [
   { label: "You", state: "ok", icon: "laptop" },
-  { label: "candygoogy.dev", state: "ok", icon: "globe" },
+  {
+    label: "candygoogy.dev",
+    state: "ok",
+    icon: "globe",
+    href: "https://map.candygoogy.dev/",
+  },
   { label: "This page", state: "missing", icon: "page" },
 ] as const;
 ---
@@ -65,69 +72,75 @@ const hops = [
       </p>
       <div class="panel-body">
         <ol class="hops">
-          {hops.map((hop, i) => (
-            <li class="hop" data-hop={i + 1}>
-              <span class="node">
-                <span class="glyph" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="28" height="28">
-                    {hop.icon === "laptop" && (
-                      <>
-                        <rect x="4" y="5" width="16" height="11" rx="1.5" />
-                        <path d="M2 19h20" />
-                      </>
-                    )}
-                    {hop.icon === "globe" && (
-                      <>
-                        <circle cx="12" cy="12" r="8.5" />
-                        <path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.1 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.1-3.6-8.5s1.2-6.2 3.6-8.5Z" />
-                      </>
-                    )}
-                    {hop.icon === "page" && (
-                      <>
-                        <path d="M6.5 3.5h7.5l4 4v13h-11.5Z" />
-                        <path d="M14 3.5v4h4M9.5 13h5M9.5 16.5h3" />
-                      </>
-                    )}
-                  </svg>
-                </span>
-                <span class="num" aria-hidden="true">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span class="label">{hop.label}</span>
-                <span class="visually-hidden">, </span>
-                <span class="status" data-state={hop.state}>
-                  <span class="dot" aria-hidden="true"></span>
-                  <span class="states" aria-hidden="true">
-                    {Object.entries(states).map(([key, text]) =>
-                      key === "checking" ? (
-                        // Its dots are separate, so they can appear in
-                        // turn while the hop is being checked.
-                        <span data-is={key}>
-                          Checking
-                          <span class="dots">
-                            <span>.</span>
-                            <span>.</span>
-                            <span>.</span>
+          {hops.map((hop, i) => {
+            const Node = "href" in hop ? "a" : "span";
+            return (
+              <li class="hop" data-hop={i + 1}>
+                <Node class="node" href={"href" in hop ? hop.href : undefined}>
+                  <span class="glyph" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="28" height="28">
+                      {hop.icon === "laptop" && (
+                        <>
+                          <rect x="4" y="5" width="16" height="11" rx="1.5" />
+                          <path d="M2 19h20" />
+                        </>
+                      )}
+                      {hop.icon === "globe" && (
+                        <>
+                          <circle cx="12" cy="12" r="8.5" />
+                          <path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.1 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.1-3.6-8.5s1.2-6.2 3.6-8.5Z" />
+                        </>
+                      )}
+                      {hop.icon === "page" && (
+                        <>
+                          <path d="M6.5 3.5h7.5l4 4v13h-11.5Z" />
+                          <path d="M14 3.5v4h4M9.5 13h5M9.5 16.5h3" />
+                        </>
+                      )}
+                    </svg>
+                  </span>
+                  <span class="num" aria-hidden="true">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span class="label">{hop.label}</span>
+                  <span class="visually-hidden">, </span>
+                  <span class="status" data-state={hop.state}>
+                    <span class="dot" aria-hidden="true"></span>
+                    <span class="states" aria-hidden="true">
+                      {Object.entries(states).map(([key, text]) =>
+                        key === "checking" ? (
+                          // Its dots are separate, so they can appear in
+                          // turn while the hop is being checked.
+                          <span data-is={key}>
+                            Checking
+                            <span class="dots">
+                              <span>.</span>
+                              <span>.</span>
+                              <span>.</span>
+                            </span>
                           </span>
-                        </span>
-                      ) : (
-                        <span
-                          data-is={key}
-                          data-settled={key === hop.state ? "" : undefined}
-                        >
-                          {text}
-                        </span>
-                      ),
-                    )}
+                        ) : (
+                          <span
+                            data-is={key}
+                            data-settled={key === hop.state ? "" : undefined}
+                          >
+                            {text}
+                          </span>
+                        ),
+                      )}
+                    </span>
+                    <span class="visually-hidden" data-sr>
+                      {states[hop.state]}
+                    </span>
                   </span>
-                  <span class="visually-hidden" data-sr>
-                    {states[hop.state]}
-                  </span>
-                </span>
-                {hop.icon === "page" && <span class="path" data-path />}
-              </span>
-            </li>
-          ))}
+                  {"href" in hop && (
+                    <span class="visually-hidden">. Opens the map</span>
+                  )}
+                  {hop.icon === "page" && <span class="path" data-path />}
+                </Node>
+              </li>
+            );
+          })}
         </ol>
         <p class="egg-line" aria-live="polite" data-egg-line></p>
       </div>
@@ -385,31 +398,34 @@ const hops = [
     flex-direction: column;
     align-items: center;
     width: 100%;
+    margin: 0;
     padding: 0;
     border: 0;
     background: none;
     color: inherit;
     font: inherit;
     text-align: center;
+    text-decoration: none;
   }
 
-  button.node {
+  :is(button, a).node {
     border-radius: 10px;
     cursor: pointer;
     transition: transform 120ms var(--ease-ui);
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    button.node:active {
+    :is(button, a).node:active {
       transform: scale(0.97);
     }
   }
 
   /* The egg's quiet affordance: the page icon gets a hairline frame on
      hover, enough for the curious to try it. Touch screens get the same
-     frame once, fading, when the trace is done (the script). */
+     frame once, fading, when the trace is done (the script). The host's
+     door to the map shows the same frame, on hover only. */
   @media (hover: hover) {
-    button.node:hover .glyph {
+    :is(button, a).node:hover .glyph {
       box-shadow: inset 0 0 0 var(--rule) var(--chip-line);
     }
   }
@@ -427,7 +443,7 @@ const hops = [
     }
   }
 
-  button.node:focus-visible {
+  :is(button, a).node:focus-visible {
     outline: var(--focus-width) solid var(--focus);
     outline-offset: 4px;
   }
