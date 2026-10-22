@@ -107,8 +107,9 @@ test(
       ["Motion", "4"],
       ["Weight", "5"],
       ["Delivery", "6"],
-      ["Credits", "7"],
-      ["Source", "8"],
+      ["Map", "7"],
+      ["Credits", "8"],
+      ["Source", "9"],
     ]);
     assert.deepEqual(problems, []);
     await context.close();
