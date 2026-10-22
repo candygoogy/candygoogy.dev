@@ -55,10 +55,10 @@ export const uses = {
         {
           id: "ap",
           label: "Access point",
-          product: "TP-Link Omada EAP610",
+          product: "Ubiquiti UniFi U7 Pro Wall",
           parent: "router",
           link: "poe",
-          detail: { text: "Wi-Fi 6" },
+          detail: { text: "Wi-Fi 7" },
         },
         {
           id: "laptop",
@@ -79,7 +79,7 @@ export const uses = {
         {
           id: "switch",
           label: "Switch",
-          product: "Netgear ProSAFE GS108",
+          product: "Ubiquiti UniFi Pro XG 8 PoE",
           parent: "router",
         },
         {
