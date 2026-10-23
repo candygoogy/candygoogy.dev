@@ -2,7 +2,10 @@
 // The social preview cards (1200 x 630), rendered to public/og.png,
 // public/og-<product>.png, public/og-uses.png, public/og-projects.png and
 // public/og-experiments.png
-// by scripts/og.mjs. Built only in `astro dev`.
+// by scripts/og.mjs. Built only in `astro dev`. The og-site-<label> cards
+// are for the sub-sites (each experiment and the map, named by the first
+// label of their host); scripts/og.mjs --sites renders them outside public/,
+// since each sub-site serves its own.
 import { getCollection } from "astro:content";
 import { Font } from "astro:assets";
 import { hero, site } from "../data/site";
@@ -10,21 +13,51 @@ import { experiments } from "../data/experiments";
 import { uses } from "../data/uses";
 import "../styles/tokens.css";
 
-// Every product gets a card (development only).
+interface Props {
+  // A sub-site's card (see getStaticPaths).
+  sub?: { name: string; line: string; url: string };
+}
+
+// Every product and sub-site gets a card (development only). A sub-site's
+// card is an experiment's name, its summary's first sentence (cut the way a
+// product's is) and its host; the map has no entry in the content, so its
+// words live here.
 export async function getStaticPaths() {
   if (!import.meta.env.DEV) return [];
   const products = (await getCollection("projects")).filter(
     (p) => p.data.kind === "product",
   );
+  const tools = (await getCollection("experiments"))
+    .filter((e) => !e.data.draft)
+    .map((e) => {
+      const [first, ...rest] = e.data.summary.split(". ");
+      return {
+        name: e.data.name,
+        line: rest.length ? `${first}.` : first,
+        url: new URL(e.data.url).host,
+      };
+    });
+  const map = {
+    name: "Map",
+    line: "This is candygoogy.dev as a little network you can travel through.",
+    url: "map.candygoogy.dev",
+  };
   return [
-    "og-card",
-    "og-uses",
-    "og-projects",
-    "og-experiments",
-    ...products.map((p) => `og-${p.id}`),
-  ].map((ogcard) => ({ params: { ogcard } }));
+    ...[
+      "og-card",
+      "og-uses",
+      "og-projects",
+      "og-experiments",
+      ...products.map((p) => `og-${p.id}`),
+    ].map((ogcard) => ({ params: { ogcard }, props: {} })),
+    ...[...tools, map].map((sub) => ({
+      params: { ogcard: `og-site-${sub.url.split(".")[0]}` },
+      props: { sub },
+    })),
+  ];
 }
 
+const { sub } = Astro.props;
 const project = import.meta.env.DEV
   ? (await getCollection("projects")).find(
       (p) => p.data.kind === "product" && `og-${p.id}` === Astro.params.ogcard,
@@ -34,7 +67,7 @@ const project = import.meta.env.DEV
 // Fettle's line is the summary's first sentence, as on the page's closing
 // statement; /uses has its title and lede, /projects its nav name
 // and what it lists (its title is too long for one line).
-const page = project
+const own = project
   ? {
       name: project.data.name,
       line: `${project.data.summary.split(". ")[0]}.`,
@@ -55,6 +88,8 @@ const page = project
             url: "candygoogy.dev/experiments",
           }
         : undefined;
+// A sub-site's card, else the site's own.
+const page = sub ?? own;
 ---
 
 <!doctype html>
@@ -67,7 +102,7 @@ const page = project
   </head>
   <body>
     {page ? (
-      <div class="card">
+      <div class="card" data-site={sub ? "" : undefined}>
         <p class="mark">{site.name}</p>
         <div class="project">
           <p class="name">{page.name}</p>
@@ -84,6 +119,24 @@ const page = project
     )}
   </body>
 </html>
+
+<script>
+  // A sub-site's name stays on one line: once the fonts are in, it steps
+  // down from 168px until it fits the card, then the card is marked fitted
+  // (scripts/og.mjs waits for that).
+  const card = document.querySelector<HTMLElement>(".card[data-site]");
+  const name = card?.querySelector<HTMLElement>(".name");
+  if (card && name) {
+    document.fonts.ready.then(() => {
+      let size = parseFloat(getComputedStyle(name).fontSize);
+      while (name.scrollWidth > name.clientWidth && size > 48) {
+        size -= 1;
+        name.style.fontSize = `${size}px`;
+      }
+      card.dataset.fitted = `${size}`;
+    });
+  }
+</script>
 
 <style>
   body {
@@ -124,6 +177,21 @@ const page = project
     margin: 0;
     font: var(--fw-d-heavy) 168px / var(--lh-band) var(--ff-display);
     letter-spacing: var(--ls-band);
+  }
+
+  /* A sub-site's name is measured on one line (the script above fits it),
+     against a column that stays the card's width. */
+  .card[data-site] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-site] .name {
+    white-space: nowrap;
+  }
+
+  /* Its line never ends on a lone word. */
+  [data-site] .line {
+    text-wrap: pretty;
   }
 
   .line {
