@@ -2,6 +2,12 @@
 import { site } from "../data/site";
 import { builtOn, commit, dirty, shortCommit } from "../lib/build";
 
+interface Props {
+  backToTop?: boolean;
+}
+
+const { backToTop = true } = Astro.props;
+
 // The page's own link is marked current, as in the header nav.
 const path = Astro.url.pathname.replace(/\.html$/, "");
 const current = (href: string) => (path === href ? "page" : undefined);
@@ -37,7 +43,7 @@ const current = (href: string) => (path === href ? "page" : undefined);
     <a href="/uses" aria-current={current("/uses")}>
       Uses
     </a>
-    <a href="#top">Back to top</a>
+    {backToTop && <a href="#top">Back to top</a>}
     <!-- Paper only (print.css). -->
     <p class="printed">
       Printed from candygoogy.dev{commit && `, build ${commit.slice(0, 7)}`}

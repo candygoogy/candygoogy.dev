@@ -29,6 +29,8 @@ interface Props {
   schema?: Record<string, unknown>;
   // The header nav item this page belongs under (product pages: Projects).
   section?: string;
+  // The footer's Back to top (the 404 leaves it out: nothing to go back up).
+  backToTop?: boolean;
 }
 
 const {
@@ -40,6 +42,7 @@ const {
   ogAlt = `${site.name}: ${hero.headline}`,
   schema,
   section,
+  backToTop = true,
 } = Astro.props;
 // Pages are built as files (index.html, fettle.html), but served and
 // listed in the sitemap without the extension: / and /fettle.
@@ -398,7 +401,7 @@ const speculation = {
     <main id="main" class="wrap">
       <slot />
     </main>
-    <Footer />
+    <Footer backToTop={backToTop} />
     <script>
       // The page's motion and pointer details (scripts/loader.ts). In the
       // built site this tag is made inert (scripts/motion-loader.mjs) and
