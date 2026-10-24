@@ -52,7 +52,7 @@ LATIN = (
     " U+2212, U+2215, U+FEFF, U+FFFD"
 )
 # Codepoints beyond LATIN, kept by whichever font has them. The same two
-# files also serve the experiments (../../experiments, a sibling repo),
+# files also serve the experiments (../experiments, a sibling repo),
 # whose keyboard tester and compose map draw the arrows; LATIN has only
 # the up and down ones. Schibsted Grotesk has all four, Newsreader none.
 # This site's own text needs nothing more: the receipt marks (U+2713,
@@ -139,7 +139,7 @@ def site_codepoints():
         read_codepoints(found, ROOT / "dist", built)
     else:
         print("make-fonts: note: no dist/ here (run npm run build); not scanned")
-    experiments = (ROOT / ".." / ".." / "experiments").resolve()
+    experiments = (ROOT / ".." / "experiments").resolve()
     if experiments.is_dir():
         sources = ("*/src/**/*.ts", "*/src/**/*.html", "*/src/**/*.css")
         read_codepoints(found, experiments, sources)
