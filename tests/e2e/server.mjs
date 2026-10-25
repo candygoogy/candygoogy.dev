@@ -53,8 +53,14 @@ export async function serve() {
     }
     const status = file ? 200 : 404;
     const path = file ?? join(ROOT, "404.html");
+    // /_astro/ is content-hashed and cached for a year, as public/_headers
+    // has it: a reload or Back takes the fonts from the cache, so none
+    // swaps in after the browser has put the scroll back.
     res.writeHead(status, {
       "Content-Type": TYPES[extname(path)] ?? "application/octet-stream",
+      ...(file && pathname.startsWith("/_astro/")
+        ? { "Cache-Control": "public, max-age=31536000, immutable" }
+        : {}),
     });
     res.end(req.method === "HEAD" ? undefined : await readFile(path));
   });
