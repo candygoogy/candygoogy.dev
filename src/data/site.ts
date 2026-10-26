@@ -118,6 +118,12 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 
 export const fixes: Fix[] = [
   {
+    project: "Everything Search for Raycast",
+    url: "https://github.com/raycast/extensions/pull/32767",
+    merged: "2026-10-26",
+    line: "Searching for anything with & or | in it failed, because the search went through the Windows command line. Now it reaches Everything as typed.",
+  },
+  {
     project: "Pi-hole web interface",
     url: "https://github.com/pi-hole/web/pull/3883",
     merged: "2026-10-20",
