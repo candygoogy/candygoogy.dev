@@ -218,6 +218,79 @@ test(
 );
 
 test(
+  "a lone Shift or a wheel leaves the intro at its pace, and Escape hurries it",
+  OPTIONS,
+  async (t) => {
+    // A first visit, caught once the curtain's own animations have started
+    // (not its CSS failsafe).
+    const playing = async () => {
+      const { page } = await fresh(t);
+      await page.goto(url("/"));
+      await page.waitForFunction(
+        () => document.querySelector(".curtain .panel")?.getAnimations().length,
+        null,
+        { timeout: 2000, polling: "raf" },
+      );
+      await page.mouse.move(640, 400);
+      return page;
+    };
+    // The curtain's animations' rates, and the hero entrance's under it,
+    // past two frames so a rate change asked for has been applied.
+    const state = (page) =>
+      page.evaluate(async () => {
+        await new Promise((done) =>
+          requestAnimationFrame(() => requestAnimationFrame(done)),
+        );
+        const curtain = document.querySelector(".curtain");
+        const ratesOf = (animations) => [
+          ...new Set(animations.map((a) => a.playbackRate)),
+        ];
+        return {
+          curtain: !!curtain,
+          rates: ratesOf(
+            (curtain?.getAnimations({ subtree: true }) ?? []).filter(
+              (a) => !(a instanceof CSSAnimation),
+            ),
+          ),
+          hero: ratesOf(
+            document.querySelector(".hero").getAnimations({ subtree: true }),
+          ),
+        };
+      });
+
+    const page = await playing();
+    await page.keyboard.press("Shift");
+    assert.deepEqual(
+      await state(page),
+      { curtain: true, rates: [1], hero: [1] },
+      "a lone Shift hurried the intro",
+    );
+    await page.evaluate(() =>
+      addEventListener("wheel", () => (window.__wheeled = true), {
+        once: true,
+        passive: true,
+      }),
+    );
+    await page.mouse.wheel(0, 200);
+    // The wheel did reach the page.
+    await page.waitForFunction(() => window.__wheeled, null, { timeout: 500 });
+    assert.deepEqual(
+      await state(page),
+      { curtain: true, rates: [1], hero: [1] },
+      "the wheel hurried the intro",
+    );
+
+    const hurried = await playing();
+    await hurried.keyboard.press("Escape");
+    assert.deepEqual(
+      await state(hurried),
+      { curtain: true, rates: [1.5], hero: [1.5] },
+      "Escape didn't hurry the intro",
+    );
+  },
+);
+
+test(
   "coming home from another page of the site plays no intro",
   OPTIONS,
   async (t) => {

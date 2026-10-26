@@ -13,10 +13,11 @@
 // The head script in Base.astro decides whether it runs (html.intro-on):
 // never without JS, never under reduced motion, only when home is the
 // session's first page.
-// Any click, key, wheel or tap fast-forwards it: whatever is left plays
-// at twice the speed or more (450ms at most), so the
-// panel still lifts and the wordmark still lands in the header. A finger
-// that scrolls isn't a tap: the intro plays on at its own pace. If the page
+// A click, a tap or a key fast-forwards it: whatever is left plays at
+// 1.5x, so the panel still lifts and the wordmark still lands in the
+// header. Only a deliberate press counts: a modifier on its own
+// (Shift, Ctrl…) or a held key's repeats don't, and a scroll, by wheel or
+// by finger, isn't a skip: the intro plays on at its own pace. If the page
 // scrolls under it, the flying wordmark moves with the header's, so it
 // lands wherever the header has gone (up and out, when it has left).
 import { site } from "../data/site";
@@ -107,8 +108,8 @@ import { site } from "../data/site";
       removeEventListener("scroll", early);
     };
 
-    // Plays the rest at 2x, or faster if 2x would take over 450ms. The
-    // animations all started together, so one clock gives where they are:
+    // Plays the rest at 1.5x. The animations all started together, so one
+    // clock gives where they are:
     // the one that ends last, whose time runs for the whole intro (one that
     // has ended stops at its end). The release timer is brought forward to
     // match, so the page is still let go as the edge reaches the headline,
@@ -118,8 +119,15 @@ import { site } from "../data/site";
     const hurry = () => {
       const clock = animations.reduce((a, b) => (endOf(b) > endOf(a) ? b : a));
       const at = Number(clock.currentTime ?? 0);
-      const rate = Math.max(2, (t.end - at) / 450);
+      const rate = 1.5;
       for (const a of animations) a.updatePlaybackRate(rate);
+      // The hero's entrance (motion.css, waiting under the curtain) goes at
+      // the same rate: at its own pace the faster edge would outrun its
+      // words and uncover an empty page ahead of them, a flash on light.
+      const hero = document.querySelector(".hero");
+      for (const a of hero?.getAnimations({ subtree: true }) ?? []) {
+        a.updatePlaybackRate(rate);
+      }
       window.clearTimeout(liftTimer);
       window.clearTimeout(endTimer);
       if (at < t.release) {
@@ -262,11 +270,23 @@ import { site } from "../data/site";
     const press = (e: PointerEvent) => {
       if ((e.pointerType === "touch") === (e.type === "pointerup")) skip();
     };
+    // A modifier on its own is often half a shortcut (or a stray Shift),
+    // and a held key repeats: neither is a skip.
+    const MODIFIERS = [
+      "Shift",
+      "Control",
+      "Alt",
+      "Meta",
+      "AltGraph",
+      "CapsLock",
+    ];
+    const key = (e: KeyboardEvent) => {
+      if (!e.repeat && !MODIFIERS.includes(e.key)) skip();
+    };
     const skips: [string, EventListener][] = [
       ["pointerdown", press as EventListener],
       ["pointerup", press as EventListener],
-      ["keydown", skip],
-      ["wheel", skip],
+      ["keydown", key as EventListener],
     ];
     for (const [t, f] of skips) {
       addEventListener(t, f, { capture: true, passive: true });
