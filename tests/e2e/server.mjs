@@ -41,6 +41,14 @@ export async function serve() {
   }
   const server = createServer(async (req, res) => {
     const { pathname } = new URL(req.url, "http://localhost");
+    // Stands in for the Worker's /api/presence, answering as it does with
+    // no status. Served here, not by a context.route: a route turns off
+    // the browser's HTTP cache, and a reload would fetch the fonts again.
+    if (pathname === "/api/presence") {
+      res.writeHead(200, { "Content-Type": TYPES[".json"] });
+      res.end(req.method === "HEAD" ? undefined : '{"status":null}');
+      return;
+    }
     let file;
     try {
       file = find(pathname);

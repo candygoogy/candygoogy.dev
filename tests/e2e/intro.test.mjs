@@ -58,11 +58,6 @@ async function fresh(
     await context.close();
     assert.deepEqual(problems, [], "the page reported problems");
   });
-  // /api/presence is the Worker's, which this static server doesn't run:
-  // answer as the Worker does with no status.
-  await context.route("**/api/presence", (route) =>
-    route.fulfill({ json: { status: null } }),
-  );
   await context.exposeFunction("__cspViolation", (v) =>
     problems.push(`CSP: ${v}`),
   );

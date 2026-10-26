@@ -45,11 +45,13 @@ async function open(
 ) {
   const context = await browser.newContext({ viewport });
   const problems = [];
-  // /api/presence is the Worker's, which this static server doesn't run:
-  // answer as the Worker does, with no status unless one is given.
-  await context.route("**/api/presence", (route) =>
-    route.fulfill({ json: { status } }),
-  );
+  // The test server answers /api/presence with no status; a test that
+  // needs one routes it (which turns off the browser's HTTP cache).
+  if (status !== null) {
+    await context.route("**/api/presence", (route) =>
+      route.fulfill({ json: { status } }),
+    );
+  }
   await context.exposeFunction("__cspViolation", (v) =>
     problems.push(`CSP: ${v}`),
   );

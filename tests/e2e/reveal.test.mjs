@@ -33,10 +33,6 @@ async function home(t, width, height) {
     await context.close();
     assert.deepEqual(problems, [], "the page reported problems");
   });
-  // /api/presence is the Worker's, which this static server doesn't run.
-  await context.route("**/api/presence", (route) =>
-    route.fulfill({ json: { status: null } }),
-  );
   await context.addInitScript(() => sessionStorage.setItem("intro-seen", "1"));
   const page = await context.newPage();
   page.on("console", (m) => {

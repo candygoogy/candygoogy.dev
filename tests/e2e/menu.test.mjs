@@ -33,12 +33,6 @@ async function phone(t, width = 390, height = 844) {
   await context.exposeFunction("__cspViolation", (v) =>
     problems.push(`CSP: ${v}`),
   );
-  // /api/presence is the Worker's, which this static server doesn't run:
-  // answer as the Worker does with no status (the badge stays hidden, as
-  // it would on the 404), so the 404 isn't reported as a console error.
-  await context.route("**/api/presence", (route) =>
-    route.fulfill({ json: { status: null } }),
-  );
   await context.addInitScript(() => {
     sessionStorage.setItem("intro-seen", "1");
     document.addEventListener("securitypolicyviolation", (e) => {
