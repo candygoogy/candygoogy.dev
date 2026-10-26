@@ -111,8 +111,11 @@ const [, rest = lineAfter, lastPair = ""] =
     clip-path: inset(-0.06em -0.08em -0.03em -0.08em);
   }
 
+  /* Scroll anchoring uses the fixed-height word box, not its text, so a
+     font swapping in late can't move a restored scroll. */
   .w > span {
     display: inline-block;
+    overflow-anchor: none;
   }
 
   .statement p {
