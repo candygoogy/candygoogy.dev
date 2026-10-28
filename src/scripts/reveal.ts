@@ -120,10 +120,20 @@ const decoded = (el: Element) => {
   const imgs = [...el.querySelectorAll("img")].filter(visible);
   for (const img of imgs) img.loading = "eager";
   return Promise.race([
-    Promise.allSettled(imgs.map((img) => img.decode())),
+    Promise.allSettled(
+      imgs.map((img) => img.decode().then(() => void ready.add(img))),
+    ),
     new Promise((resolve) => setTimeout(resolve, 300)),
   ]).then(() => undefined);
 };
+
+// Whether everything decoded() waited for really loaded and decoded, not
+// just ran out of time. Decoded ones are remembered as it goes.
+const ready = new WeakSet<HTMLImageElement>();
+const allReady = (el: Element) =>
+  [...el.querySelectorAll("img")]
+    .filter(visible)
+    .every((img) => ready.has(img));
 
 // Already shown by something else (a page arriving through a transition
 // shows what's in view settled, Base.astro): nothing to play.
@@ -294,8 +304,16 @@ function band(el: HTMLElement) {
   //    tilt is never clipped.
   //    (5. Its story and facts, arriving with it, follow from 600ms, 300ms
   //    from the intro: play, below.)
+  //    From the intro, a screenshot that's ready (it decoded under the
+  //    curtain) comes with the panel instead, uncovered by its rising edge:
+  //    unrolled after it, the quick panel showed empty first and the image
+  //    then popped in, a flicker.
   if (!stage || !tilt) return;
   void decoded(stage).then(() => {
+    if (intro && performance.now() - start < 50 && allReady(stage)) {
+      stage.classList.add("is-in");
+      return;
+    }
     const at = (intro ? 150 : 450) - (performance.now() - start);
     go(
       tilt,
@@ -409,6 +427,13 @@ const release = () => {
 };
 addEventListener("intro:release", release);
 if (held) setTimeout(release, Math.max(0, 2600 - performance.now()));
+// The band's screenshot decodes while the curtain is up, so it's ready to
+// come in with the band (band(), above).
+if (held && motion) {
+  for (const el of document.querySelectorAll(".rv-band .stage")) {
+    void decoded(el);
+  }
+}
 
 // Where each kind arrives: 15% up from the bottom of the window (8% on
 // phones, where screens are short). The band waits until a good part of it

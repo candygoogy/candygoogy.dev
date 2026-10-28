@@ -1,11 +1,14 @@
 ---
 // The home page's intro, when a session lands there first. A panel in the
-// band's ink covers the page from the first paint (the page is fully
-// rendered underneath).
+// band's ink covers the page, dimming in over the first 200ms from the
+// page's own color (the page is fully rendered underneath).
 // "candygoogy", the header's own wordmark scaled up and centred, rises
 // letter by letter; then, as the last letters settle, the panel lifts away
 // while the wordmark glides and shrinks into the header's wordmark,
-// turning to page ink as the panel's edge passes it. The page is let go
+// turning to page ink where the panel's edge passes it. There are two of
+// it, flying together: one in page ink under the panel, and one in the
+// band's ink inside it, held still as the panel slides away, so the edge
+// itself is where one gives way to the other. The page is let go
 // as the edge reaches the headline, so the headline's words rise as it
 // uncovers them, and what lies below, the band too (still clipped), rises
 // after the edge has passed it: one movement.
@@ -21,18 +24,32 @@
 // scrolls under it, the flying wordmark moves with the header's, so it
 // lands wherever the header has gone (up and out, when it has left).
 import { site } from "../data/site";
+
+const letters = [...site.name];
 ---
 
 <div class="curtain" aria-hidden="true">
-  <div class="panel"></div>
-  <div class="ride">
+  <div class="ride ink">
     <p class="fly">
-      {[...site.name].map((ch) => (
+      {letters.map((ch) => (
         <span class="l">
           <span>{ch}</span>
         </span>
       ))}
     </p>
+  </div>
+  <div class="panel">
+    <div class="hold">
+      <div class="ride">
+        <p class="fly">
+          {letters.map((ch) => (
+            <span class="l">
+              <span>{ch}</span>
+            </span>
+          ))}
+        </p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -49,8 +66,8 @@ import { site } from "../data/site";
 
   if (curtain && root.classList.contains("intro-on")) {
     const panel = curtain.querySelector<HTMLElement>(".panel");
-    const ride = curtain.querySelector<HTMLElement>(".ride");
-    const fly = curtain.querySelector<HTMLElement>(".fly");
+    const hold = curtain.querySelector<HTMLElement>(".hold");
+    const flies = [...curtain.querySelectorAll<HTMLElement>(".fly")];
     const brand = document.querySelector<HTMLElement>(".top .brand");
     const animations: Animation[] = [];
     let done = false;
@@ -64,8 +81,9 @@ import { site } from "../data/site";
     let liftTimer = 0;
     let endTimer = 0;
 
-    // The flying wordmark rides with the header's: .ride is shifted by how
-    // far the header wordmark has moved since start() measured it. Wide,
+    // The flying wordmark rides with the header's: both .ride are shifted
+    // (by --dy, set on the curtain) by how far the header wordmark has
+    // moved since start() measured it. Wide,
     // that's the scroll (the header is in the page); on phones the header
     // stays put and slides away on its own 250ms transition after the
     // scroll, so once the page scrolls this reads where it really is,
@@ -73,9 +91,9 @@ import { site } from "../data/site";
     let brandTop = 0;
     let riding = false;
     const follow = () => {
-      if (done || !ride || !brand) return;
+      if (done || !brand) return;
       const dy = brand.getBoundingClientRect().top - brandTop;
-      ride.style.setProperty("--dy", `${dy}px`);
+      curtain.style.setProperty("--dy", `${dy}px`);
       requestAnimationFrame(follow);
     };
     const onScroll = () => {
@@ -96,10 +114,13 @@ import { site } from "../data/site";
       window.dispatchEvent(new Event("intro:release"));
     };
 
+    // The curtain goes as it is, its animations at their ends: cancelling
+    // them first would put the panel back over the page, and a browser
+    // can paint that for a frame before the removal lands (a dark flash
+    // just as the page has been uncovered).
     const finish = () => {
       if (done) return;
       done = true;
-      for (const a of animations) a.cancel();
       release();
       curtain.remove();
       root.classList.remove("intro-on");
@@ -133,8 +154,8 @@ import { site } from "../data/site";
       if (at < t.release) {
         liftTimer = window.setTimeout(release, (t.release - at) / rate);
       } else release();
-      // finish() cancels them all; nothing is left to wait for then. The
-      // timer is the fallback if a finished promise never settles.
+      // The curtain goes once they've all ended. The timer is the fallback
+      // if a finished promise never settles.
       Promise.all(animations.map((a) => a.finished)).then(finish, () => {});
       endTimer = window.setTimeout(finish, (t.end - at) / rate + 100);
     };
@@ -148,7 +169,9 @@ import { site } from "../data/site";
     }
 
     const start = () => {
-      if (done || !panel || !fly || !brand) return finish();
+      if (done || !panel || !hold || flies.length !== 2 || !brand) {
+        return finish();
+      }
       // The wordmark's text box (on phones the link spans the whole row).
       const range = document.createRange();
       range.selectNodeContents(brand);
@@ -168,83 +191,85 @@ import { site } from "../data/site";
       const scale = Math.min((W * share) / b.width, 7);
       const bigX = (W - b.width * scale) / 2;
       const bigY = (H - b.height * scale) / 2;
-      fly.style.translate = `${bigX}px ${bigY}px`;
-      fly.style.scale = String(scale);
-      fly.style.opacity = "1";
+      // Both wordmarks do the same, so they're one wherever they show.
+      for (const fly of flies) {
+        fly.style.translate = `${bigX}px ${bigY}px`;
+        fly.style.scale = String(scale);
+        fly.style.opacity = "1";
 
-      const ink = getComputedStyle(root).getPropertyValue("--ink").trim();
+        // 1. Letters rise out of their clip, 30ms apart, fading up as they
+        //    go.
+        fly.querySelectorAll<HTMLElement>(".l > span").forEach((ch, i) => {
+          animations.push(
+            ch.animate(
+              [
+                { transform: "translateY(110%)", opacity: 0 },
+                { opacity: 1, offset: 0.6 },
+                { transform: "none", opacity: 1 },
+              ],
+              { duration: 620, delay: 60 + i * 30, easing: OUT, fill: "both" },
+            ),
+          );
+        });
 
-      // 1. Letters rise out of their clip, 30ms apart, fading up as they go.
-      fly.querySelectorAll<HTMLElement>(".l > span").forEach((ch, i) => {
+        // 2. The wordmark glides home. Scale leads the move a little, so
+        //    it reads as settling rather than sliding.
         animations.push(
-          ch.animate(
-            [
-              { transform: "translateY(110%)", opacity: 0 },
-              { opacity: 1, offset: 0.6 },
-              { transform: "none", opacity: 1 },
-            ],
-            { duration: 620, delay: 60 + i * 30, easing: OUT, fill: "both" },
-          ),
-        );
-      });
-
-      // 2. The panel lifts away, its bottom edge travelling up.
-      animations.push(
-        panel.animate(
-          [{ clipPath: "inset(0 0 0 0)" }, { clipPath: "inset(0 0 100% 0)" }],
-          { duration: t.liftDur, delay: t.lift, easing: INOUT, fill: "both" },
-        ),
-      );
-
-      // 3. The wordmark glides home. Scale leads the move a little, so it
-      //    reads as settling rather than sliding.
-      animations.push(
-        fly.animate([{ scale: String(scale) }, { scale: "1" }], {
-          duration: t.liftDur - 60,
-          delay: t.lift,
-          easing: GLIDE,
-          fill: "both",
-        }),
-        fly.animate(
-          [
-            { translate: `${bigX}px ${bigY}px` },
-            { translate: `${b.left}px ${b.top}px` },
-          ],
-          {
-            duration: t.liftDur,
-            delay: t.lift + 40,
+          fly.animate([{ scale: String(scale) }, { scale: "1" }], {
+            duration: t.liftDur - 60,
+            delay: t.lift,
             easing: GLIDE,
             fill: "both",
-          },
+          }),
+          fly.animate(
+            [
+              { translate: `${bigX}px ${bigY}px` },
+              { translate: `${b.left}px ${b.top}px` },
+            ],
+            {
+              duration: t.liftDur,
+              delay: t.lift + 40,
+              easing: GLIDE,
+              fill: "both",
+            },
+          ),
+        );
+      }
+
+      // 3. The panel lifts away, its bottom edge travelling up, uncovering
+      //    the page-ink wordmark under it. What it holds slides back down
+      //    by as much, on the same curve, so the band-ink wordmark stays
+      //    put and the edge cuts it off as it passes.
+      const lift = {
+        duration: t.liftDur,
+        delay: t.lift,
+        easing: INOUT,
+        fill: "both",
+      } as const;
+      animations.push(
+        panel.animate(
+          [{ transform: "none" }, { transform: "translateY(-100%)" }],
+          lift,
+        ),
+        hold.animate(
+          [{ transform: "none" }, { transform: "translateY(100%)" }],
+          lift,
         ),
       );
 
       // How far into the lift (0 to 1) its edge has come up to y, with
-      // smootherstep standing in for the ease-in-out curve; `never` if it
-      // doesn't get there (y above the screen).
-      const edgeAt = (y: number, never = 1) => {
+      // smootherstep standing in for the ease-in-out curve; 1 if it doesn't
+      // get there (y above the screen).
+      const edgeAt = (y: number) => {
         for (let k = 0; k <= 100; k++) {
           const p = k / 100;
           const eased = p * p * p * (p * (6 * p - 15) + 10);
           if (H * (1 - eased) <= y) return p;
         }
-        return never;
+        return 1;
       };
 
-      // 4. Its colour turns to page ink as the panel's edge passes the
-      //    header: find when the lift's edge reaches the wordmark's bottom,
-      //    then crossfade over 120ms around that moment.
-      const pass = edgeAt(b.bottom + 4, 0.9);
-      animations.push(
-        fly.animate([{ color: getComputedStyle(fly).color }, { color: ink }], {
-          duration: 120,
-          delay: t.lift + t.liftDur * pass - 60,
-          easing: "linear",
-          fill: "both",
-        }),
-      );
-
-      // 5. The page is let go as the lift's edge reaches the headline's
+      // 4. The page is let go as the lift's edge reaches the headline's
       //    bottom, less the 80ms its words wait (motion.css), so they rise
       //    as the edge uncovers them: the same reveals as a normal load
       //    (with their group delays halved while the intro is on),
@@ -354,10 +379,49 @@ import { site } from "../data/site";
     }
   }
 
+  /* The panel dims in from the page's own color rather than being there
+     from the first paint: until a page first paints, the browser shows a
+     blank tab (white, in light Edge), and a dark first frame right after
+     it flashes. So the first frame is a veil in the page's color, which
+     the panel fades in over, opacity only, smooth while the page is still
+     loading; then the veil goes, before anything lifts. On dark the two
+     colors are near enough the same. */
+  :global(html.intro-on) .curtain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    animation: gone 1ms linear 220ms forwards;
+  }
+
+  /* Shows only what's over it: the band-ink wordmark inside ends at its
+     edge. */
   .panel {
     position: absolute;
     inset: 0;
+    overflow: hidden;
     background: var(--band);
+    animation: dusk 200ms var(--ease-in-out) both;
+  }
+
+  @keyframes dusk {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* The page-ink wordmark waits out the dimming: through a part-faded
+     panel its letters would show. */
+  .ink {
+    visibility: hidden;
+    animation: shown 1ms linear 220ms forwards;
+  }
+
+  /* The panel's whole area, slid back down as the panel lifts, so what it
+     holds stays where it is on screen. */
+  .hold {
+    position: absolute;
+    inset: 0;
   }
 
   /* Carries the wordmark with the header when the page scrolls under it
@@ -381,6 +445,11 @@ import { site } from "../data/site";
     font: var(--fw-heavy) 1.125rem / 1 var(--ff-text);
     letter-spacing: var(--ls-wordmark);
     white-space: nowrap;
+  }
+
+  /* The one under the panel, in the page's ink, as the header's is. */
+  .ink .fly {
+    color: var(--ink);
   }
 
   /* Room below for the y's and g's tails (about 0.06em past the box at

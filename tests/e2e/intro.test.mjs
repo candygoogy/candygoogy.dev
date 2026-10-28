@@ -185,11 +185,9 @@ test(
     await page.addInitScript(() => {
       addEventListener("intro:release", () => {
         const panel = document.querySelector(".curtain .panel");
-        const inset = getComputedStyle(panel).clipPath.match(
-          /inset\(\s*\S+\s+\S+\s+([\d.]+)%/,
-        );
+        // The panel's bottom edge, lifted by its transform.
         window.__edge = {
-          inset: inset ? Number(inset[1]) : null,
+          edge: panel.getBoundingClientRect().bottom,
           title: document.querySelector(".hero-title").getBoundingClientRect()
             .bottom,
           H: innerHeight,
@@ -202,11 +200,7 @@ test(
       timeout: 3200,
     });
     const e = await page.evaluate(() => window.__edge);
-    assert.ok(
-      e.inset !== null,
-      `no clip-path inset read: ${JSON.stringify(e)}`,
-    );
-    const edge = e.H * (1 - e.inset / 100);
+    const { edge } = e;
     const seen = `edge ${edge.toFixed(0)}px, headline bottom ${e.title.toFixed(0)}px, at ${e.at}ms`;
     // The lift is underway, and its edge hasn't passed the headline yet, so the words don't spend their rise under the panel.
     assert.ok(
@@ -214,6 +208,76 @@ test(
       `the edge wasn't between the headline and the lift's start: ${seen}`,
     );
     t.diagnostic(seen);
+  },
+);
+
+test(
+  "the panel lifts once, and its edge is where the wordmark turns to ink",
+  OPTIONS,
+  async (t) => {
+    const { page } = await fresh(t, { theme: "light" });
+    // The panel's bottom edge every frame while the curtain is up, and any
+    // of the curtain's animations cancelled while it's still in the page:
+    // a cancel snaps the panel back over the page, and a browser can paint
+    // that for a frame before the curtain is removed (a dark flash at the
+    // very end, on light).
+    await page.addInitScript(() => {
+      window.__cancelled = [];
+      const cancel = Animation.prototype.cancel;
+      Animation.prototype.cancel = function () {
+        const target = this.effect?.target;
+        if (target?.isConnected && target.closest?.(".curtain")) {
+          window.__cancelled.push(target.className || target.tagName);
+        }
+        return cancel.call(this);
+      };
+      window.__edges = [];
+      // How far apart the two wordmarks are on screen, at most.
+      window.__apart = 0;
+      const tick = () => {
+        const panel = document.querySelector(".curtain .panel");
+        if (!panel) return;
+        window.__edges.push(Math.round(panel.getBoundingClientRect().bottom));
+        const [ink, band] = [...document.querySelectorAll(".curtain .fly")].map(
+          (fly) => fly.getBoundingClientRect(),
+        );
+        if (ink && band) {
+          window.__apart = Math.max(
+            window.__apart,
+            Math.abs(ink.left - band.left),
+            Math.abs(ink.top - band.top),
+            Math.abs(ink.width - band.width),
+          );
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await page.goto(url("/"));
+    await page.waitForFunction(
+      () => !document.querySelector(".curtain"),
+      null,
+      {
+        timeout: 3200,
+      },
+    );
+    const { cancelled, edges, apart } = await page.evaluate(() => ({
+      cancelled: window.__cancelled,
+      edges: window.__edges,
+      apart: window.__apart,
+    }));
+    assert.deepEqual(cancelled, [], "a curtain animation was cancelled");
+    const up = edges.findIndex((y) => y <= 0);
+    assert.ok(up > 0, `the panel never lifted: ${edges.join(" ")}`);
+    assert.deepEqual(
+      edges.slice(up).filter((y) => y > 0),
+      [],
+      `the panel came back after lifting: ${edges.join(" ")}`,
+    );
+    // The band-ink wordmark rides inside the lifting panel, held still:
+    // it stays on the page-ink one, so the panel's edge is where the
+    // wordmark turns to ink, never a white one uncovered on a light page.
+    assert.ok(apart < 0.5, `the two wordmarks parted by ${apart}px`);
   },
 );
 
