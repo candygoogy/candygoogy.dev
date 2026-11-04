@@ -10,14 +10,17 @@ import { bandTitleId, vtAttr } from "../lib/vt";
 
 interface Props {
   project: CollectionEntry<"projects">;
-  // On the project's own page the name is the page's h1 and the link to
-  // that page is dropped.
+  // Where the band is. On the home page (false) it carries the project:
+  // the name and lede, the screenshot, then the story beside the facts and
+  // the link to its page. On the project's own page (true) it holds the
+  // product only: the name, as the page's h1, on its own row, the lede and
+  // the facts side by side under it, then the screenshot; the story is the
+  // page's (ProductPage.astro).
   page?: boolean;
 }
 
 const { project, page = false } = Astro.props;
 const Heading = page ? "h1" : "h2";
-const Sub = page ? "h2" : "h3";
 const { data } = project;
 const shot = data.images[0];
 const version = latestVersion(data.repo, data.version);
@@ -32,44 +35,50 @@ const words = data.name.split(" ").map((word) => {
 // The longest word's length in letters: the name's size is capped by it,
 // so a long name fits its column instead of running into the lede.
 const longest = Math.max(...words.map((letters) => letters.length));
-// Without a screenshot the band is text only (.bare): the story sits
-// further from the lede, so the name and its line read as the header, and
-// the facts start at the lede's edge, so the right side has one edge.
-// With no receipt on the page either (featherplay, tellall), the story's
-// last part moves under the facts (.split), so the two columns end
-// together.
-const split = !shot && !data.receipt && !!data.story;
+// On the home page, without a screenshot the band is text only (.bare):
+// the story sits further from the lede, so the name and its line read as
+// the header, and the facts start at the lede's edge, so the right side
+// has one edge. With no receipt on the page either, the story's last part
+// moves under the facts (.split), so the two columns end together. On a
+// product's page a band without a screenshot simply ends after the facts.
+const split = !page && !shot && !data.receipt && !!data.story;
 ---
 
 <section
   id={project.id}
-  class:list={["band", "rv-band", { bare: !shot, split }]}
+  class:list={["band", "rv-band", { bare: !shot, split, "on-page": page }]}
   aria-labelledby={bandTitleId(project.id)}
 >
-  <div class="band-head">
-    <Heading
-      id={bandTitleId(project.id)}
-      class="title letters vt-project-title"
-      style={`--word: ${longest}`}
-      aria-label={data.name}
-      {...vtAttr(project.id)}
-    >
-      {words.map((letters, w) => (
-        <>
-          {w > 0 && " "}
-          <span class="word">
-            {letters.map(({ ch, i }) => (
-              <span class="l" aria-hidden="true" data-i={i}>
-                <span>{ch}</span>
-              </span>
-            ))}
-          </span>
-        </>
-      ))}
-    </Heading>
-    <p class="lede rv" data-d="260">
-      <Keep text={data.summary} />
-    </p>
+  <!-- On a product's page the head's two parts and the facts share one
+       grid (the head itself is display: contents there); the facts stay
+       out of the head, so they arrive after the lede, as on home. -->
+  <div class="band-top">
+    <div class="band-head">
+      <Heading
+        id={bandTitleId(project.id)}
+        class="title letters vt-project-title"
+        style={`--word: ${longest}`}
+        aria-label={data.name}
+        {...vtAttr(project.id)}
+      >
+        {words.map((letters, w) => (
+          <>
+            {w > 0 && " "}
+            <span class="word">
+              {letters.map(({ ch, i }) => (
+                <span class="l" aria-hidden="true" data-i={i}>
+                  <span>{ch}</span>
+                </span>
+              ))}
+            </span>
+          </>
+        ))}
+      </Heading>
+      <p class="lede rv" data-d="260">
+        <Keep text={data.summary} />
+      </p>
+    </div>
+    {page && <Facts data={data} version={version} />}
   </div>
 
   {shot && (
@@ -92,41 +101,41 @@ const split = !shot && !data.receipt && !!data.story;
     </figure>
   )}
 
-  <div class="zig">
-    <div class="story">
-      {data.story && (
-        <>
-          <Sub class="sub rv" data-i="0">
-            Why
-          </Sub>
-          <p class="rv" data-i="1">
-            {data.story.why}
-          </p>
-          <Sub class="sub rv" data-i="2">
-            What was hard
-          </Sub>
-          <p class="rv" data-i="3">
-            {data.story.hard}
-          </p>
-          <Sub class="sub rv" data-i="4">
-            What it won’t do
-          </Sub>
-          <p class="rv" data-i="5">
-            {data.story.promise}
-          </p>
-        </>
-      )}
-      {!page && (
+  {!page && (
+    <div class="zig">
+      <div class="story">
+        {data.story && (
+          <>
+            <h3 class="sub rv" data-i="0">
+              Why
+            </h3>
+            <p class="rv" data-i="1">
+              {data.story.why}
+            </p>
+            <h3 class="sub rv" data-i="2">
+              What was hard
+            </h3>
+            <p class="rv" data-i="3">
+              {data.story.hard}
+            </p>
+            <h3 class="sub rv" data-i="4">
+              What it won’t do
+            </h3>
+            <p class="rv" data-i="5">
+              {data.story.promise}
+            </p>
+          </>
+        )}
         <p class="more rv" data-i="6">
           <a class="tap" href={`/${project.id}`}>
             {data.page?.bandLink ??
               `What ${data.name} checks, and how it handles privacy`}
           </a>
         </p>
-      )}
+      </div>
+      <Facts data={data} version={version} />
     </div>
-    <Facts data={data} version={version} />
-  </div>
+  )}
 </section>
 
 <script>
@@ -220,9 +229,36 @@ const split = !shot && !data.receipt && !!data.story;
     border-radius: var(--r-shot);
   }
 
+  /* On a product's page: the name on its own row, as wide as the band;
+     under it the lede and the facts side by side, on the page's 5/6
+     columns (ProductPage.astro runs them down to Privacy), the facts
+     taking the wider one, so a stack of five fits its line at 1440. */
+  .on-page .band-top {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: var(--sp-6) var(--sp-8);
+    align-items: start;
+    container-type: inline-size;
+  }
+
+  .on-page .band-head {
+    display: contents;
+  }
+
+  .on-page .title {
+    grid-column: 1 / -1;
+    margin-bottom: calc(var(--sp-7) - var(--sp-6));
+  }
+
+  /* Beside the lede, the facts' first row sits level with its first line:
+     the room above it, under its hairline, is taken from above the list. */
+  .on-page .band-top > :global(.facts) {
+    margin-top: calc(-1 * var(--sp-4));
+  }
+
   .zig {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--sp-7) var(--sp-9);
     margin-top: clamp(2.5rem, 6vh, 4rem);
   }
@@ -249,7 +285,9 @@ const split = !shot && !data.receipt && !!data.story;
   }
 
   /* Side by side, the facts' first row sits level with "Why": the room
-     above it, under its hairline, is taken from above the column. */
+     above it, under its hairline, is taken from above the column. The two
+     columns are equal, so the facts have half the band and a stack of
+     five fits its line at 1440. */
   @media (min-width: 53.76rem) {
     .zig > :global(.facts) {
       margin-top: calc(-1 * var(--sp-4));
@@ -259,11 +297,11 @@ const split = !shot && !data.receipt && !!data.story;
        gap; the name is no wider than that. Its column can't be narrower
        than its longest word either, so a wider name than the cap allows
        for pushes the lede over rather than running into it. */
-    .band-head {
+    .band:not(.on-page) .band-head {
       grid-template-columns: minmax(auto, 5fr) minmax(0, 6fr);
     }
 
-    .title {
+    .band:not(.on-page) .title {
       font-size: min(
         var(--fs-d-band),
         (100cqi - var(--sp-8)) * 10 / (11 * var(--word))
@@ -308,9 +346,20 @@ const split = !shot && !data.receipt && !!data.story;
       --band-r: var(--r-band-narrow);
     }
     .band-head,
+    .on-page .band-top,
     .zig,
     .bare .zig {
       grid-template-columns: 1fr;
+    }
+
+    .on-page .band-top > :global(.facts) {
+      margin-top: 0;
+    }
+  }
+
+  @media (max-width: 32.5rem) {
+    .on-page .title {
+      margin-bottom: calc(var(--sp-5) - var(--sp-6));
     }
   }
 

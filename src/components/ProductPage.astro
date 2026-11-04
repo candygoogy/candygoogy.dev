@@ -1,8 +1,9 @@
 ---
-// A product's page (/fettle, /idiff, ...): the band as the header, what it
-// checks (or does), what you can do with it, privacy, what I learned, and
-// the way to get it. Everything comes from the project's entry, the two
-// section headings too.
+// A product's page (/fettle, /idiff, ...): the band as the header (the
+// product only), why I made it, what it checks (or does), what you can do
+// with it, privacy, what I learned, and the way to get it. From the band's
+// head down to Privacy the parts share the band's 5/6 columns. Everything
+// comes from the project's entry, the two section headings too.
 import type { CollectionEntry } from "astro:content";
 import FettleBand from "./FettleBand.astro";
 import Keep from "./Keep.astro";
@@ -22,6 +23,8 @@ const { project } = Astro.props;
 const { data } = project;
 const page = data.page;
 if (!page) throw new Error(`projects/${project.id}.md needs its page sections`);
+const story = data.story;
+if (!story) throw new Error(`projects/${project.id}.md needs its story`);
 const { version, get } = release(project);
 // A product without a site of its own is described by this page, with the
 // release as its download and the repository as the same thing elsewhere.
@@ -49,9 +52,11 @@ const schema = {
   sameAs: own ? data.links.source : undefined,
 };
 
-// Uses with a screenshot get it beside them; the rest sit together after.
-const shown = page.uses.filter((u) => u.shot !== undefined);
-const plain = page.uses.filter((u) => u.shot === undefined);
+// The uses as one list; the screenshots of those that have one sit beside
+// it, in the uses' order.
+const shots = page.uses
+  .map((u) => (u.shot === undefined ? undefined : data.images[u.shot]))
+  .filter((shot) => shot !== undefined);
 // A use's linked phrase, split out of its text. The phrase must be in the
 // text as written (the schema checks it too).
 const parts = (text: string, phrase: string) => {
@@ -77,6 +82,17 @@ if (note && checks > 12) {
     `projects/${project.id}.md has ${checks} checks; the note beside the last one is mapped for up to 12. Map more rows ([data-rows-3], [data-rows-2]) in ProductPage.astro.`,
   );
 }
+// Privacy, then What I learned when there is one: each its first
+// paragraph set large, the rest beside it.
+const pairs = [
+  { id: "privacy-title", title: "Privacy", text: page.privacy },
+  ...(page.learned
+    ? [{ id: "learned-title", title: "What I learned", text: page.learned }]
+    : []),
+].map((part) => {
+  const [lead = "", ...rest] = part.text.split("\n\n");
+  return { ...part, lead, rest };
+});
 const rows = note
   ? {
       "data-rows-3": Math.ceil(checks / 3),
@@ -100,6 +116,33 @@ const rows = note
     <FettleBand project={project} page />
   </div>
 
+  <!-- Why I made it, at the lede's size, with what was hard and what it
+       won't do beside it. -->
+  <section class="sec" aria-labelledby="why-title">
+    <h2 id="why-title">
+      <span class="rv-mask">
+        <span>Why</span>
+      </span>
+    </h2>
+    <div class="pair">
+      <p class="lead rv">{story.why}</p>
+      <div class="side">
+        <h3 class="rv" data-i="0">
+          What was hard
+        </h3>
+        <p class="rv" data-i="1">
+          {story.hard}
+        </p>
+        <h3 class="rv" data-i="2">
+          What it won’t do
+        </h3>
+        <p class="rv" data-i="3">
+          {story.promise}
+        </p>
+      </div>
+    </div>
+  </section>
+
   <!-- What it checks: the items on a grid, each under a drawn hairline,
        and the note after them. -->
   <section class="sec" aria-labelledby="checks-title">
@@ -121,83 +164,87 @@ const rows = note
     </div>
   </section>
 
-  <!-- What you can do: each screenshot sits beside the line it shows. -->
+  <!-- What you can do: every use in one list, a hairline between them, and
+       the screenshots beside it, in the uses' order. A real example (a
+       receipt) follows on the same columns. -->
   <section class="sec" aria-labelledby="uses-title">
     <h2 id="uses-title">
       <span class="rv-mask">
         <span>{page.usesTitle}</span>
       </span>
     </h2>
-    <ul class="uses">
-      {shown.map((u) => {
-        const shot = data.images[u.shot ?? 0];
-        return (
-          <li class="use rv-line" data-line="line">
-            <p class="rv">{u.text}</p>
-            {shot && (
-              <figure class="rv" data-d="120" data-tilt>
-                <div class="tilt">
-                  <Shot
-                    src={shot.light}
-                    phone={shot.phone?.light}
-                    alt={shot.alt}
-                    sizes="(min-width: 53.75rem) 700px, 90vw"
-                  />
-                </div>
-                <figcaption>{shot.caption}</figcaption>
-              </figure>
+    <div class="pair">
+      <ul class="uses">
+        {page.uses.map((u, i) => (
+          <li
+            class:list={["rv", { "rv-line": i > 0 }]}
+            data-i={i}
+            data-line={i > 0 ? "line" : undefined}
+          >
+            {u.link ? (
+              <>
+                {parts(u.text, u.link.text)[0]}
+                <a href={u.link.href}>{u.link.text}</a>
+                {parts(u.text, u.link.text)[1]}
+              </>
+            ) : (
+              u.text
             )}
           </li>
-        );
-      })}
-    </ul>
-    <ul class="more">
-      {plain.map((u, i) => (
-        <li class="rv rv-line" data-i={i} data-line="line">
-          {u.link ? (
-            <>
-              {parts(u.text, u.link.text)[0]}
-              <a href={u.link.href}>{u.link.text}</a>
-              {parts(u.text, u.link.text)[1]}
-            </>
-          ) : (
-            u.text
-          )}
-        </li>
-      ))}
-    </ul>
+        ))}
+      </ul>
+      {shots.length > 0 && (
+        <div class="figs">
+          {shots.map((shot) => (
+            <figure class="rv" data-d="120" data-tilt>
+              <div class="tilt">
+                <Shot
+                  src={shot.light}
+                  phone={shot.phone?.light}
+                  alt={shot.alt}
+                  sizes="(min-width: 84rem) 700px, (min-width: 53.75rem) 52vw, 90vw"
+                />
+              </div>
+              <figcaption>{shot.caption}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+    </div>
     <slot name="example" />
   </section>
 
-  <!-- Privacy, then What I learned when there is one: sections like the
-       others, their title above and their paragraphs side by side, set as
-       the uses without a screenshot are. -->
-  {[
-    { id: "privacy-title", title: "Privacy", text: page.privacy },
-    ...(page.learned
-      ? [{ id: "learned-title", title: "What I learned", text: page.learned }]
-      : []),
-  ].map((part) => (
+  <!-- Privacy, then What I learned when there is one: the first paragraph
+       at the lede's size, the rest beside it. -->
+  {pairs.map((part) => (
     <section class="sec" aria-labelledby={part.id}>
       <h2 id={part.id}>
         <span class="rv-mask">
           <span>{part.title}</span>
         </span>
       </h2>
-      <div class="privacy">
-        {part.text.split("\n\n").map((para, i) => (
-          <p class="rv rv-line" data-i={i} data-line="line">
-            <Keep text={para} />
-          </p>
-        ))}
+      <div class="pair">
+        <p class="lead rv">
+          <Keep text={part.lead} />
+        </p>
+        {part.rest.length > 0 && (
+          <div class="side">
+            {part.rest.map((para, i) => (
+              <p class="rv" data-i={i}>
+                <Keep text={para} />
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   ))}
 
   <!-- The landing: a closing panel on the band's surface, so the page is
        framed at both ends: the ask and the product's line on the left,
-       the download and the source on the right. Under it, the way back
-       to every project and on to the next product. -->
+       the button on the right (the band's facts carry the source and the
+       version, so each is said once). Under it, the way back to every
+       project and on to the next product. -->
   <section class="cta" aria-labelledby="cta-title" data-box>
     <div class="panel band rv">
       <div class="ask">
@@ -210,21 +257,13 @@ const rows = note
           <Keep text={data.blurb} />
         </p>
       </div>
-      <div class="actions rv" data-d="160">
-        <div class="buttons">
-          {get && (
-            <a class="get" href={get}>
-              {data.links.live ? "Visit the site" : "Download"}
-            </a>
-          )}
-          {data.links.source && (
-            <a class="source" href={data.links.source}>
-              Source on GitHub
-            </a>
-          )}
+      {get && (
+        <div class="actions rv" data-d="160">
+          <a class="get" href={get}>
+            {data.links.live ? "Visit the site" : "Download"}
+          </a>
         </div>
-        {version && <p class="version">Version {version}</p>}
-      </div>
+      )}
     </div>
     <nav class="way rv" data-d="300" aria-label="More projects">
       <a href="/projects">
@@ -383,21 +422,67 @@ const rows = note
     }
   }
 
-  /* Each use with its screenshot: the line on the left (4), the picture
-     on the right (7), on the page's section grid. */
-  .use {
+  /* The band's 5/6 columns, from its head down to Privacy: Why, the
+     uses and their screenshots, Privacy and What I learned each set their
+     two parts on them, the large text on the left. */
+  .pair {
     display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
-    gap: var(--sp-5) var(--gap-hero);
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: var(--sp-6) var(--sp-8);
     align-items: start;
-    padding-block: var(--sp-6);
   }
 
-  .use > p {
-    max-width: 34ch;
-    padding-top: var(--sp-2);
+  /* The first part, at the lede's size: Why, a privacy section's first
+     paragraph. */
+  .lead {
+    max-width: var(--measure-lede);
     font-size: var(--fs-lede);
     color: var(--ink);
+  }
+
+  /* Beside it, at body size: What was hard and What it won't do, the
+     other paragraphs. Its first line is level with the lead's. */
+  .side {
+    padding-top: var(--sp-1);
+  }
+
+  .side p {
+    max-width: var(--measure);
+  }
+
+  .side p + p,
+  .side p + h3 {
+    margin-top: var(--sp-5);
+  }
+
+  .side h3 {
+    margin-bottom: var(--sp-2);
+    font-size: var(--fs-d-sm);
+    letter-spacing: var(--ls-d-sm);
+  }
+
+  /* The uses: one list at the lede's size, a hairline between rows (a
+     list never ends on one). */
+  .uses li {
+    max-width: 34ch;
+    padding-block: var(--sp-5);
+    font-size: var(--fs-lede);
+    color: var(--ink);
+  }
+
+  .uses li:first-child {
+    padding-top: 0;
+  }
+
+  .uses li:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Their screenshots, stacked in the uses' order, each with its
+     caption. */
+  .figs {
+    display: grid;
+    gap: var(--sp-7);
   }
 
   figure {
@@ -419,61 +504,6 @@ const rows = note
     margin-top: var(--sp-3);
     font-size: var(--fs-meta);
     color: var(--soft);
-  }
-
-  /* The uses without a screenshot: the same lede size, two equal columns
-     at the measure, so they read as the list's end, not a footnote. */
-  .more {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 var(--gap-hero);
-  }
-
-  /* Three uses would leave the third alone in a row of two: on a wide
-     screen they share one row instead. */
-  @media (width > 64rem) {
-    .more:has(> li:nth-child(3):last-child) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      column-gap: var(--sp-8);
-    }
-  }
-
-  .more li {
-    max-width: var(--measure);
-    padding-block: var(--sp-5);
-    font-size: var(--fs-lede);
-    color: var(--ink);
-  }
-
-  /* Privacy and What I learned: their paragraphs side by side at the
-     measure, on the columns of the uses above (two, three on a wide
-     screen when there are three); one paragraph sits at the measure. */
-  .privacy {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 var(--gap-hero);
-    align-items: start;
-  }
-
-  .privacy:has(> p:only-child) {
-    grid-template-columns: 1fr;
-  }
-
-  @media (width > 64rem) {
-    .privacy:has(> p:nth-child(3):last-child) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      column-gap: var(--sp-8);
-    }
-  }
-
-  /* Ruled and spaced like the uses above (.more li), so the two sections
-     read as one system, but at body size like the checks: denser reference
-     text, in columns too narrow for the lede size. */
-  .privacy p {
-    max-width: var(--measure);
-    padding-block: var(--sp-5);
-    font-size: var(--fs-body);
-    color: var(--ink);
   }
 
   /* The landing: a panel on the band's surface and radius, as wide as
@@ -511,22 +541,6 @@ const rows = note
     text-wrap: pretty;
   }
 
-  .buttons {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--sp-4) var(--sp-6);
-  }
-
-  /* The release's version, the one fact the panel repeats: under the
-     button, on its edge. */
-  .version {
-    margin-top: var(--sp-3);
-    font-size: var(--fs-meta);
-    font-variant-numeric: tabular-nums;
-    color: var(--band-soft);
-  }
-
   /* The one solid button on the site: the band's ink as its fill and the
      band's color as its text, the accent on hover. */
   .get {
@@ -557,20 +571,6 @@ const rows = note
 
   .get:focus-visible {
     outline-offset: 3px;
-  }
-
-  /* A 44px tall touch target, laid over the line without changing it. */
-  .source {
-    position: relative;
-    font-weight: var(--fw-medium);
-  }
-
-  .source::after {
-    content: "";
-    position: absolute;
-    inset: 50% 0 auto;
-    height: 44px;
-    translate: 0 -50%;
   }
 
   /* Under the panel, on the page's edges: back to every project on the
@@ -628,13 +628,12 @@ const rows = note
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .use,
-    .more {
+    .pair {
       grid-template-columns: 1fr;
     }
 
-    .privacy {
-      grid-template-columns: 1fr;
+    .side {
+      padding-top: 0;
     }
 
     /* The panel stacks: the ask, then the actions under it, on its left

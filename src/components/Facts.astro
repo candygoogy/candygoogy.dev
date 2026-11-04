@@ -15,7 +15,7 @@ const status = {
 }[data.status];
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 // The stack as one text, so its balanced lines are set as before; Keep
-// holds a hyphenated item ("c2pa-ts") on one line.
+// holds any hyphenated item on one line.
 const stack = data.stack.join(", ");
 ---
 
@@ -185,9 +185,10 @@ const stack = data.stack.join(", ");
   /* Side by side, a row is set as text, as a printed receipt is. The
      label floats left, in the value's size (its words in their own), so
      its line and the value's first line share a baseline, and the value
-     takes the rest of the row beside it, set right, within its 28ch. The
-     leader runs back from the value's first letter, however the value
-     wraps, and is cut off where the label ends. */
+     takes the rest of the row beside it, set right, within 48ch (a stack
+     of five on one line, in the half of the band the facts have at
+     1440). The leader runs back from the value's first letter, however
+     the value wraps, and is cut off where the label ends. */
   @media (width > 32.5rem) {
     .facts > div {
       display: flow-root;
@@ -214,16 +215,12 @@ const stack = data.stack.join(", ");
       clip-path: inset(-100vh -100vw -100vh 0);
     }
 
+    /* In a narrower column a value takes the row beside its label short
+       of a leader's worth of dots, and wraps there. */
     .value {
       display: inline-block;
-      max-width: 28ch;
+      max-width: min(48ch, 100% - var(--sp-6));
       vertical-align: top;
-    }
-
-    /* In a text-only band the facts have the lede's wide column: a value
-       takes the row, short of a leader's worth of dots. */
-    :global(.bare) .value {
-      max-width: calc(100% - var(--sp-7));
     }
 
     /* The dots, at the height of base.css's leader: as wide as the window
