@@ -1,5 +1,6 @@
 // Fetches the public GitHub data the site shows, at build time:
-//  - the latest release tag of each product (public REST API);
+//  - the latest release tag of each product and side project (public REST
+//    API);
 //  - each product's last 10 published releases, for the feed (/feed.xml);
 //  - candygoogy's public contribution calendar for the heatmap.
 //
@@ -31,7 +32,7 @@ import {
   mergeData,
   parseContributions,
   parseReleases,
-  productRepo,
+  releaseRepo,
   restApi,
   staleDeploy,
   staleReleases,
@@ -80,16 +81,17 @@ async function contributionsFromProfile() {
   return parseContributions(await res.text());
 }
 
-// The repos to ask for a release: products with a repo in their frontmatter.
-// Side projects aren't asked: their versions aren't shown, and their tags
-// (notary's changes-v0.2.1) aren't versions, and neither are drafts'. Top-level
-// files only, like the content loader's "*.md" pattern, and only unindented
+// The repos to ask for a release: products and side projects with a repo in
+// their frontmatter, so neither version needs bumping by hand (side
+// projects' show in map.json; a tag that isn't a version, like notary's
+// changes-v0.2.1, counts as none). Drafts aren't asked. Top-level files
+// only, like the content loader's "*.md" pattern, and only unindented
 // frontmatter keys.
-async function productRepos() {
+async function releaseRepos() {
   const repos = [];
   for (const file of (await readdir(PROJECTS)).sort()) {
     if (!file.endsWith(".md")) continue;
-    const repo = productRepo(await readFile(join(PROJECTS, file), "utf8"));
+    const repo = releaseRepo(await readFile(join(PROJECTS, file), "utf8"));
     if (repo) repos.push(repo);
   }
   return repos;
@@ -103,7 +105,7 @@ const old = await previous(
 
 let repos = null;
 try {
-  repos = await productRepos();
+  repos = await releaseRepos();
 } catch (error) {
   warn(`releases kept as before, no project list: ${error}`);
 }

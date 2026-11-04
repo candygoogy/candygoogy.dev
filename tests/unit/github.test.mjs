@@ -9,7 +9,7 @@ import {
   latestRelease,
   mergeData,
   parseContributions,
-  productRepo,
+  releaseRepo,
   restApi,
   staleDeploy,
   staleReleases,
@@ -102,22 +102,23 @@ test("frontmatterKey allows a trailing comment", () => {
   assert.equal(frontmatterKey("links:\n  repo: a/b", "repo"), undefined);
 });
 
-test("productRepo skips side projects and drafts", () => {
-  assert.equal(productRepo("---\nkind: product\nrepo: a/b\n---"), "a/b");
-  assert.equal(productRepo("---\nkind: side\nrepo: a/b\n---"), undefined);
+test("releaseRepo asks for own work only, and skips drafts", () => {
+  assert.equal(releaseRepo("---\nkind: product\nrepo: a/b\n---"), "a/b");
+  assert.equal(releaseRepo("---\nkind: side\nrepo: a/b\n---"), "a/b");
+  assert.equal(releaseRepo("---\nkind: website\nrepo: a/b\n---"), undefined);
   assert.equal(
-    productRepo("---\nkind: product\nrepo: a/b\ndraft: true\n---"),
+    releaseRepo("---\nkind: product\nrepo: a/b\ndraft: true\n---"),
     undefined,
   );
   assert.equal(
-    productRepo("---\nkind: product\nrepo: a/b\ndraft: false\n---"),
+    releaseRepo("---\nkind: product\nrepo: a/b\ndraft: false\n---"),
     "a/b",
   );
 });
 
-test("productRepo reads a file that starts with a byte order mark", () => {
+test("releaseRepo reads a file that starts with a byte order mark", () => {
   assert.equal(
-    productRepo("\uFEFF---\r\nkind: product\r\nrepo: a/b\r\n---"),
+    releaseRepo("\uFEFF---\r\nkind: product\r\nrepo: a/b\r\n---"),
     "a/b",
   );
 });
@@ -363,6 +364,13 @@ const failing = (status) => async () => {
   throw Object.assign(new Error(`HTTP ${status}`), { status });
 };
 
+test("latestRelease: a tag that isn't a version is no release", async () => {
+  const tag = (t) => async () => ({ tag_name: t });
+  assert.equal(await latestRelease(tag("changes-v0.2.1"), "a/b"), null);
+  assert.equal(await latestRelease(tag("v1.2.1"), "a/b"), "1.2.1");
+  assert.equal(await latestRelease(tag("0.2.2-rc.1"), "a/b"), "0.2.2-rc.1");
+});
+
 test("latestRelease: a 404 is no release yet, which isn't stale", async () => {
   assert.equal(await latestRelease(failing(404), "a/b"), null);
   const run = {
@@ -399,10 +407,10 @@ test("latestRelease: any other failure throws, so it counts as stale", async () 
   );
 });
 
-test("productRepo reads draft as YAML does: True and TRUE are drafts too", () => {
+test("releaseRepo reads draft as YAML does: True and TRUE are drafts too", () => {
   for (const draft of ["True", "TRUE"]) {
     assert.equal(
-      productRepo(`---\nkind: product\nrepo: a/b\ndraft: ${draft}\n---`),
+      releaseRepo(`---\nkind: product\nrepo: a/b\ndraft: ${draft}\n---`),
       undefined,
       draft,
     );

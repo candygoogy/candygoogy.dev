@@ -27,11 +27,14 @@ export function frontmatterKey(front, name) {
 export const frontmatterFlag = (front, name) =>
   /^(?:true|True|TRUE)$/.test(frontmatterKey(front, name) ?? "");
 
-// A project file's repo if it is a product and not a draft (the site leaves
-// drafts out too), else undefined.
-export function productRepo(text) {
+// A project file's repo if it is the owner's own work (a product or a side
+// project, not a client website) and not a draft (the site leaves drafts
+// out too), else undefined. Side projects' versions go to map.json; the
+// feed lists products' releases only.
+export function releaseRepo(text) {
   const front = frontmatter(text);
-  if (frontmatterKey(front, "kind") !== "product") return undefined;
+  if (!["product", "side"].includes(frontmatterKey(front, "kind")))
+    return undefined;
   if (frontmatterFlag(front, "draft")) return undefined;
   return frontmatterKey(front, "repo");
 }
@@ -95,6 +98,9 @@ export async function latestRelease(api, repo) {
   }
   const tag = release?.tag_name;
   if (typeof tag !== "string" || !tag) throw new Error(`${repo}: no tag`);
+  // A tag that isn't a version (notary's "changes-v0.2.1") names no
+  // release of the project: no version, so the frontmatter's is shown.
+  if (!/^v?\d+(\.\d+)*([-+][\w.+-]*)?$/.test(tag)) return null;
   return tag.replace(/^v/, "");
 }
 
