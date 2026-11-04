@@ -7,7 +7,7 @@ status: live
 date: 2026-10-18
 repo: candygoogy/eolietech
 license: AGPL-3.0
-stack: [Astro, TypeScript, WebAssembly, Cloudflare Workers]
+stack: [TypeScript, Astro, WebAssembly, Cloudflare Workers]
 links:
   live: https://eolietech.com/
   source: https://github.com/candygoogy/eolietech

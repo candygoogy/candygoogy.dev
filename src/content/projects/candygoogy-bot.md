@@ -6,6 +6,7 @@ kind: side
 status: live
 date: 2026-10-11
 repo: candygoogy/candygoogy-bot
+version: 1.2.1
 license: MIT
 stack: [Python, Docker, systemd]
 links:

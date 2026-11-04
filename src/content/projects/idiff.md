@@ -5,7 +5,7 @@ featured: true
 summary: "A free, open-source command-line tool for Windows. It tells you, in plain words, what an app’s installer did to your PC and what it left behind after you uninstalled it. It only reads."
 kind: product
 status: live
-date: 2026-10-14
+date: 2026-10-15
 version: 1.0.0
 repo: fettle-page/idiff
 license: MIT

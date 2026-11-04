@@ -6,7 +6,7 @@ kind: website
 status: live
 date: 2026-04-23
 role: Built and maintained
-stack: [HTML, CSS, JavaScript]
+stack: [HTML, CSS, JavaScript, Cloudflare Workers]
 links:
   live: https://www.sieleolie.com/
 ---

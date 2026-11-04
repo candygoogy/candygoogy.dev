@@ -6,5 +6,5 @@ url: https://photo.candygoogy.dev/
 source: https://github.com/candygoogy/experiments/tree/main/photo
 date: 2026-10-15
 status: live
-stack: [TypeScript, exifr]
+stack: [TypeScript, exifr, Vite, Cloudflare Workers]
 ---

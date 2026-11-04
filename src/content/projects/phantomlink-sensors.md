@@ -8,7 +8,7 @@ date: 2026-10-30
 version: 0.2.2
 repo: candygoogy/phantomlink-sensors
 license: MIT
-runsOn: Windows 10 and 11
+runsOn: Windows 10 and 11 (64-bit)
 stack: [Rust]
 links:
   source: https://github.com/candygoogy/phantomlink-sensors

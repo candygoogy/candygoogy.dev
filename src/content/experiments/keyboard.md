@@ -6,5 +6,5 @@ url: https://keyboard.candygoogy.dev/
 source: https://github.com/candygoogy/experiments/tree/main/keyboard
 date: 2026-10-15
 status: live
-stack: [TypeScript]
+stack: [TypeScript, Vite, Cloudflare Workers]
 ---

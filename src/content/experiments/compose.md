@@ -6,5 +6,5 @@ url: https://compose.candygoogy.dev/
 source: https://github.com/candygoogy/experiments/tree/main/compose
 date: 2026-10-15
 status: live
-stack: [TypeScript, js-yaml]
+stack: [TypeScript, js-yaml, Vite, Cloudflare Workers]
 ---

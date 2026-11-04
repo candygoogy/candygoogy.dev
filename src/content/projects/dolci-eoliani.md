@@ -6,7 +6,7 @@ kind: website
 status: live
 date: 2026-05-17
 role: Built and maintained
-stack: [React 19, TypeScript, Vite, Tailwind]
+stack: [TypeScript, React, Vite, Tailwind, Cloudflare Workers]
 links:
   live: https://dolci-eoliani.it/
 ---

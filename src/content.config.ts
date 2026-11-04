@@ -29,6 +29,11 @@ const projects = defineCollection({
         kind: z.enum(["product", "side", "website"]),
         status: z.enum(["live", "in-progress", "archived"]),
         date: z.coerce.date(),
+        // "Built with": what was built and shipped for it, in this order:
+        // the main part's language, framework and core library, then its
+        // own website's framework (not its language), then where it's
+        // hosted. No version numbers. A library only when it is the core
+        // of the tool (js-yaml, exifr).
         stack: z.array(z.string().min(1)).min(1),
         role: z.string().min(1).optional(),
         // The site shows the higher of this and the latest published release,

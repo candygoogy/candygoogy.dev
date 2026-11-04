@@ -12,7 +12,7 @@ license: MIT
 runsOn: Windows 10 and 11 (64-bit)
 os: "Windows 10, Windows 11"
 category: MultimediaApplication
-stack: [Rust, Slint]
+stack: [Rust, Slint, Astro, Cloudflare Workers]
 story:
   why: "I listen to YouTube Music every day, and until featherplay that meant Pear Desktop. Pear has a plugin for everything, but underneath it’s the YouTube Music website running in Electron, and it can get heavy and glitchy. I wanted the handful of things I used every day in one program that opens at once and stays quiet while it plays. On my PC, playing the same song with the window minimised, featherplay used 81 MB of memory in one process, and Pear 798 MB."
   hard: "Playing YouTube Music without a browser, and keeping it light. featherplay talks to YouTube Music’s private web interface, which can change without notice, and finds each song’s audio with yt-dlp and Deno, updating yt-dlp up to once a day because YouTube changes often. Only signing in needs Google’s own page, in a small WebView2 window that closes once you’re in. For the memory, I patched Slint’s renderer, which kept the covers of rows that had scrolled away (140 MB after scrolling a long Home a few times), and featherplay now frees what the window drew while it’s minimised or in the tray."
