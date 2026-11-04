@@ -78,7 +78,7 @@ export function productCard(project: CollectionEntry<"projects">): string {
     title(data.name),
     wrap(data.blurb),
     wrap(data.summary),
-    heading("What it checks"),
+    heading(page.checksTitle),
     checks,
     ...(page.checksNote ? [wrap(page.checksNote)] : []),
     ...(facts.length ? [columns(facts)] : []),

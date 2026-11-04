@@ -230,8 +230,11 @@ test("a page without a card goes to the assets, even for curl", async () => {
 // the colophon's Delivery numbers.
 test("every page run_worker_first sends to the Worker has a job there", async () => {
   const config = await readFile(new URL("wrangler.jsonc", ROOT), "utf8");
+  // Prettier wraps a long list and ends it with a comma, which JSON refuses.
   const list = JSON.parse(
-    config.match(/"run_worker_first":\s*(\[[^\]]*\])/)[1],
+    config
+      .match(/"run_worker_first":\s*(\[[^\]]*\])/)[1]
+      .replace(/,(\s*\])$/, "$1"),
   );
   assert.ok(list.includes("/colophon"));
   const pages = list.filter((p) => !p.startsWith("/api/") && p !== "/colophon");

@@ -41,6 +41,36 @@ const projects = defineCollection({
           .optional(),
         license: z.string().min(1).optional(),
         runsOn: z.string().min(1).optional(),
+        // For the product page's structured data: the systems it runs on,
+        // as free text, and its kind of app, from the schema.org values
+        // Google lists for SoftwareApplication.
+        os: z.string().min(1).default("Windows 10, Windows 11"),
+        category: z
+          .enum([
+            "GameApplication",
+            "SocialNetworkingApplication",
+            "TravelApplication",
+            "ShoppingApplication",
+            "SportsApplication",
+            "LifestyleApplication",
+            "BusinessApplication",
+            "DesignApplication",
+            "DeveloperApplication",
+            "DriverApplication",
+            "EducationalApplication",
+            "HealthApplication",
+            "FinanceApplication",
+            "SecurityApplication",
+            "BrowserApplication",
+            "CommunicationApplication",
+            "DesktopEnhancementApplication",
+            "EntertainmentApplication",
+            "MultimediaApplication",
+            "HomeApplication",
+            "UtilitiesApplication",
+            "ReferenceApplication",
+          ])
+          .default("UtilitiesApplication"),
         // The command it runs as, when that isn't its name (Install diff
         // is idiff), named once in its facts.
         command: z.string().min(1).optional(),
@@ -91,6 +121,16 @@ const projects = defineCollection({
         // The project page's own sections (products only).
         page: z
           .object({
+            // The two section headings, for a product that doesn't check
+            // things or make a receipt.
+            checksTitle: z.string().min(1).default("What it checks"),
+            usesTitle: z
+              .string()
+              .min(1)
+              .default("What you can do with the receipt"),
+            // The band's link to this page. Left out, it says what the
+            // product checks.
+            bandLink: z.string().min(1).optional(),
             checks: z
               .array(
                 z.object({ name: z.string().min(1), text: z.string().min(1) }),

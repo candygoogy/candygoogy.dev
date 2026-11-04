@@ -85,6 +85,8 @@ const CARDS = new Map([
   ["/", "/card.txt"],
   ["/fettle", "/fettle.txt"],
   ["/idiff", "/idiff.txt"],
+  ["/featherplay", "/featherplay.txt"],
+  ["/tellall", "/tellall.txt"],
 ]);
 const TERMINAL = /^(curl|Wget|HTTPie|xh)\//i;
 const HELLO =
