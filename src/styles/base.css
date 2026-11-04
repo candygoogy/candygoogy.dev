@@ -33,6 +33,24 @@ html {
   }
 }
 
+/* A page shorter than the window still ends at its bottom edge: the
+   content grows to fill the room, and the footer sits at the end. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+body > main {
+  flex: 1 0 auto;
+}
+
+/* In the column, auto side margins would shrink a .wrap to its content;
+   full width keeps it at --page-max, centred, as in normal flow. */
+body > .wrap {
+  width: 100%;
+}
+
 body {
   margin: 0;
   font-family: var(--ff-text);

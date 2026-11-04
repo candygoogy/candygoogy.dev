@@ -1,7 +1,7 @@
 // Renders the social preview cards from the dev server into public/:
 // og.png (the site), og-<product>.png (each product’s page), og-uses.png
-// (/uses), og-projects.png (/projects) and og-experiments.png
-// (/experiments).
+// (/uses), og-fixes.png (/fixes), og-projects.png (/projects) and
+// og-experiments.png (/experiments).
 //   npm run dev   (in another terminal)
 //   node scripts/og.mjs http://localhost:4321
 // With --sites <dir> it also renders the sub-sites' cards (each experiment
@@ -47,6 +47,7 @@ const cards = {
   "og-card": "og.png",
   ...Object.fromEntries(products.map((id) => [`og-${id}`, `og-${id}.png`])),
   "og-uses": "og-uses.png",
+  "og-fixes": "og-fixes.png",
   "og-projects": "og-projects.png",
   "og-experiments": "og-experiments.png",
 };

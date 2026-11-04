@@ -14,6 +14,7 @@ import {
 } from "../data/site";
 import { checkFixes } from "../lib/fixes";
 import { github } from "../lib/github";
+import FixList from "./FixList.astro";
 import Heatmap from "./Heatmap.astro";
 import Section from "./Section.astro";
 
@@ -21,11 +22,6 @@ const days = github.contributions?.days ?? [];
 // Throws, and so stops the build, on a fix that isn't a pull request on
 // someone else's project.
 const fixes = checkFixes(allFixes);
-const fmtMonth = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "numeric",
-  timeZone: "UTC",
-});
 const logos = { siel: sielLogo, gaijin: gaijinLogo };
 // Display size: Siel's round mark 18px, Gaijin's white wordmark 14px tall.
 const logoSize = (org: keyof typeof logos) => {
@@ -178,23 +174,10 @@ const dates = (when: string): [string, string] => {
       {fixes.length > 0 && (
         <div class="fixes">
           <h4>{fixesTitle}</h4>
-          <ol>
-            {fixes.map((fix) => (
-              <li>
-                <h5>
-                  <a href={fix.url}>{fix.project}</a>
-                </h5>
-                <p class="meta">
-                  Merged{" "}
-                  <time datetime={fix.merged}>
-                    {fmtMonth.format(new Date(`${fix.merged}T00:00:00Z`))}
-                  </time>
-                  {fix.release && `, in ${fix.release}`}
-                </p>
-                <p class="detail">{fix.line}</p>
-              </li>
-            ))}
-          </ol>
+          <FixList fixes={fixes.slice(0, 2)} heading="h5" />
+          <p class="all">
+            <a href="/fixes">All {fixes.length} fixes</a>
+          </p>
         </div>
       )}
     </section>
@@ -526,9 +509,8 @@ const dates = (when: string): [string, string] => {
     letter-spacing: var(--ls-d-sm);
   }
 
-  /* The fixes, under the heatmap: a subheading like a skill group's, then
-     each fix the way the timeline shows a role (the name, the month soft,
-     the line), side by side while there's room. */
+  /* The fixes, under the heatmap: a subheading like a skill group's, the
+     newest two (FixList.astro), then a link to the rest on /fixes. */
   .fixes {
     margin-top: var(--sp-7);
   }
@@ -538,22 +520,8 @@ const dates = (when: string): [string, string] => {
     font-size: var(--fs-d-xs);
   }
 
-  .fixes > ol {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sp-5) var(--sp-7);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .fixes li {
-    max-width: var(--measure);
-  }
-
-  .fixes h5 {
-    margin: 0;
-    font: var(--fw-bold) var(--fs-body) / var(--lh-body) var(--ff-text);
+  .all {
+    margin-top: var(--sp-5);
   }
 
   .skills {
@@ -577,10 +545,6 @@ const dates = (when: string): [string, string] => {
   @media (max-width: 53.75rem) {
     .skills {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .fixes > ol {
-      grid-template-columns: minmax(0, 1fr);
     }
   }
 

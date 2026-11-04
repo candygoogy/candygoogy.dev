@@ -1,0 +1,266 @@
+---
+// The fixes I’ve sent to other projects, all of them, under their
+// projects' names. A head with only its title and a line, then one group
+// per project, the one with the newest fix first. Each fix is a row: its
+// line, then the pull request (its release under it) and the day it was
+// merged, in fixed columns on the right so they line up from row to row.
+// One hairline under each project's name, none between its own fixes;
+// groups are set apart by space alone. About shows the newest two
+// (FixList.astro) and links here. The words are in src/data/site.ts.
+import { fixes as allFixes, fixesTitle } from "../data/site";
+import Base from "../layouts/Base.astro";
+import { checkFixes, groupFixes } from "../lib/fixes";
+
+// Throws, and so stops the build, on a fix that isn't a pull request on
+// someone else's project.
+const groups = groupFixes(checkFixes(allFixes));
+
+const lede =
+  "Bugs I hit in other people’s projects, fixed and merged upstream.";
+
+// "Nov 3, 2026", in UTC, as the footer's build date.
+const fmtDay = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+// "https://github.com/pi-hole/web/pull/3883" → "pi-hole/web#3883".
+const ref = (url: string) => {
+  const [owner, repo, , n] = new URL(url).pathname.split("/").slice(1);
+  return `${owner}/${repo}#${n}`;
+};
+
+// "Everything Search for Raycast" → "everything-search-for-raycast".
+const slug = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+---
+
+<Base
+  title="Fixes – candygoogy"
+  description={lede}
+  ogImage="/og-fixes.png"
+  ogAlt={`Fixes: ${fixesTitle}.`}
+>
+  <section class="head" aria-labelledby="fixes-title">
+    <h1 id="fixes-title">
+      <span class="rv-mask">
+        <span>Fixes</span>
+      </span>
+    </h1>
+    <p class="lede rv" data-d="200">
+      {lede}
+    </p>
+  </section>
+
+  <div class="ledger">
+    {groups.map((group) => (
+      <section
+        class="group"
+        id={slug(group.name)}
+        aria-labelledby={`${slug(group.name)}-title`}
+      >
+        <header class="rv-line at-bottom" data-line="line">
+          <h2 id={`${slug(group.name)}-title`}>
+            <span class="rv-mask">
+              <span>{group.name}</span>
+            </span>
+          </h2>
+          <p class="count num rv">
+            {group.fixes.length} {group.fixes.length === 1 ? "fix" : "fixes"}
+          </p>
+        </header>
+        <ol class="fix-list">
+          {group.fixes.map((fix, i) => (
+            <li class="fix rv" data-i={i}>
+              <p class="line">{fix.line}</p>
+              <p class="pr">
+                <a class="ref tap" href={fix.url}>
+                  {ref(fix.url)}
+                </a>
+                {fix.release && (
+                  <span class="rel">
+                    <span class="sep">, </span>in {fix.release}
+                  </span>
+                )}
+              </p>
+              <p class="when">
+                <span class="visually-hidden">Merged </span>
+                <time datetime={fix.merged}>
+                  {fmtDay.format(new Date(`${fix.merged}T00:00:00Z`))}
+                </time>
+              </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+</Base>
+
+<style>
+  /* A head with only its title and lede takes half the hero's space over
+     it (tokens.css): the full space is for heads with something beside
+     them to fill it, as /uses has. */
+  .head {
+    padding-block: var(--space-head-top) var(--space-head-bottom);
+  }
+
+  h1 {
+    font-size: var(--fs-d-hero);
+    line-height: var(--lh-display);
+    letter-spacing: var(--ls-hero);
+  }
+
+  .lede {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-6);
+    font-size: var(--fs-lede);
+    color: var(--soft);
+  }
+
+  /* The list ends on its last fix: the footer's own margin is the gap. */
+  .ledger {
+    --cols: minmax(0, 1fr) 11.5rem 6.5rem;
+  }
+
+  .group + .group {
+    padding-top: var(--sp-8);
+  }
+
+  .group {
+    scroll-margin-top: var(--sp-5);
+  }
+
+  /* The project's name, its count soft beside it on the baseline, and
+     the group's one hairline under them. */
+  .group > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-1) var(--sp-3);
+    padding-bottom: var(--sp-3);
+  }
+
+  h2 {
+    font-size: var(--fs-d-lg);
+    letter-spacing: var(--ls-d-md);
+  }
+
+  .count {
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  .fix-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A fix: its line, then the pull request and the day, each in its own
+     column on the line's first baseline. */
+  .fix {
+    display: grid;
+    grid-template-columns: var(--cols);
+    grid-template-areas: "line ref when";
+    column-gap: var(--sp-7);
+    align-items: baseline;
+    padding-block: var(--sp-4);
+  }
+
+  .fix:last-child {
+    padding-bottom: 0;
+  }
+
+  .line {
+    grid-area: line;
+    max-width: 72ch;
+  }
+
+  /* The pull request by name, the one link on a fix, and the release
+     with the fix under it, a step smaller and soft. */
+  .pr {
+    grid-area: ref;
+    font-size: var(--fs-sm);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ref {
+    white-space: nowrap;
+  }
+
+  .rel {
+    display: block;
+  }
+
+  .sep {
+    position: absolute;
+    clip-path: inset(50%);
+  }
+
+  .when {
+    grid-area: when;
+    font-size: var(--fs-sm);
+    color: var(--soft);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Narrower: the day goes under the pull request and its release. */
+  @media (max-width: 64rem) {
+    .ledger {
+      --cols: minmax(0, 1fr) 11.5rem;
+    }
+
+    .fix {
+      grid-template-areas:
+        "line ref"
+        "line when";
+      grid-template-rows: auto 1fr;
+      row-gap: var(--sp-1);
+    }
+
+    .when {
+      align-self: start;
+      text-align: left;
+    }
+  }
+
+  /* Phones: the line, then the pull request (its release after a comma)
+     on the left and the day on the right. */
+  @media (max-width: 53.75rem) {
+    .group + .group {
+      padding-top: var(--sp-7);
+    }
+
+    .fix {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "line line"
+        "ref when";
+      grid-template-rows: none;
+      column-gap: var(--sp-4);
+      row-gap: var(--sp-2);
+    }
+
+    .when {
+      align-self: baseline;
+      text-align: right;
+    }
+
+    .rel {
+      display: inline;
+    }
+
+    .sep {
+      position: static;
+      clip-path: none;
+    }
+  }
+</style>

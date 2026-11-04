@@ -119,12 +119,19 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 export const fixes: Fix[] = [
   {
     project: "Everything Search for Raycast",
+    url: "https://github.com/raycast/extensions/pull/33000",
+    merged: "2026-11-03",
+    line: "After Raycast had been running for a few hours, every search failed until a restart, because es.exe couldn’t get a console. Now it starts without one.",
+  },
+  {
+    project: "Everything Search for Raycast",
     url: "https://github.com/raycast/extensions/pull/32767",
     merged: "2026-10-26",
     line: "Searching for anything with & or | in it failed, because the search went through the Windows command line. Now it reaches Everything as typed.",
   },
   {
     project: "Pi-hole web interface",
+    group: "Pi-hole",
     url: "https://github.com/pi-hole/web/pull/3883",
     merged: "2026-10-20",
     line: "Deleting selected messages on Pi-hole’s diagnosis page sent a request and showed a toast for each one, so 40 messages meant 40 toasts. Now it’s one request and one toast.",

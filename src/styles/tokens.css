@@ -82,6 +82,11 @@
      headline is small, and height alone left it far below the header. */
   --space-hero-top: clamp(3rem, min(14vh, 12vw), 10.5rem);
   --space-hero-bottom: clamp(4rem, 10vh, 7.5rem);
+  /* A head with only a title and lede (/fixes, /colophon, /projects,
+     /experiments): half the hero’s space over it, at least --sp-7. /uses,
+     whose head has its index beside it, keeps --space-hero-top. */
+  --space-head-top: max(var(--sp-7), calc(var(--space-hero-top) / 2));
+  --space-head-bottom: var(--sp-8);
   --space-band: clamp(4rem, 10vh, 7.5rem);
 
   /* Shape: square by default; radius only marks the band and screenshots. */

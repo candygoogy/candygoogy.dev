@@ -5,6 +5,10 @@
 
 export interface Fix {
   project: string;
+  // The heading /fixes lists it under, when that isn't the project: e.g.
+  // "Pi-hole", so the web interface's fixes join the core's. Left out, it
+  // is the project.
+  group?: string;
   // The pull request: https://github.com/<owner>/<repo>/pull/<number>.
   url: string;
   // The day it was merged, e.g. "2026-10-07"; About shows the month.
@@ -43,4 +47,23 @@ export function checkFixes(fixes: Fix[]): Fix[] {
     }
   }
   return [...fixes].sort((a, b) => b.merged.localeCompare(a.merged));
+}
+
+// One heading's fixes on /fixes.
+export interface FixGroup {
+  name: string;
+  fixes: Fix[];
+}
+
+// The fixes under their headings (a fix's group, or its project), for
+// /fixes: each heading's fixes newest first, and the heading with the
+// newest fix first.
+export function groupFixes(fixes: Fix[]): FixGroup[] {
+  const groups = new Map<string, Fix[]>();
+  const newest = [...fixes].sort((a, b) => b.merged.localeCompare(a.merged));
+  for (const fix of newest) {
+    const name = fix.group ?? fix.project;
+    groups.set(name, [...(groups.get(name) ?? []), fix]);
+  }
+  return [...groups].map(([name, fixes]) => ({ name, fixes }));
 }

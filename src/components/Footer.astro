@@ -43,6 +43,9 @@ const current = (href: string) => (path === href ? "page" : undefined);
     <a href="/uses" aria-current={current("/uses")}>
       Uses
     </a>
+    <a href="/fixes" aria-current={current("/fixes")}>
+      Fixes
+    </a>
     {backToTop && <a href="#top">Back to top</a>}
     <!-- Paper only (print.css). -->
     <p class="printed">
@@ -153,6 +156,14 @@ const current = (href: string) => (path === href ? "page" : undefined);
 
     .stamp {
       display: none;
+    }
+  }
+
+  /* The narrowest phones: a tighter gap keeps the links on one row inside
+     the page edges, as in the header nav. Their targets still stay apart. */
+  @media (max-width: 22.5rem) {
+    .inner {
+      column-gap: var(--sp-3);
     }
   }
 

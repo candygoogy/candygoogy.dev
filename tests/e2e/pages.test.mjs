@@ -338,7 +338,14 @@ test(
           r,
           {
             source: false,
-            markup: ["notes", "Colophon", "Uses", "Back to top", "printed"],
+            markup: [
+              "notes",
+              "Colophon",
+              "Uses",
+              "Fixes",
+              "Back to top",
+              "printed",
+            ],
             reordered: false,
             stamp: expected.stamp,
             notes: expected.notes,

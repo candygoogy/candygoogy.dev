@@ -1,0 +1,73 @@
+---
+// The fixes I’ve sent to other projects, as About lists them (/fixes has
+// its own rows): each fix the way the timeline shows a role (the name, the
+// month soft, the line), side by side while there's room. The fixes come
+// in checked (src/lib/fixes.ts); the heading level is the page's.
+import type { Fix } from "../lib/fixes";
+
+interface Props {
+  fixes: Fix[];
+  heading: "h2" | "h5";
+}
+
+const { fixes, heading: Name } = Astro.props;
+const fmtMonth = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+---
+
+<ol class="fix-list">
+  {fixes.map((fix) => (
+    <li>
+      <Name>
+        <a href={fix.url}>{fix.project}</a>
+      </Name>
+      <p class="meta">
+        Merged{" "}
+        <time datetime={fix.merged}>
+          {fmtMonth.format(new Date(`${fix.merged}T00:00:00Z`))}
+        </time>
+        {fix.release && `, in ${fix.release}`}
+      </p>
+      <p class="detail">{fix.line}</p>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .fix-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-5) var(--sp-7);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    max-width: var(--measure);
+  }
+
+  :is(h2, h5) {
+    margin: 0;
+    font: var(--fw-bold) var(--fs-body) / var(--lh-body) var(--ff-text);
+  }
+
+  .meta {
+    font-size: var(--fs-sm);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .detail {
+    margin-top: var(--sp-1);
+  }
+
+  @media (max-width: 53.75rem) {
+    .fix-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

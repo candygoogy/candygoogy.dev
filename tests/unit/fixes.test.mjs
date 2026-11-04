@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { fixes } from "../../src/data/site.ts";
-import { checkFixes } from "../../src/lib/fixes.ts";
+import { checkFixes, groupFixes } from "../../src/lib/fixes.ts";
 
 const fix = (url, merged = "2026-10-07") => ({
   project: "Example",
@@ -47,3 +48,79 @@ test("checkFixes stops on a merge day that isn't one", () => {
     assert.throws(() => checkFixes([fix(url, merged)]), /merged is/, merged);
   }
 });
+
+test("groupFixes groups by group, else project, newest group first", () => {
+  const at = (project, merged, group) => ({
+    ...fix(`https://github.com/x/${project}/pull/1`, merged),
+    project,
+    ...(group && { group }),
+  });
+  const groups = groupFixes([
+    at("Core", "2026-10-01"),
+    at("Web", "2026-10-20", "Core"),
+    at("Other", "2026-10-10"),
+    at("Web", "2026-11-01"),
+    at("Core", "2026-10-15"),
+  ]);
+  assert.deepEqual(
+    groups.map((g) => [g.name, g.fixes.map((f) => f.merged)]),
+    [
+      ["Web", ["2026-11-01"]],
+      ["Core", ["2026-10-20", "2026-10-15", "2026-10-01"]],
+      ["Other", ["2026-10-10"]],
+    ],
+  );
+});
+
+test("groupFixes keeps every listed fix, both Pi-hole repositories in one", () => {
+  const groups = groupFixes(checkFixes(fixes));
+  assert.equal(
+    groups.reduce((n, g) => n + g.fixes.length, 0),
+    fixes.length,
+  );
+  const pihole = groups.find((g) => g.name === "Pi-hole");
+  assert.deepEqual(pihole?.fixes.map((f) => f.project).sort(), [
+    "Pi-hole",
+    "Pi-hole web interface",
+  ]);
+});
+
+// The pages as the build wrote them: /fixes lists every fix under its
+// group, About the newest two and a link to the rest. These read dist/, so they run after
+// `npm run build`; without a build they're skipped.
+const DIST = new URL("../../dist/", import.meta.url);
+const skip =
+  !existsSync(new URL("index.html", DIST)) && "no dist/: run `npm run build`";
+// Each list's pull requests in order, one link per fix.
+const listed = (html) =>
+  [...html.matchAll(/<ol class="fix-list"[^>]*>([\s\S]*?)<\/ol>/g)].map((m) =>
+    [...m[1].matchAll(/<a\b[^>]*?\bhref="([^"]+)"/g)].map((a) => a[1]),
+  );
+const page = (file) => readFileSync(new URL(file, DIST), "utf8");
+
+test("fixes.html lists every fix, one list per group", { skip }, () => {
+  assert.deepEqual(
+    listed(page("fixes.html")),
+    groupFixes(checkFixes(fixes)).map((g) => g.fixes.map((f) => f.url)),
+  );
+});
+
+test(
+  "About lists the newest two fixes and links to all of them",
+  { skip },
+  () => {
+    const html = page("index.html");
+    assert.deepEqual(listed(html), [
+      checkFixes(fixes)
+        .slice(0, 2)
+        .map((f) => f.url),
+    ]);
+    const link = /<a href="\/fixes"[^>]*>([\s\S]*?)<\/a>/.exec(
+      html.slice(html.indexOf('class="fixes"')),
+    )?.[1];
+    assert.equal(
+      link?.replace(/\s+/g, " ").trim(),
+      `All ${fixes.length} fixes`,
+    );
+  },
+);

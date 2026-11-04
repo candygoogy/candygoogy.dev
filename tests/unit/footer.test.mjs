@@ -28,10 +28,11 @@ const SLOTS = [
   "Built",
   ">Colophon<",
   ">Uses<",
+  ">Fixes<",
   'href="#top"',
 ];
 
-for (const page of ["index.html", "colophon.html", "uses.html"]) {
+for (const page of ["index.html", "colophon.html", "uses.html", "fixes.html"]) {
   test(
     `${page}: the footer's slots, in order, Back to top last`,
     { skip },

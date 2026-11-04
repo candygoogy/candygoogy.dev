@@ -1,14 +1,14 @@
 ---
 // The social preview cards (1200 x 630), rendered to public/og.png,
-// public/og-<product>.png, public/og-uses.png, public/og-projects.png and
-// public/og-experiments.png
+// public/og-<product>.png, public/og-uses.png, public/og-fixes.png,
+// public/og-projects.png and public/og-experiments.png
 // by scripts/og.mjs. Built only in `astro dev`. The og-site-<label> cards
 // are for the sub-sites (each experiment and the map, named by the first
 // label of their host); scripts/og.mjs --sites renders them outside public/,
 // since each sub-site serves its own.
 import { getCollection } from "astro:content";
 import { Font } from "astro:assets";
-import { hero, site } from "../data/site";
+import { fixesTitle, hero, site } from "../data/site";
 import { experiments } from "../data/experiments";
 import { uses } from "../data/uses";
 import "../styles/tokens.css";
@@ -46,6 +46,7 @@ export async function getStaticPaths() {
     ...[
       "og-card",
       "og-uses",
+      "og-fixes",
       "og-projects",
       "og-experiments",
       ...products.map((p) => `og-${p.id}`),
@@ -65,8 +66,8 @@ const project = import.meta.env.DEV
   : undefined;
 // A page's card: its name and one line, the way Fettle's card is made.
 // Fettle's line is the summary's first sentence, as on the page's closing
-// statement; /uses has its title and lede, /projects its nav name
-// and what it lists (its title is too long for one line).
+// statement; /uses has its title and lede, /fixes and /projects their
+// short names and what they list (their titles are too long for one line).
 const own = project
   ? {
       name: project.data.name,
@@ -75,19 +76,25 @@ const own = project
     }
   : Astro.params.ogcard === "og-uses"
     ? { name: uses.title, line: uses.lede, url: "candygoogy.dev/uses" }
-    : Astro.params.ogcard === "og-projects"
+    : Astro.params.ogcard === "og-fixes"
       ? {
-          name: "Projects",
-          line: "Products, side projects and websites I’ve built.",
-          url: "candygoogy.dev/projects",
+          name: "Fixes",
+          line: `${fixesTitle}.`,
+          url: "candygoogy.dev/fixes",
         }
-      : Astro.params.ogcard === "og-experiments"
+      : Astro.params.ogcard === "og-projects"
         ? {
-            name: experiments.title,
-            line: experiments.intro,
-            url: "candygoogy.dev/experiments",
+            name: "Projects",
+            line: "Products, side projects and websites I’ve built.",
+            url: "candygoogy.dev/projects",
           }
-        : undefined;
+        : Astro.params.ogcard === "og-experiments"
+          ? {
+              name: experiments.title,
+              line: experiments.intro,
+              url: "candygoogy.dev/experiments",
+            }
+          : undefined;
 // A sub-site's card, else the site's own.
 const page = sub ?? own;
 ---
