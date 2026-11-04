@@ -75,7 +75,7 @@ console.info(
 );
 
 // A row jumped to by a link on the page takes a brief tint, so the eye
-// finds it (ProjectRows.astro). A load, a reload or back/forward doesn't
+// finds it (Rows.astro). A load, a reload or back/forward doesn't
 // replay it, as a CSS :target would.
 // A plain click or Enter only: one with a modifier or another button opens
 // a new tab or window, and the row stays where it is. The tint plays once

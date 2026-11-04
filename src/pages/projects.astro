@@ -1,8 +1,8 @@
 ---
-// Every published project, in the site's order, as text rows like the
-// home page's shortlist (linked from under it), grouped by kind: products,
-// side projects, websites, each under its heading. The featured product is
-// a row here too, linking to its page.
+// Every published project, in the site's order, grouped by kind under
+// its heading: the products two across, in the same shape as the home
+// page's (linked from under it), then side projects and websites. The
+// featured product is an entry here too, linking to its page.
 import ProjectRows from "../components/ProjectRows.astro";
 import { hero, site } from "../data/site";
 import Base from "../layouts/Base.astro";
@@ -37,7 +37,7 @@ const groups = [
   </div>
   <div id="projects">
     {groups.map((g) => (
-      <ProjectRows projects={g.rows} id={g.id} title={g.title} oneKind />
+      <ProjectRows projects={g.rows} id={g.id} title={g.title} across={2} />
     ))}
   </div>
 </Base>

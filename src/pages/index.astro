@@ -12,8 +12,8 @@ import { featuredProjects, orderedProjects, ownPages } from "../lib/projects";
 
 const projects = await orderedProjects();
 // The band is the featured product's alone; the other featured projects
-// are the rows here, and the list closes on the rest, named and linked to
-// /projects, where every project is.
+// follow it, three across, and the list closes on the rest, named and
+// linked to /projects, where every project is.
 const band = projects.find((p) => p.id === featuredProject);
 const shortlist = featuredProjects(projects).filter(
   (p) => p.id !== featuredProject,
@@ -42,6 +42,7 @@ const schema = {
     title="More things I’ve made"
     aliases={["websites", "side-projects"]}
     more={rest}
+    named
   />
   <About />
   <Contact />

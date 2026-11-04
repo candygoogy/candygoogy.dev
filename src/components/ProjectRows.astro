@@ -1,61 +1,82 @@
 ---
-import type { ComponentProps } from "astro/types";
 import type { CollectionEntry } from "astro:content";
+import { GITHUB } from "../data/icons";
 import { site } from "../data/site";
-import Rows, { type Row } from "./Rows.astro";
+import { release } from "../lib/projects";
+import { vtAttr } from "../lib/vt";
+import Keep from "./Keep.astro";
 
-// Projects as text rows, in the order given: the home page's shortlist
-// and /projects share one row shape. The list itself (its id, heading,
-// aliases, row level) is the page's, passed on to Rows. The projects a
-// shortlist leaves out (more) close it with one row, linking to them all.
-// A list of one kind (a /projects group, named by its heading) leaves
-// the kind off its rows, and its products' titles carry no view-transition
-// names: that page doesn't name them per project (ProjectNames), so they
-// would all share one.
-type Props = {
-  projects: CollectionEntry<"projects">[];
-  more?: CollectionEntry<"projects">[];
-  oneKind?: boolean;
-} & Omit<ComponentProps<typeof Rows>, "rows" | "more">;
+// The projects, in the order given, as one list under its heading: the
+// home page's shortlist and each group on /projects. Products and the
+// rest aren't the same kind of thing, so they don't share a shape. A
+// product is an entry: its name, its summary, a few facts in the band's
+// language (status, what it's built with, what it runs on) and its page,
+// in columns (three across on the home page, two on /projects), a hairline
+// over each and no boxes. Anything else is a ledger item, two across: the
+// name with its one link set right on the same line, the description,
+// then the credit and the stack. The projects a shortlist leaves out
+// (more) close the list with one row, linking to them all.
+type Project = CollectionEntry<"projects">;
 
-const { projects, more = [], oneKind = false, ...list } = Astro.props;
+interface Props {
+  projects: Project[];
+  id: string;
+  title: string;
+  // Ids that old links still use, landing on the list.
+  aliases?: string[];
+  more?: Project[];
+  // How many products to a row: three under the band, two on /projects.
+  across?: 2 | 3;
+  // The products' names carry their view-transition names to their pages:
+  // only where the page names them per project (ProjectNames); elsewhere
+  // they would all share one.
+  named?: boolean;
+}
+
+const {
+  projects,
+  id,
+  title,
+  aliases = [],
+  more = [],
+  across = 3,
+  named = false,
+} = Astro.props;
+
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
-const kind = { side: "Side project", website: "Website", product: "Product" };
+const home = host(site.url);
 
-// The row's one link, named by where it goes: a product's own page (its
-// address on this site); else a live site; otherwise the source.
-const link = ({ id, data }: CollectionEntry<"projects">): Row["link"] =>
-  data.kind === "product"
-    ? { href: `/${id}`, kind: "page", label: `${host(site.url)}/${id}` }
-    : data.links.live
-      ? { href: data.links.live, kind: "live", label: host(data.links.live) }
-      : data.links.source
-        ? { href: data.links.source, kind: "source" }
-        : undefined;
+const products = projects.filter((p) => p.data.kind === "product");
+const others = projects.filter((p) => p.data.kind !== "product");
 
-// What I did (the role, or the license for my own code), then the stack.
-const credit = ({ data }: CollectionEntry<"projects">) =>
+// A product's facts, from the same sources as its page's (Facts.astro).
+const status = {
+  live: "Live",
+  "in-progress": "In progress",
+  archived: "Archived",
+};
+
+// A ledger item's one link, named by where it goes: a live site, else
+// the source.
+const link = ({ data }: Project) =>
+  data.links.live
+    ? {
+        kind: "live" as const,
+        href: data.links.live,
+        label: host(data.links.live),
+      }
+    : data.links.source
+      ? { kind: "source" as const, href: data.links.source }
+      : undefined;
+
+// What I did (the role, or the license for my own code).
+const credit = ({ data }: Project) =>
   data.role
     ? `${data.role}.`
     : data.license
       ? `Open source, ${data.license}.`
       : "";
 
-const rows: Row[] = projects.map((p) => {
-  const go = link(p);
-  return {
-    id: p.id,
-    name: p.data.name,
-    ...(oneKind ? {} : { kind: kind[p.data.kind] }),
-    year: p.data.date.getUTCFullYear(),
-    summary: p.data.summary,
-    ...(go ? { link: go } : {}),
-    // A product's title carries its view-transition name to its page.
-    ...(p.data.kind === "product" && !oneKind ? { vt: p.id } : {}),
-    credit: credit(p),
-    stack: p.data.stack,
-  };
-});
 // The closing row's line: the kinds of the projects it stands for, as
 // categories (plural even for one), so it stays true as the list changes,
 // e.g. "Side projects, and websites I’ve built for others."
@@ -64,7 +85,7 @@ const kinds = {
   side: "side projects",
   website: "websites I’ve built for others",
 } as const;
-const line = (left: CollectionEntry<"projects">[]) => {
+const line = (left: Project[]) => {
   const parts = (["product", "side", "website"] as const)
     .filter((k) => left.some((p) => p.data.kind === k))
     .map((k) => kinds[k]);
@@ -74,15 +95,562 @@ const line = (left: CollectionEntry<"projects">[]) => {
       : (parts[0] ?? "");
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;
 };
+const closing = more.length > 0;
 ---
 
-<Rows
-  {...list}
-  rows={rows}
-  more={{
-    count: more.length,
-    line: line(more),
-    href: "/projects",
-    label: `${host(site.url)}/projects`,
-  }}
-/>
+<!--
+  The section opens like Contact: the section gap, then the heading. Each
+  entry and item rises in reading order, its hairline drawing on the way.
+-->
+<section id={id} class="projects" aria-labelledby={`${id}-title`}>
+  {aliases.length > 0 && (
+    <Fragment set:html="<!-- Old links to the two lists this one replaced still land here. -->" />
+  )}
+  {aliases.map((alias) => (
+    <span id={alias} class="alias" />
+  ))}
+  <h2 id={`${id}-title`}>
+    <span class="rv-mask">
+      <span>{title}</span>
+    </span>
+  </h2>
+  {products.length > 0 && (
+    <ol class:list={["shelf", { pair: across === 2 }]}>
+      {products.map((p, i) => {
+        const { version } = release(p);
+        return (
+          <li
+            id={p.id}
+            class="row entry rv rv-line"
+            data-i={i}
+            data-line="line"
+          >
+            <h3
+              {...(named ? vtAttr(p.id) : {})}
+              class:list={["name", { "vt-project-title": named }]}
+            >
+              {p.data.name}
+            </h3>
+            <p class="desc">
+              <Keep text={p.data.summary} />
+            </p>
+            <dl class="facts">
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  <span class="value">
+                    <span class:list={[{ live: p.data.status === "live" }]}>
+                      {status[p.data.status]}
+                    </span>
+                    {version && `, version ${version}`}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>Built with</dt>
+                <dd>
+                  <span class="value">
+                    <Keep text={p.data.stack.join(", ")} />
+                  </span>
+                </dd>
+              </div>
+              {p.data.runsOn && (
+                <div>
+                  <dt>Runs on</dt>
+                  <dd>
+                    <span class="value">
+                      <Keep text={p.data.runsOn} />
+                    </span>
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <p class="link">
+              <a class="go" href={`/${p.id}`}>
+                {[
+                  `${home}/${p.id}`,
+                  <span class="visually-hidden">, about {p.data.name}</span>,
+                ]}
+                <svg
+                  class="arr next"
+                  viewBox="0 0 16 16"
+                  width="14"
+                  height="14"
+                  aria-hidden="true"
+                >
+                  <path d="M3.5 8h9M8.5 4l4 4-4 4" />
+                </svg>
+              </a>
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+  )}
+  {others.length > 0 && (
+    <ol class="ledger">
+      {others.map((p, i) => {
+        const go = link(p);
+        const role = credit(p);
+        return (
+          <li
+            id={p.id}
+            class="row item rv rv-line"
+            data-i={products.length + i}
+            data-line="line"
+          >
+            <div class="item-head">
+              <h3 class="name">{p.data.name}</h3>
+              {go && (
+                <p class="link">
+                  {go.kind === "live" ? (
+                    <a class="go" href={go.href}>
+                      {go.label}
+                      <svg
+                        class="arr"
+                        viewBox="0 0 16 16"
+                        width="14"
+                        height="14"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 11 11 5M6 5h5v5" />
+                      </svg>
+                    </a>
+                  ) : (
+                    <a class="go" href={go.href}>
+                      <svg
+                        class="mark"
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                        aria-hidden="true"
+                      >
+                        <path d={GITHUB} />
+                      </svg>
+                      Source
+                      <span class="visually-hidden">
+                        {" "}
+                        of {p.data.name} on GitHub
+                      </span>
+                    </a>
+                  )}
+                </p>
+              )}
+            </div>
+            <p class="desc">
+              <Keep text={p.data.summary} />
+            </p>
+            <p class="credit">
+              {role && <span class="role">{role}</span>}
+              <span class="stack">{p.data.stack.join(", ")}</span>
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+  )}
+  {closing && (
+    <div class="row end closing rv" data-i={projects.length}>
+      <p class="kind">
+        <span>{more.length} more</span>
+      </p>
+      <div class="what">
+        <p class="desc">
+          <Keep text={line(more)} />
+        </p>
+        <p class="link">
+          <a class="go" href="/projects">
+            {[
+              `${home}/projects`,
+              <span class="visually-hidden">, every project</span>,
+            ]}
+            <svg
+              class="arr next"
+              viewBox="0 0 16 16"
+              width="14"
+              height="14"
+              aria-hidden="true"
+            >
+              <path d="M3.5 8h9M8.5 4l4 4-4 4" />
+            </svg>
+          </a>
+        </p>
+      </div>
+    </div>
+  )}
+</section>
+
+<style>
+  .projects {
+    margin-top: var(--space-section);
+  }
+
+  .alias {
+    position: absolute;
+    top: 0;
+  }
+
+  h2 {
+    margin-bottom: var(--sp-7);
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Columns parted by space, a hairline over each (drawn as it arrives,
+     motion.css), no boxes. Each entry takes four of the list's rows (a
+     subgrid): its name, its summary, its facts and its link. So across a
+     row of entries each part starts on one line, however long the
+     summaries run, and a lone entry, or one column on phones, has rows
+     only as tall as its own parts. */
+  .shelf {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-8) var(--sp-7);
+  }
+
+  .shelf.pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--sp-9);
+  }
+
+  .row {
+    position: relative;
+    scroll-margin-top: var(--sp-5);
+  }
+
+  .entry {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    padding-top: var(--sp-5);
+  }
+
+  .name {
+    letter-spacing: var(--ls-section);
+  }
+
+  .entry .name {
+    font-size: clamp(2rem, 1.25rem + 1.6vw, 2.75rem);
+    line-height: 1;
+  }
+
+  .pair .entry .name {
+    font-size: clamp(2.25rem, 1.25rem + 2.6vw, 3.5rem);
+  }
+
+  .desc {
+    font-size: var(--fs-lede);
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+
+  .entry .desc {
+    max-width: 46ch;
+    margin-top: var(--sp-4);
+  }
+
+  .pair .entry .desc {
+    max-width: 44ch;
+  }
+
+  /* The facts, in the band's leaders a size down. One label column for
+     the list, as wide as its longest label, so every leader starts at the
+     same place, and every value ends on the list's right edge; the same
+     labels give every entry the same columns. A value too long for its
+     line wraps into balanced lines set right, the leader on the first. */
+  .facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: var(--sp-3);
+    align-content: start;
+    margin: var(--sp-5) 0 0;
+    font-size: var(--fs-sm);
+  }
+
+  .pair .facts {
+    font-size: var(--fs-meta);
+  }
+
+  .facts > div {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+  }
+
+  .facts dt {
+    font-size: var(--fs-sm);
+    color: var(--soft);
+  }
+
+  .facts dd {
+    display: flex;
+    align-items: baseline;
+    margin: 0;
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The dots, as base.css draws them: a no-break space's box with a
+     dotted rule under it, lifted to the middle of the line. */
+  .facts dd::before {
+    content: "\a0";
+    content: "\a0" / "";
+    flex: 1 0 var(--sp-3);
+    margin-right: var(--sp-3);
+    overflow: hidden;
+    font-family: var(--ff-text);
+    font-weight: var(--fw-regular);
+    line-height: 1;
+    border-bottom: var(--rule) dotted var(--leader, var(--chip-line));
+    transform: translateY(-0.3em);
+  }
+
+  .value {
+    max-width: 40ch;
+    text-align: right;
+    text-wrap: balance;
+  }
+
+  /* The dot marks the live state, and stays with its word. */
+  .live {
+    white-space: nowrap;
+  }
+
+  .live::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: var(--sp-2);
+    border-radius: 50%;
+    background: var(--live);
+    vertical-align: 0.12em;
+  }
+
+  .link {
+    font-size: var(--fs-meta);
+  }
+
+  .entry .link {
+    padding-top: var(--sp-5);
+  }
+
+  /* Side projects and websites: two across, each item its name with its
+     link on the same line, the description, then the credit (ink) and
+     the stack (soft). Like the entries, each item takes three of the
+     list's rows, so the credit lines of a row share a line. */
+  .ledger {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-7) var(--sp-9);
+  }
+
+  .shelf + .ledger {
+    margin-top: var(--sp-8);
+  }
+
+  .item {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    padding-top: var(--sp-5);
+  }
+
+  .item-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--sp-2) var(--sp-5);
+  }
+
+  .item .name {
+    font-size: clamp(1.5rem, 1rem + 1vw, 2rem);
+    line-height: var(--lh-tight);
+  }
+
+  .item .desc {
+    max-width: var(--measure);
+    margin-top: var(--sp-3);
+    font-size: var(--fs-body);
+  }
+
+  /* Too long for one line, the stack moves under the credit whole. */
+  .credit {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: start;
+    gap: var(--sp-1) var(--sp-3);
+    margin-top: var(--sp-3);
+    font-size: var(--fs-meta);
+    color: var(--soft);
+  }
+
+  .role {
+    color: var(--ink);
+  }
+
+  /* The closing row keeps to the columns above: the count under the
+     first, its line and link from the second on, on one baseline. */
+  .closing {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--sp-7);
+    align-items: baseline;
+    margin-top: var(--sp-9);
+  }
+
+  .closing .what {
+    grid-column: 2 / span 2;
+  }
+
+  .kind {
+    font-size: var(--fs-meta);
+    color: var(--soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .closing .link {
+    margin-top: var(--sp-3);
+  }
+
+  /* The one link of each entry, item and closing row. An exception to
+     the link colour: ink at medium weight, not the accent, and no marker;
+     it turns the accent when its row is pointed at or pressed. */
+  .go {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-inline: 0;
+    padding-inline: 0;
+    border-radius: var(--r-focus);
+    background: none;
+    font-weight: var(--fw-medium);
+    color: var(--ink);
+    text-decoration: none;
+    transition: color var(--dur-ui) var(--ease-ui);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .go svg {
+    flex: none;
+    transition: transform var(--dur-ui) var(--ease-ui);
+  }
+
+  .mark {
+    fill: currentColor;
+  }
+
+  .arr {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* The whole entry or item is the link: its box stretches over it. */
+  .go::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  /* A press shows on the link, after 80ms, so a scroll that starts on an
+     entry doesn't flash it. */
+  .row:has(.go:active) .go {
+    color: var(--acc);
+    transition-delay: 80ms;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .row:hover .go {
+      color: var(--acc);
+    }
+
+    .row:hover .arr {
+      transform: translate(2px, -2px);
+    }
+
+    .row:hover .next {
+      transform: translateX(2px);
+    }
+
+    .row:hover .mark {
+      transform: rotate(-8deg);
+    }
+  }
+
+  /* Narrower: the products two across, the closing row with them. */
+  @media (max-width: 64rem) {
+    .shelf {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .closing {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .closing .what {
+      grid-column: 2;
+    }
+  }
+
+  /* Phones: one column throughout. */
+  @media (max-width: 53.75rem) {
+    h2 {
+      margin-bottom: var(--sp-5);
+    }
+
+    .shelf,
+    .shelf.pair,
+    .ledger,
+    .closing {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .closing {
+      row-gap: var(--sp-2);
+    }
+
+    .closing .what {
+      grid-column: 1;
+    }
+  }
+
+  /* Phones: each value under its label, from the left, with no leader. */
+  @media (max-width: 32.5rem) {
+    .facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .facts > div {
+      row-gap: var(--sp-1);
+    }
+
+    .facts dd::before {
+      display: none;
+    }
+
+    .value {
+      max-width: none;
+      text-align: left;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .live::before {
+      background: CanvasText;
+    }
+  }
+</style>
