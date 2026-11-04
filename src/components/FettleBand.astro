@@ -29,20 +29,28 @@ const words = data.name.split(" ").map((word) => {
   at += [...word].length + 1;
   return letters;
 });
+// The longest word's length in letters: the name's size is capped by it,
+// so a long name fits its column instead of running into the lede.
+const longest = Math.max(...words.map((letters) => letters.length));
 // Without a screenshot the band is text only (.bare): the story sits
 // further from the lede, so the name and its line read as the header, and
 // the facts start at the lede's edge, so the right side has one edge.
+// With no receipt on the page either (featherplay, tellall), the story's
+// last part moves under the facts (.split), so the two columns end
+// together.
+const split = !shot && !data.receipt && !!data.story;
 ---
 
 <section
   id={project.id}
-  class:list={["band", "rv-band", { bare: !shot }]}
+  class:list={["band", "rv-band", { bare: !shot, split }]}
   aria-labelledby={bandTitleId(project.id)}
 >
   <div class="band-head">
     <Heading
       id={bandTitleId(project.id)}
       class="title letters vt-project-title"
+      style={`--word: ${longest}`}
       aria-label={data.name}
       {...vtAttr(project.id)}
     >
@@ -111,7 +119,8 @@ const words = data.name.split(" ").map((word) => {
       {!page && (
         <p class="more rv" data-i="6">
           <a class="tap" href={`/${project.id}`}>
-            What {data.name} checks, and how it handles privacy
+            {data.page?.bandLink ??
+              `What ${data.name} checks, and how it handles privacy`}
           </a>
         </p>
       )}
@@ -157,6 +166,8 @@ const words = data.name.split(" ").map((word) => {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     gap: var(--sp-5) var(--sp-8);
     align-items: end;
+    /* The name's size is measured against the head's width. */
+    container-type: inline-size;
   }
 
   /* Letters clip their own rise (see motion.css). At this line height
@@ -178,8 +189,12 @@ const words = data.name.split(" ").map((word) => {
     display: inline-block;
   }
 
+  /* A word in the display face is at most about 0.5em a letter wide
+     (featherplay is 0.46), so a name whose longest word (--word letters)
+     would be wider than its column is set smaller, to fit. Short names
+     (Fettle, Install diff) never reach the cap. */
   .title {
-    font-size: var(--fs-d-band);
+    font-size: min(var(--fs-d-band), 100cqi * 2 / var(--word));
     font-weight: var(--fw-d-heavy);
     line-height: var(--lh-band);
     letter-spacing: var(--ls-band);
@@ -238,6 +253,53 @@ const words = data.name.split(" ").map((word) => {
   @media (min-width: 53.76rem) {
     .zig > :global(.facts) {
       margin-top: calc(-1 * var(--sp-4));
+    }
+
+    /* Beside the lede, the name's column is 5/11 of the head after the
+       gap; the name is no wider than that. Its column can't be narrower
+       than its longest word either, so a wider name than the cap allows
+       for pushes the lede over rather than running into it. */
+    .band-head {
+      grid-template-columns: minmax(auto, 5fr) minmax(0, 6fr);
+    }
+
+    .title {
+      font-size: min(
+        var(--fs-d-band),
+        (100cqi - var(--sp-8)) * 10 / (11 * var(--word))
+      );
+    }
+
+    /* Split: Why and What was hard on the left; the facts, then What it
+       won't do, on the right, its heading level with What was hard. The
+       story's parts are the grid's own items, so the rows space them
+       (their margins), not the grid's gap. When the facts are the taller,
+       the room they need opens under Why's paragraph (the flexible row),
+       never between Why and its paragraph. */
+    .split .zig {
+      grid-template-rows: auto 1fr;
+      row-gap: 0;
+    }
+
+    .split .story {
+      display: contents;
+    }
+
+    .split .story > * {
+      grid-column: 1;
+    }
+
+    .split .zig > :global(.facts) {
+      grid-area: 1 / 2 / 3;
+      margin-bottom: var(--sp-5);
+    }
+
+    .split .story > :nth-child(5) {
+      grid-area: 3 / 2;
+    }
+
+    .split .story > :nth-child(6) {
+      grid-area: 4 / 2;
     }
   }
 

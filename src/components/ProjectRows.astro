@@ -8,12 +8,17 @@ import Rows, { type Row } from "./Rows.astro";
 // and /projects share one row shape. The list itself (its id, heading,
 // aliases, row level) is the page's, passed on to Rows. The projects a
 // shortlist leaves out (more) close it with one row, linking to them all.
+// A list of one kind (a /projects group, named by its heading) leaves
+// the kind off its rows, and its products' titles carry no view-transition
+// names: that page doesn't name them per project (ProjectNames), so they
+// would all share one.
 type Props = {
   projects: CollectionEntry<"projects">[];
   more?: CollectionEntry<"projects">[];
+  oneKind?: boolean;
 } & Omit<ComponentProps<typeof Rows>, "rows" | "more">;
 
-const { projects, more = [], ...list } = Astro.props;
+const { projects, more = [], oneKind = false, ...list } = Astro.props;
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
 const kind = { side: "Side project", website: "Website", product: "Product" };
 
@@ -41,12 +46,12 @@ const rows: Row[] = projects.map((p) => {
   return {
     id: p.id,
     name: p.data.name,
-    kind: kind[p.data.kind],
+    ...(oneKind ? {} : { kind: kind[p.data.kind] }),
     year: p.data.date.getUTCFullYear(),
     summary: p.data.summary,
     ...(go ? { link: go } : {}),
     // A product's title carries its view-transition name to its page.
-    ...(p.data.kind === "product" ? { vt: p.id } : {}),
+    ...(p.data.kind === "product" && !oneKind ? { vt: p.id } : {}),
     credit: credit(p),
     stack: p.data.stack,
   };

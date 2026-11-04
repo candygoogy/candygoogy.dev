@@ -1,7 +1,8 @@
 ---
-// A product's page (/fettle, /idiff): the band as the header, what it
-// checks, what you can do with it, privacy, what I learned, and the way to
-// get it. Everything comes from the project's entry.
+// A product's page (/fettle, /idiff, ...): the band as the header, what it
+// checks (or does), what you can do with it, privacy, what I learned, and
+// the way to get it. Everything comes from the project's entry, the two
+// section headings too.
 import type { CollectionEntry } from "astro:content";
 import FettleBand from "./FettleBand.astro";
 import Keep from "./Keep.astro";
@@ -9,7 +10,7 @@ import ProjectNames from "./ProjectNames.astro";
 import Shot from "./Shot.astro";
 import Base from "../layouts/Base.astro";
 import { featuredProject, site } from "../data/site";
-import { release } from "../lib/projects";
+import { nextProduct, orderedProjects, release } from "../lib/projects";
 
 interface Props {
   project: CollectionEntry<"projects">;
@@ -25,16 +26,19 @@ const { version, get } = release(project);
 // A product without a site of its own is described by this page, with the
 // release as its download and the repository as the same thing elsewhere.
 const own = !data.links.live;
+// Where the page goes next: the next product in the site's order.
+const next = nextProduct(await orderedProjects(), project.id);
 
-// Structured data: the product as a free Windows application.
+// Structured data: the product as a free application, on the systems and
+// of the kind its entry gives (Windows utility unless it says otherwise).
 const schema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: data.name,
   description: data.summary,
   url: data.links.live ?? `${site.url}/${project.id}`,
-  applicationCategory: "UtilitiesApplication",
-  operatingSystem: "Windows 10, Windows 11",
+  applicationCategory: data.category,
+  operatingSystem: data.os,
   softwareVersion: version,
   license:
     data.license &&
@@ -101,7 +105,7 @@ const rows = note
   <section class="sec" aria-labelledby="checks-title">
     <h2 id="checks-title">
       <span class="rv-mask">
-        <span>What it checks</span>
+        <span>{page.checksTitle}</span>
       </span>
     </h2>
     <div class:list={["checks-grid", page.checksNote && beside]} {...rows}>
@@ -121,7 +125,7 @@ const rows = note
   <section class="sec" aria-labelledby="uses-title">
     <h2 id="uses-title">
       <span class="rv-mask">
-        <span>What you can do with the receipt</span>
+        <span>{page.usesTitle}</span>
       </span>
     </h2>
     <ul class="uses">
@@ -165,64 +169,91 @@ const rows = note
     <slot name="example" />
   </section>
 
-  <!-- Privacy and what I learned: short, so they sit as a pair. Privacy
-       alone sits on the page's 4/7 columns, its heading on the left. -->
-  <section
-    class:list={["pair", { single: !page.learned }]}
-    aria-label={page.learned ? "Privacy and what I learned" : "Privacy"}
-  >
-    <div class="rv">
-      <h2>Privacy</h2>
-      {page.privacy.split("\n\n").map((para) => (
-        <p>
-          <Keep text={para} />
-        </p>
-      ))}
-    </div>
-    {page.learned && (
-      <div class="rv" data-i="1">
-        <h2>What I learned</h2>
-        {page.learned.split("\n\n").map((para) => (
-          <p>{para}</p>
+  <!-- Privacy, then What I learned when there is one: sections like the
+       others, their title above and their paragraphs side by side, set as
+       the uses without a screenshot are. -->
+  {[
+    { id: "privacy-title", title: "Privacy", text: page.privacy },
+    ...(page.learned
+      ? [{ id: "learned-title", title: "What I learned", text: page.learned }]
+      : []),
+  ].map((part) => (
+    <section class="sec" aria-labelledby={part.id}>
+      <h2 id={part.id}>
+        <span class="rv-mask">
+          <span>{part.title}</span>
+        </span>
+      </h2>
+      <div class="privacy">
+        {part.text.split("\n\n").map((para, i) => (
+          <p class="rv rv-line" data-i={i} data-line="line">
+            <Keep text={para} />
+          </p>
         ))}
       </div>
-    )}
-  </section>
+    </section>
+  ))}
 
-  <!-- The landing: the promise, the download, and a way back. -->
-  <section class="cta" aria-labelledby="cta-title">
-    <h2 id="cta-title" class="visually-hidden">
-      Get {data.name}
-    </h2>
-    <p class="statement rv">
-      <Keep text={`${data.summary.split(". ")[0]}.`} />
-    </p>
-    <div class="actions rv" data-d="160">
-      {get && (
-        <a class="get" href={get}>
-          Get {data.name}
-        </a>
-      )}
-      {data.links.source && (
-        <a class="source" href={data.links.source}>
-          Source on GitHub
-        </a>
-      )}
+  <!-- The landing: a closing panel on the band's surface, so the page is
+       framed at both ends: the ask and the product's line on the left,
+       the download and the source on the right. Under it, the way back
+       to every project and on to the next product. -->
+  <section class="cta" aria-labelledby="cta-title" data-box>
+    <div class="panel band rv">
+      <div class="ask">
+        <h2 id="cta-title">
+          <span class="rv-mask">
+            <span>Get {data.name}</span>
+          </span>
+        </h2>
+        <p class="pitch rv">
+          <Keep text={data.blurb} />
+        </p>
+      </div>
+      <div class="actions rv" data-d="160">
+        <div class="buttons">
+          {get && (
+            <a class="get" href={get}>
+              {data.links.live ? "Visit the site" : "Download"}
+            </a>
+          )}
+          {data.links.source && (
+            <a class="source" href={data.links.source}>
+              Source on GitHub
+            </a>
+          )}
+        </div>
+        {version && <p class="version">Version {version}</p>}
+      </div>
     </div>
-    <ul class="facts rv" data-d="240">
-      {version && <li>Version {version}</li>}
-      {data.runsOn && (
-        <li>
-          <Keep text={data.runsOn} />
-        </li>
-      )}
-      {data.license && <li>Free and open source, {data.license}</li>}
-    </ul>
-    <p class="back rv" data-d="300">
-      <a class="tap" href="/projects">
-        Back to all projects
+    <nav class="way rv" data-d="300" aria-label="More projects">
+      <a href="/projects">
+        <svg
+          class="arr back"
+          viewBox="0 0 16 16"
+          width="14"
+          height="14"
+          aria-hidden="true"
+        >
+          <path d="M12.5 8h-9M7.5 4l-4 4 4 4" />
+        </svg>
+        All projects
       </a>
-    </p>
+      {next && (
+        <a href={`/${next.id}`}>
+          Next: {next.data.name}
+          <svg
+            class="arr fwd"
+            viewBox="0 0 16 16"
+            width="14"
+            height="14"
+            aria-hidden="true"
+          >
+            <path d="M3.5 8h9M8.5 4l4 4-4 4" />
+          </svg>
+        </a>
+      )}
+    </nav>
   </section>
 </Base>
 
@@ -235,8 +266,7 @@ const rows = note
     padding-top: var(--space-section);
   }
 
-  .sec > h2,
-  .pair h2 {
+  .sec > h2 {
     margin-bottom: var(--sp-7);
     font-size: var(--fs-d-section);
     line-height: 1;
@@ -399,6 +429,15 @@ const rows = note
     gap: 0 var(--gap-hero);
   }
 
+  /* Three uses would leave the third alone in a row of two: on a wide
+     screen they share one row instead. */
+  @media (width > 64rem) {
+    .more:has(> li:nth-child(3):last-child) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: var(--sp-8);
+    }
+  }
+
   .more li {
     max-width: var(--measure);
     padding-block: var(--sp-5);
@@ -406,77 +445,99 @@ const rows = note
     color: var(--ink);
   }
 
-  /* Privacy and What I learned, side by side. */
-  .pair {
+  /* Privacy and What I learned: their paragraphs side by side at the
+     measure, on the columns of the uses above (two, three on a wide
+     screen when there are three); one paragraph sits at the measure. */
+  .privacy {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sp-7) var(--gap-hero);
-    padding-top: var(--sp-9);
-  }
-
-  .single {
-    grid-template-columns: 1fr;
-  }
-
-  .single > div {
-    display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
-    column-gap: var(--gap-hero);
+    gap: 0 var(--gap-hero);
     align-items: start;
   }
 
-  .single h2 {
-    grid-row: 1 / span 9;
+  .privacy:has(> p:only-child) {
+    grid-template-columns: 1fr;
   }
 
-  .single p {
-    grid-column: 2;
+  @media (width > 64rem) {
+    .privacy:has(> p:nth-child(3):last-child) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      column-gap: var(--sp-8);
+    }
   }
 
-  .pair h2 {
-    margin-bottom: var(--sp-4);
-    font-size: var(--fs-d-md);
-    letter-spacing: var(--ls-d-sm);
-  }
-
-  .pair p {
+  /* Ruled and spaced like the uses above (.more li), so the two sections
+     read as one system, but at body size like the checks: denser reference
+     text, in columns too narrow for the lede size. */
+  .privacy p {
     max-width: var(--measure);
+    padding-block: var(--sp-5);
+    font-size: var(--fs-body);
+    color: var(--ink);
   }
 
-  .pair p + p {
-    margin-top: var(--sp-4);
-  }
-
-  /* The landing. */
+  /* The landing: a panel on the band's surface and radius, as wide as
+     the band (out to the window's gutters), the ask on the left and the
+     actions on the right, their last lines level. The band class gives it
+     the band's accent, focus ring and selection (base.css); its look is
+     set here, not shared with FettleBand. */
   .cta {
     margin-top: var(--space-section);
   }
 
-  .statement {
-    max-width: 24ch;
-    font: var(--fw-d-bold) var(--fs-d-section) / 1.08 var(--ff-display);
-    letter-spacing: var(--ls-section);
-    text-wrap: balance;
+  .panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--sp-6) var(--sp-8);
+    align-items: end;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: var(--sp-8) var(--gutter);
+    border-radius: var(--r-band);
+    background: var(--band);
+    color: var(--band-ink);
   }
 
-  .actions {
+  .ask h2 {
+    font-size: var(--fs-d-section);
+    line-height: 1;
+    letter-spacing: var(--ls-section);
+  }
+
+  .pitch {
+    max-width: var(--measure-lede);
+    margin-top: var(--sp-4);
+    font-size: var(--fs-lede);
+    color: var(--band-soft);
+    text-wrap: pretty;
+  }
+
+  .buttons {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--sp-4) var(--sp-6);
-    margin-top: var(--sp-6);
   }
 
-  /* The one solid button on the site: ink fill, page-colored text. */
+  /* The release's version, the one fact the panel repeats: under the
+     button, on its edge. */
+  .version {
+    margin-top: var(--sp-3);
+    font-size: var(--fs-meta);
+    font-variant-numeric: tabular-nums;
+    color: var(--band-soft);
+  }
+
+  /* The one solid button on the site: the band's ink as its fill and the
+     band's color as its text, the accent on hover. */
   .get {
     display: inline-flex;
     align-items: center;
     min-height: 3rem;
     padding: 0 var(--sp-6);
     border-radius: var(--r-pill);
-    background: var(--ink);
-    color: var(--bg);
-    font: var(--fw-d-bold) var(--fs-body) / 1 var(--ff-display);
+    background: var(--band-ink);
+    color: var(--band);
+    font: var(--fw-d-bold) var(--fs-body) / var(--lh-body) var(--ff-display);
     letter-spacing: var(--ls-d-sm);
     transition:
       background-color var(--dur-ui) var(--ease-out),
@@ -486,7 +547,7 @@ const rows = note
   @media (hover: hover) and (pointer: fine) {
     .get:hover {
       background: var(--acc);
-      color: var(--bg);
+      color: var(--band);
     }
   }
 
@@ -512,18 +573,54 @@ const rows = note
     translate: 0 -50%;
   }
 
-  .facts {
+  /* Under the panel, on the page's edges: back to every project on the
+     left, on to the next product on the right. Ink at medium weight with
+     a drawn arrow, as the project rows' links, turning the accent on
+     hover, the arrow a step further along; each 44px tall. */
+  .way {
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
     gap: var(--sp-2) var(--sp-6);
-    margin-top: var(--sp-6);
-    font-size: var(--fs-meta);
-    color: var(--soft);
+    margin-top: var(--sp-5);
   }
 
-  .back {
-    margin-top: var(--sp-7);
-    font-size: var(--fs-meta);
+  .way a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    padding-bottom: 0;
+    border-radius: var(--r-focus);
+    background: none;
+    font-weight: var(--fw-medium);
+    color: var(--ink);
+    text-decoration: none;
+    transition: color var(--dur-ui) var(--ease-ui);
+  }
+
+  .arr {
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform var(--dur-ui) var(--ease-ui);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .way a:hover {
+      color: var(--acc);
+    }
+
+    .way a:hover .back {
+      transform: translateX(-2px);
+    }
+
+    .way a:hover .fwd {
+      transform: translateX(2px);
+    }
   }
 
   @media (width <= 53.75rem) {
@@ -532,18 +629,22 @@ const rows = note
     }
 
     .use,
-    .more,
-    .pair,
-    .single > div {
+    .more {
       grid-template-columns: 1fr;
     }
 
-    .single h2 {
-      grid-row: auto;
+    .privacy {
+      grid-template-columns: 1fr;
     }
 
-    .single p {
-      grid-column: auto;
+    /* The panel stacks: the ask, then the actions under it, on its left
+       edge; its corners as the band's at this size. */
+    .panel {
+      grid-template-columns: 1fr;
+      gap: var(--sp-6);
+      align-items: start;
+      padding-block: var(--sp-7);
+      border-radius: var(--r-band-narrow);
     }
   }
 
@@ -551,19 +652,18 @@ const rows = note
     .checks {
       grid-template-columns: 1fr;
     }
-
-    /* Phones: the facts one per line on the left edge, rather than
-       wrapping into a ragged second column. */
-    .facts {
-      flex-direction: column;
-    }
   }
 
-  /* Forced colors drop the button's fill: an edge in its text color
-     keeps it a button. */
+  /* Forced colors drop the fills: an edge in the text color keeps the
+     button a button and the panel a panel. */
   @media (forced-colors: active) {
     .get {
       border: var(--rule) solid currentColor;
+    }
+
+    .panel {
+      outline: var(--rule) solid CanvasText;
+      outline-offset: calc(-1 * var(--rule));
     }
   }
 </style>

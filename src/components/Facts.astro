@@ -14,6 +14,9 @@ const status = {
   archived: "Archived",
 }[data.status];
 const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
+// The stack as one text, so its balanced lines are set as before; Keep
+// holds a hyphenated item ("c2pa-ts") on one line.
+const stack = data.stack.join(", ");
 ---
 
 <dl class="facts leaders rv-line" data-line="band-line">
@@ -33,7 +36,9 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
       <span>Built with</span>
     </dt>
     <dd>
-      <span class="value">{data.stack.join(", ")}</span>
+      <span class="value">
+        <Keep text={stack} />
+      </span>
     </dd>
   </div>
   {data.runsOn && (
@@ -213,6 +218,12 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
       display: inline-block;
       max-width: 28ch;
       vertical-align: top;
+    }
+
+    /* In a text-only band the facts have the lede's wide column: a value
+       takes the row, short of a leader's worth of dots. */
+    :global(.bare) .value {
+      max-width: calc(100% - var(--sp-7));
     }
 
     /* The dots, at the height of base.css's leader: as wide as the window

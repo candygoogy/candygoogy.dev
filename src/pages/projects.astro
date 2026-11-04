@@ -1,13 +1,24 @@
 ---
 // Every published project, in the site's order, as text rows like the
-// home page's shortlist (linked from under it). The featured product is a
-// row here too, linking to its page.
+// home page's shortlist (linked from under it), grouped by kind: products,
+// side projects, websites, each under its heading. The featured product is
+// a row here too, linking to its page.
 import ProjectRows from "../components/ProjectRows.astro";
 import { hero, site } from "../data/site";
 import Base from "../layouts/Base.astro";
 import { orderedProjects } from "../lib/projects";
 
 const projects = await orderedProjects();
+// One group per kind, in the site's order (lib/projects.ts sorts by kind
+// first, so each keeps its own order); a kind with no projects is left out.
+// The groups share one #projects, so every row is still under it.
+const groups = [
+  { kind: "product", id: "products", title: "Products" },
+  { kind: "side", id: "side-projects", title: "Side projects" },
+  { kind: "website", id: "websites", title: "Websites" },
+]
+  .map((g) => ({ ...g, rows: projects.filter((p) => p.data.kind === g.kind) }))
+  .filter((g) => g.rows.length > 0);
 ---
 
 <Base
@@ -24,17 +35,16 @@ const projects = await orderedProjects();
       </span>
     </h1>
   </div>
-  <ProjectRows
-    projects={projects}
-    id="projects"
-    labelledBy="projects-title"
-    level={2}
-  />
+  <div id="projects">
+    {groups.map((g) => (
+      <ProjectRows projects={g.rows} id={g.id} title={g.title} oneKind />
+    ))}
+  </div>
 </Base>
 
 <style>
   .head {
-    padding-block: var(--space-hero-top) var(--sp-8);
+    padding-block: var(--space-head-top) var(--space-head-bottom);
   }
 
   h1 {
@@ -43,13 +53,9 @@ const projects = await orderedProjects();
     letter-spacing: var(--ls-hero);
   }
 
-  /* The list starts right under the head, not a section gap away. */
-  :global(#projects.projects) {
+  /* The first group starts right under the head, not a section gap away;
+     the groups are a section gap apart, like the home page's sections. */
+  #projects > :global(.projects:first-child) {
     margin-top: 0;
-  }
-
-  /* Here the rows' names are the page's h2s: no list-heading margin. */
-  :global(#projects .name) {
-    margin-bottom: 0;
   }
 </style>

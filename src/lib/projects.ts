@@ -63,6 +63,19 @@ export const ownPages = (projects: Project[]) =>
     (p) => p.data.kind === "product" && p.id !== featuredProject && p.data.page,
   );
 
+// The product after this one in the site's order, the last one wrapping
+// back to the first: each product page ends with a link to it, at /<id>.
+// None when it's the only product.
+export function nextProduct(
+  projects: Project[],
+  id: string,
+): Project | undefined {
+  const products = projects.filter((p) => p.data.kind === "product");
+  if (products.length < 2) return undefined;
+  const at = products.findIndex((p) => p.id === id);
+  return products[(at + 1) % products.length];
+}
+
 // A product's release as the build sees it: the latest published release
 // on GitHub (scripts/github-data.mjs), or the entry's own fallback, and
 // where to get it. A product with no site of its own ships as GitHub
