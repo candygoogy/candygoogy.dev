@@ -335,6 +335,50 @@ test("checkIndexes: a drifted, missing or unfetched index fails by name", () => 
   assert.match(lines[3].text, /matches the site's 3 rows: subnet$/);
 });
 
+test("checkIndexes: with warnUnfetched, an unfetched index warns, drift still fails", () => {
+  // The push-time check (scripts/check-menus.mjs): an outage elsewhere
+  // doesn't block a deploy, a menu that drifted does.
+  const lines = checkIndexes(
+    SITE_MENU,
+    [
+      { id: "mail", error: new Error("HTTP 503") },
+      {
+        id: "keyboard",
+        url: TOOL_URL,
+        html: TOOL_MENU.replace("Install diff", "Idiff"),
+      },
+      { id: "photo", url: TOOL_URL, html: "<header><nav></nav></header>" },
+      { id: "subnet", url: TOOL_URL, html: TOOL_MENU },
+    ],
+    { warnUnfetched: true },
+  );
+  assert.deepEqual(
+    lines.map(({ ok, warn }) => ({ ok, warn })),
+    [
+      { ok: true, warn: true },
+      { ok: false, warn: undefined },
+      { ok: false, warn: undefined },
+      { ok: true, warn: undefined },
+    ],
+  );
+  assert.match(
+    lines[0].text,
+    /^mail: couldn't check its menu index: .*HTTP 503/,
+  );
+  assert.match(
+    lines[1].text,
+    /^keyboard: row 2 name "Idiff", site has "Install diff":/,
+  );
+  assert.match(lines[2].text, /^photo: no menu index/);
+  // Every tool unfetched: only warnings, so the run passes.
+  const down = checkIndexes(
+    SITE_MENU,
+    [{ id: "mail", error: new Error("fetch failed") }],
+    { warnUnfetched: true },
+  );
+  assert.ok(down.every((l) => l.ok && l.warn));
+});
+
 // Workers Builds deploys one branch, named in three places: the release
 // job that moves it (ci.yml), the build stamp's fallback that asks GitHub
 // for its tip (src/lib/commit.ts, used by src/lib/build.ts) and this

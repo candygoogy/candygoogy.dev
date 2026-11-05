@@ -18,7 +18,8 @@
 //    reordered or with other names, blurbs or links; or it has none, or
 //    can't be checked. The tools keep their own copy of the site's
 //    featured list, and nothing else notices when the two drift apart;
-//    this is where that gets loud.
+//    this is where that gets loud. Pushes and pull requests check the
+//    built home page against them too (scripts/check-menus.mjs).
 //   node scripts/check-live.mjs
 //
 // The parse and checks are exported for the tests; only running the file
@@ -375,9 +376,13 @@ export function compareIndex(site, tool) {
 /** One line per tool whose menu index isn't the home page's or that
  * couldn't be checked, and one for all the others. Each tool is its id with
  * its live page (and its address, to resolve its links), or the error.
+ * With warnUnfetched, a tool that couldn't be fetched only warns: the
+ * push-time check (scripts/check-menus.mjs), so an outage elsewhere
+ * doesn't block a deploy. The daily run fails on it.
  * @param {string} home
- * @param {({ id: string, url: string, html: string } | { id: string, error: unknown })[]} tools */
-export function checkIndexes(home, tools) {
+ * @param {({ id: string, url: string, html: string } | { id: string, error: unknown })[]} tools
+ * @param {{ warnUnfetched?: boolean }} [options] */
+export function checkIndexes(home, tools, { warnUnfetched = false } = {}) {
   const site = menuIndex(home, `${SITE}/`);
   if (!site) {
     return [
@@ -392,7 +397,7 @@ export function checkIndexes(home, tools) {
   for (const tool of tools) {
     if ("error" in tool) {
       lines.push({
-        ok: false,
+        ...(warnUnfetched ? { ok: true, warn: true } : { ok: false }),
         text: `${tool.id}: couldn't check its menu index: ${tool.error}`,
       });
       continue;
@@ -420,7 +425,7 @@ export function checkIndexes(home, tools) {
 
 // Every experiment /experiments lists, with its live page, or why it
 // couldn't be fetched. The same list livePolicies() reads.
-async function liveTools() {
+export async function liveTools() {
   const tools = await listedTools();
   return Promise.all(
     tools.map(async ({ id, url }) => {
@@ -508,19 +513,23 @@ async function get(path) {
   return res.text();
 }
 
-if (isMain(import.meta.filename)) {
-  const report = (lines) => {
-    for (const { ok, warn, text } of lines) {
-      if (warn) {
-        console.warn(`check-live: WARNING ${text}`);
-      } else if (ok) {
-        console.log(`check-live: ${text}`);
-      } else {
-        console.error(`check-live: FAIL ${text}`);
-        process.exitCode = 1;
-      }
+/** Prints the lines, each after the script's name, and fails the run on
+ * one that didn't pass. scripts/check-menus.mjs prints through this too.
+ * @param {string} name @param {{ ok: boolean, warn?: boolean, text: string }[]} lines */
+export function report(name, lines) {
+  for (const { ok, warn, text } of lines) {
+    if (warn) {
+      console.warn(`${name}: WARNING ${text}`);
+    } else if (ok) {
+      console.log(`${name}: ${text}`);
+    } else {
+      console.error(`${name}: FAIL ${text}`);
+      process.exitCode = 1;
     }
-  };
+  }
+}
+
+if (isMain(import.meta.filename)) {
   // Each part on its own, so one that can't run doesn't hide the others.
   let home;
   try {
@@ -530,13 +539,13 @@ if (isMain(import.meta.filename)) {
       get("/"),
       deployTip().catch((error) => ({ error })),
     ]);
-    report(checkLive(securityTxt, home, Date.now(), tip));
+    report("check-live", checkLive(securityTxt, home, Date.now(), tip));
   } catch (error) {
     console.error(`check-live: FAIL couldn't fetch the site: ${error}`);
     process.exitCode = 1;
   }
   try {
-    report(checkPolicies(await livePolicies()));
+    report("check-live", checkPolicies(await livePolicies()));
   } catch (error) {
     console.error(`check-live: FAIL couldn't check the experiments: ${error}`);
     process.exitCode = 1;
@@ -545,7 +554,7 @@ if (isMain(import.meta.filename)) {
   // already failed above.
   if (home !== undefined) {
     try {
-      report(checkIndexes(home, await liveTools()));
+      report("check-live", checkIndexes(home, await liveTools()));
     } catch (error) {
       console.error(
         `check-live: FAIL couldn't check the experiments' menus: ${error}`,

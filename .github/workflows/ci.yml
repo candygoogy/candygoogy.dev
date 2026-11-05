@@ -46,6 +46,13 @@ jobs:
           # Sent only to the GitHub REST API, for release lookups.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: npx astro build
+      # The experiments keep their own copy of the home page's featured
+      # list. A push that changes it fails here, against the page just
+      # built, so release doesn't deploy it before the experiments match:
+      # update them first. A tool that can't be fetched only warns. Not on
+      # the schedule: the live job checks the live pages then, strictly.
+      - if: github.event_name != 'schedule'
+        run: node scripts/check-menus.mjs
       # The browser is kept between runs, keyed by Playwright's version; the
       # system libraries it needs are installed every time.
       - id: playwright
