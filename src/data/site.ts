@@ -118,6 +118,12 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 
 export const fixes: Fix[] = [
   {
+    project: "Zen Browser for Raycast",
+    url: "https://github.com/raycast/extensions/pull/32787",
+    merged: "2026-11-06",
+    line: "On Windows, searching from New Tab split a query with spaces into a search plus a stray tab, or failed every time. Now each search arrives as typed.",
+  },
+  {
     project: "Everything Search for Raycast",
     url: "https://github.com/raycast/extensions/pull/33000",
     merged: "2026-11-03",
