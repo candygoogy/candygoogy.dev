@@ -209,7 +209,8 @@ const fine = {
   subnet: none("2026-10-15"),
 };
 const LEDE =
-  "Small tools that run in your browser. All but Mail check are blocked from connecting anywhere. Checked Oct 14.";
+  "Small tools that run in your browser, open source under MIT. All but Mail check are blocked from connecting anywhere. Checked Oct 14.";
+const OPENER = "Small tools that run in your browser, open source under MIT.";
 const INTRO = "Small tools that run in your browser.";
 
 test("the lede: all fine says so, with the oldest check", () => {
@@ -242,7 +243,7 @@ test("the lede: mail looser than its DNS host drops the sentences", () => {
       failing: ["mail"],
     });
   }
-  assert.equal(words.lede(undefined), INTRO);
+  assert.equal(words.lede(undefined), OPENER);
 });
 
 test("the lede: one unknown, unchecked or unlisted tool drops the sentences", () => {
@@ -269,8 +270,8 @@ test("the lede: one unknown, unchecked or unlisted tool drops the sentences", ()
     checked: undefined,
     failing: ["mail"],
   });
-  assert.equal(words.lede(undefined), INTRO);
-  assert.equal(words.lede(""), INTRO);
+  assert.equal(words.lede(undefined), OPENER);
+  assert.equal(words.lede(""), OPENER);
 });
 
 test("the lede: the date is the oldest check, wherever it is", () => {

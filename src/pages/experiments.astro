@@ -14,14 +14,14 @@ const entries = await listedExperiments();
 // lost around it. The description follows the same check.
 const checked = policyChecked(entries.map(({ id }) => id));
 const lede = words.lede(checked);
+// Every tool is from the same year under the same licence, so the rows
+// leave both out: the lede says the licence once.
 const rows: Row[] = entries.map(({ id, data }) => ({
   id,
   name: data.name,
-  year: data.date.getUTCFullYear(),
   summary: data.summary,
   link: { href: data.url, kind: "live", label: new URL(data.url).hostname },
   source: data.source,
-  credit: words.credit,
   stack: data.stack,
 }));
 ---

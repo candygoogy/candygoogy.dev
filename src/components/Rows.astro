@@ -10,9 +10,10 @@ import { vtAttr } from "../lib/vt";
 export interface Row {
   id: string;
   name: string;
-  // Left out where every row would say the same: then only the year shows.
+  // Left out where every row would say the same: then only the year shows,
+  // and with no year either, the name stands alone.
   kind?: string;
-  year: number;
+  year?: number;
   summary: string;
   // The row's link: a page on this site (its address and →), a live site
   // (its domain and ↗) or its source.
@@ -25,7 +26,8 @@ export interface Row {
   // A project with its own page: the title carries its view-transition
   // names (src/lib/vt.ts).
   vt?: string;
-  credit: string;
+  // Left out where every row would say the same (the page says it once).
+  credit?: string;
   stack: string[];
 }
 
@@ -111,10 +113,12 @@ const closing = more && more.count > 0 ? more : undefined;
                 {row.name}
               </h3>
             )}
-            <p class="kind">
-              {row.kind && <span>{row.kind}</span>}
-              <span>{row.year}</span>
-            </p>
+            {(row.kind || row.year !== undefined) && (
+              <p class="kind">
+                {row.kind && <span>{row.kind}</span>}
+                {row.year !== undefined && <span>{row.year}</span>}
+              </p>
+            )}
           </div>
           <div class="what">
             <p class="desc">
