@@ -2,7 +2,7 @@
 name: Install diff
 blurb: What an installer did to your PC, in plain words
 featured: true
-summary: "A free, open-source command-line tool for Windows. It tells you, in plain words, what an app’s installer did to your PC and what it left behind after you uninstalled it. It only reads."
+summary: "An installer report for Windows, from the command line. It tells you, in plain words, what an app’s installer did to your PC and what it left behind after you uninstalled it. It only reads, and it’s free and open source."
 kind: product
 status: live
 date: 2026-10-15

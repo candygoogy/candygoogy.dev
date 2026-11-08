@@ -1,7 +1,7 @@
 ---
 name: tellall
 blurb: What an image or a text gives away, and a clean copy
-summary: "A free, open-source privacy check for images and copied text. It tells you in plain sentences what they give away and makes a clean copy, on your device."
+summary: "A privacy check for images and copied text. It tells you in plain sentences what they give away and makes a clean copy, on your device. Free and open source."
 featured: true
 kind: product
 status: live

@@ -1,7 +1,7 @@
 ---
 name: featherplay
 blurb: Native Windows player for YouTube Music, unofficial
-summary: "A free, open-source Windows player for YouTube Music. It plays your library, playlists and radio in one native program, with no browser behind the window and no video."
+summary: "YouTube Music on Windows as one native program. It plays your library, playlists and radio with no browser behind the window and no video, and it’s free and open source."
 featured: true
 kind: product
 status: live
