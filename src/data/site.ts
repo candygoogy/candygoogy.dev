@@ -118,6 +118,12 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 
 export const fixes: Fix[] = [
   {
+    project: "Scoop",
+    url: "https://github.com/ScoopInstaller/Scoop/pull/6773",
+    merged: "2026-11-10",
+    line: "Clearing Scoop’s download cache sometimes failed with “Cannot find path”, because it deleted each app’s leftover .txt file twice. Now each file is deleted once.",
+  },
+  {
     project: "Zen Browser for Raycast",
     url: "https://github.com/raycast/extensions/pull/32787",
     merged: "2026-11-06",
