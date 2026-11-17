@@ -118,6 +118,18 @@ export const fixesTitle = "Fixes I’ve sent to other projects";
 
 export const fixes: Fix[] = [
   {
+    project: "Slint visual editor",
+    url: "https://github.com/slint-ui/slint/pull/14832",
+    merged: "2026-11-17",
+    line: "On Windows, the recent projects on the start screen showed paths like \\\\?\\C:\\dev\\gallery. Now they show C:\\dev\\gallery, also for projects saved by older versions.",
+  },
+  {
+    project: "Slint visual editor",
+    url: "https://github.com/slint-ui/slint/pull/14834",
+    merged: "2026-11-17",
+    line: "On Windows, “Create New Project” opened in whatever folder the editor started from, because it looked for a HOME variable Windows doesn’t set. Now it opens in Documents.",
+  },
+  {
     project: "Scoop",
     url: "https://github.com/ScoopInstaller/Scoop/pull/6773",
     merged: "2026-11-10",
