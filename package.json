@@ -22,13 +22,13 @@
   },
   "dependencies": {
     "@astrojs/sitemap": "3.7.4",
-    "astro": "7.4.1",
+    "astro": "7.4.12",
     "sharp": "0.35.5"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.11",
     "@axe-core/playwright": "4.14.0",
-    "@cloudflare/workers-types": "5.20261019.1",
+    "@cloudflare/workers-types": "5.20261117.1",
     "@eslint/js": "10.0.1",
     "eslint": "10.13.0",
     "eslint-plugin-astro": "3.2.1",
